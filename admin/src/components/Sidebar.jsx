@@ -50,6 +50,7 @@ const Sidebar = ({ isOpen }) => {
         if (response.data.success) {
           // response.data.permissions is an array of permission strings
           setAdminPermissions(response.data.permissions || []);
+          console.log('Admin Permissions:', response.data);
           setAdminRole(response.data.role || '');
         }
       } catch (error) {
@@ -151,10 +152,14 @@ const Sidebar = ({ isOpen }) => {
     </p>
   );
 
-  // Check if user has permission - since permissions is an array of strings
+  // Check if user has permission - MODIFIED FOR ADMIN ROLE
   const hasPermission = (permissionString) => {
-    // If no permissions array or empty, deny access
+    // If role is 'admin', show everything (bypass permission check)
+    if (adminRole === 'admin') return true;
+    
+    // If no permissions array or empty, deny access (for non-admin roles)
     if (!adminPermissions || adminPermissions.length === 0) return false;
+    
     // Check if the permission string exists in the array
     return adminPermissions.includes(permissionString);
   };
