@@ -912,11 +912,6 @@ const refreshCoinBalance = async () => {
                       <div className="text-xs text-gray-500 mt-1">
                         {t.playerId}: {userData?.player_id || "N/A"}
                       </div>
-                      {/* Coin Balance in Profile Dropdown */}
-                      <div className="flex items-center gap-1 mt-2 text-xs text-yellow-400">
-                        <FaCoins className="w-3 h-3" />
-                        <span>Coins: {userData?.coinBalance || 0}</span>
-                      </div>
                     </div>
                   </div>
                   <div className="flex flex-col py-3">
@@ -965,24 +960,6 @@ const refreshCoinBalance = async () => {
               {/* Desktop View */}
               <div className="hidden md:flex items-center rounded overflow-hidden gap-2">
                 {/* Main Balance Box */}
-                <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
-  <div className="flex items-center space-x-2 px-3 py-2 text-sm bg-[#1f1f1f] text-white">
-    <FaCoins className="w-4 h-4" />
-    <span className="min-w-[60px] font-medium">
-      {userData?.coinBalance?.toLocaleString() || 0}
-    </span>
-  </div>
-  <button
-    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-    onClick={refreshCoinBalance}
-    disabled={isRefreshingCoinBalance}
-    aria-label={t.refreshCoinBalance}
-  >
-    <FiRefreshCw
-      className={`w-4 h-4 ${isRefreshingCoinBalance ? 'animate-spin' : ''}`}
-    />
-  </button>
-</div>
                 <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm bg-[#1f1f1f] text-white">
                     <img
