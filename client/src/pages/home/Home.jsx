@@ -473,6 +473,16 @@ const HomeContent = () => {
 
   return (
     <div className="h-screen overflow-hidden font-poppins bg-[#1a1a1a] text-white">
+
+          {/* <div className="h-screen overflow-hidden font-poppins text-white"
+style={{
+  backgroundImage: `
+    radial-gradient(ellipse at 50% 40%, #071d4a 0%, #040f28 55%, #010610 100%),
+    radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px)
+  `,
+  backgroundSize: 'cover, 28px 28px',
+  backgroundBlendMode: 'screen'
+}}></div> */}
       {/* Loading Overlay - Only show for initial load */}
 {isLoading && (
  <div className="fixed top-0 left-0 w-full h-full bg-[#0a0a0a] flex justify-center items-center z-[10000000]">
