@@ -409,7 +409,7 @@ const Footer = () => {
         {/* ── Main Text Section ── */}
         <div className="mb-4 md:mb-8">
           <h3 className="font-medium mb-2 text-gray-400 text-[11px] md:text-[15px]">
-            {t.footerHeadingTitle}
+            Bir75 -  Leading Online Gaming and Betting Platform
           </h3>
           <p className="text-justify leading-relaxed text-gray-600 text-[10px] md:text-[13px]">
             {t.footerHeadingText}
