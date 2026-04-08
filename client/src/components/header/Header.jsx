@@ -857,7 +857,7 @@ const refreshCoinBalance = async () => {
   return (
     <>
       <Toaster />
-      <header className="flex justify-between items-center px-1 py-2 bg-[#1a1a1a] text-white border-b border-[#333] relative z-[10000]">
+      <header className="flex justify-between items-center px-1 py-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white border-b border-[#333] relative z-[10000]">
         <div className="flex items-center space-x-4 md:space-x-7">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -1060,7 +1060,7 @@ const refreshCoinBalance = async () => {
       </header>
 
       <div
-        className={`fixed top-0 left-0 h-full w-full md:w-80 no-scrollbar overflow-y-auto pb-[100px] bg-[#1a1a1a] text-white z-40 transition-all duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-full w-full md:w-80 no-scrollbar overflow-y-auto pb-[100px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white z-40 transition-all duration-300 ease-in-out ${
           sidebarOpen ? "shadow-2xl" : "w-0 -translate-x-full"
         }`}
         style={{ marginTop: "56px" }}
@@ -1076,7 +1076,7 @@ const refreshCoinBalance = async () => {
             sidebarOpen ? "opacity-100" : "opacity-0"
           }`}
         >
-          <div className="w-full flex justify-start items-center px-4 pt-4 pb-3 md:sticky top-0 left-0 bg-[#1A1A1A]">
+          <div className="w-full flex justify-start items-center px-4 pt-4 pb-3 md:sticky top-0 left-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]]">
             <a
               href="https://wa.me/+4407386588951"
               target="_blank"

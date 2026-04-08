@@ -117,7 +117,7 @@ const Sidebar = ({ sidebarOpen, onCategorySelect }) => {
 
   return (
     <div
-      className={`fixed md:block hidden md:relative min-h-[calc(100vh-56px)] no-scrollbar border-r border-[#222424] z-20 bg-[#1a1a1a] text-white overflow-y-auto
+      className={`fixed md:block hidden md:relative min-h-[calc(100vh-56px)] no-scrollbar border-r border-[#222424] z-20 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white overflow-y-auto
         transition-all duration-300 ease-in-out px-2
         ${sidebarOpen ? "w-75" : "w-15 -translate-x-full md:translate-x-0"}`}
     >
