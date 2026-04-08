@@ -472,7 +472,8 @@ const HomeContent = () => {
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden font-poppins bg-[#1a1a1a] text-white" >
+/* Changed to a diagonal gradient with a stronger, deeper blue */
+<div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Loading Overlay - Only show for initial load */}
 {isLoading && (
  <div className="fixed top-0 left-0 w-full h-full bg-[#0a0a0a] flex justify-center items-center z-[10000000]">

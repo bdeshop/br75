@@ -320,7 +320,7 @@ const FeaturedContent = () => {
         `}
       </style>
       
-      <div className="bg-[#1a1a1a] pt-6 md:py-4 font-inter text-gray-200">
+      <div className=" pt-6 md:py-4 font-inter text-gray-200">
         <div className="flex justify-between items-center mb-2 md:mb-4 px-4">
           <h2 className="text-[16px] md:text-lg font-semibold flex items-center">
             <span className="w-1 h-6 bg-theme_color mr-2 rounded-full"></span>
