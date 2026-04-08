@@ -122,7 +122,7 @@ const Footer = () => {
         <div className="md:hidden mb-3">
 
           {/* Gaming Dropdown */}
-          <div className="border-b border-gray-900 py-2">
+          <div className="border-b border-gray-500 py-2">
             <button
               className="flex justify-between cursor-pointer items-center w-full text-left font-medium text-gray-200 text-[11px]"
               onClick={() => toggleSection("gaming")}
@@ -152,7 +152,7 @@ const Footer = () => {
           </div>
 
           {/* About Dropdown */}
-          <div className="border-b border-gray-900 py-2">
+          <div className="border-b border-gray-500 py-2">
             <button
               className="flex justify-between items-center cursor-pointer w-full text-left font-medium text-gray-200 text-[11px]"
               onClick={() => toggleSection("about")}
@@ -180,7 +180,7 @@ const Footer = () => {
           </div>
 
           {/* Features Dropdown */}
-          <div className="border-b border-gray-900 py-2">
+          <div className="border-b border-gray-500 py-2">
             <button
               className="flex cursor-pointer justify-between items-center w-full text-left font-medium text-gray-200 text-[11px]"
               onClick={() => toggleSection("features")}
@@ -200,7 +200,7 @@ const Footer = () => {
           </div>
 
           {/* Help Dropdown */}
-          <div className="border-b border-gray-900 py-2">
+          <div className="border-b border-gray-500 py-2">
             <button
               className="flex cursor-pointer justify-between items-center w-full text-left font-medium text-white text-[11px]"
               onClick={() => toggleSection("help")}

@@ -41,13 +41,13 @@ import casino_img from "../../assets/casino.png";
 import banner from "../../assets/banner.jpg";
 import play_img from "../../assets/play.png";
 import profile_img from "../../assets/profile.png";
-import menu_img from "../../assets/icon-menu.png";
 import toast, { Toaster } from "react-hot-toast";
 import { useAuth } from "../../App";
 import { LanguageContext } from "../../context/LanguageContext";
 import telegram_icon from "../../assets/social_icon/telegram.png"
 import whatsapp_icon from "../../assets/social_icon/whatsapp.png"
-
+import home_img from "../../assets/home.png";
+import menu_img from "../../assets/menu.png"
 const APK_FILE = "https://bir75.com/Bajiman.apk";
 
 // ── Flag URLs ─────────────────────────────────────────────────────────────────
@@ -1044,7 +1044,7 @@ const refreshCoinBalance = async () => {
             <>
               <NavLink
                 to="/login"
-                className="text-white text-[12px] md:text-sm px-5 py-2 border-[1px] cursor-pointer border-gray-700 rounded hover:bg-[#333] transition-all duration-200"
+                className="text-white text-[12px] md:text-sm px-5 py-2 border-[1px] cursor-pointer border-blue-500 rounded transition-all duration-200"
               >
                 {t.login}
               </NavLink>
@@ -1083,7 +1083,7 @@ const refreshCoinBalance = async () => {
               rel="noopener noreferrer"
               className="block w-full"
             >
-              <span className="bg-[#222424] text-[16px] px-2 py-2.5 mt-3 rounded-[3px] text-center flex justify-center items-center gap-3 cursor-pointer hover:bg-[#2a2a2a] transition">
+              <span className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border-[1px] border-blue-500 text-[16px] px-2 py-2.5 mt-3 rounded-[3px] text-center flex justify-center items-center gap-3 cursor-pointer hover:bg-[#2a2a2a] transition">
                 <MdSupportAgent className="text-white text-[20px]" />
                 <span className="text-[13px]">{t.liveChat}</span>
               </span>
@@ -1457,7 +1457,7 @@ const refreshCoinBalance = async () => {
       )}
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1a1a1a] border-t border-[#333] z-50"
+      <div className="md:hidden fixed bottom-0 border-t-[2px] border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
            style={showMobileAppBanner ? { bottom: '80px' } : {}}>
         <div className="flex justify-around items-center py-2">
           <button
@@ -1467,6 +1467,13 @@ const refreshCoinBalance = async () => {
             <img src={menu_img} alt="Menu" className="h-6 w-6 mb-1" />
             <span>{t.menu}</span>
           </button>
+            <NavLink
+            to="/"
+            className="flex flex-col items-center cursor-pointer justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors"
+          >
+            <img src={home_img} alt="Menu" className="h-6 w-6 mb-1" />
+            <span>{t.home}</span>
+          </NavLink>
           <NavLink
             to="/casino"
             className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors"
@@ -1485,13 +1492,6 @@ const refreshCoinBalance = async () => {
           </NavLink>
 
           {/* Download App Button in Mobile Bottom Bar */}
-          <button
-            onClick={() => downloadFileAtURL(APK_FILE)}
-            className="flex flex-col items-center justify-center p-2 text-xs text-theme_color hover:text-yellow-400 transition-colors"
-          >
-            <FaMobileAlt className="h-6 w-6 mb-1" />
-            <span>{t.app}</span>
-          </button>
 
           {isLoggedIn ? (
             <NavLink
@@ -1520,7 +1520,7 @@ const refreshCoinBalance = async () => {
       </div>
 
       {/* WhatsApp & Telegram Floating Buttons - Vertical Stack */}
-      <div className="fixed bottom-25 md:bottom-20 right-4 z-[1000] flex flex-col gap-2">
+      <div className="fixed bottom-32 md:bottom-20 right-4 z-[1000] flex flex-col gap-2">
         {/* Telegram Button - Top */}
         <a
           href="https://t.me/bajiman"
@@ -1530,7 +1530,7 @@ const refreshCoinBalance = async () => {
           aria-label="Join Telegram Channel"
           style={{ animationDelay: '0.1s' }}
         >
-         <img src={telegram_icon} className="w-[80px]" alt="" />
+         <img src={telegram_icon} className="w-[65px] md:w-[80px]" alt="" />
         </a>
 
         {/* WhatsApp Button - Bottom */}
@@ -1542,7 +1542,7 @@ const refreshCoinBalance = async () => {
           aria-label="Contact Support on WhatsApp"
           style={{ animationDelay: '0.2s' }}
         >
-                 <img src={whatsapp_icon} className="w-[80px]" alt="" />
+                 <img src={whatsapp_icon} className="w-[65px] md:w-[80px]" alt="" />
         </a>
       </div>
 

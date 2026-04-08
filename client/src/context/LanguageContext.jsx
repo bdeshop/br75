@@ -16,7 +16,7 @@ const translations = {
     logout: 'লগআউট',
 
     // ── Balance / Wallet ─────────────────────────────────────────
-    deposit: 'জমা করুন',
+    deposit: 'জমা',
     withdrawal: 'উত্তোলন',
     refreshBalance: 'ব্যালেন্স রিফ্রেশ করুন',
 

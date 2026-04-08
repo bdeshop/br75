@@ -17,7 +17,7 @@ import { LanguageContext } from "../../../context/LanguageContext"; // adjust pa
 const SkeletonItem = ({ type }) => {
   if (type === "category") {
     return (
-      <div className="flex flex-col relative items-center justify-center p-3 rounded-[5px] bg-[#222424] animate-pulse h-[80px] w-full">
+      <div className="flex flex-col relative items-center justify-center p-3 rounded-[5px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] animate-pulse h-[80px] w-full">
         <div className="w-[45px] h-[45px] absolute top-[-30%] rounded-full bg-[#333] border-2 border-[#1a1a1a]"></div>
         <div className="h-3 w-16 bg-[#333] mt-4 rounded"></div>
       </div>
@@ -25,7 +25,7 @@ const SkeletonItem = ({ type }) => {
   }
   return (
     <div className="flex flex-col items-center rounded-[8px] overflow-hidden animate-pulse w-full">
-      <div className="w-full aspect-[3/4] bg-[#222424] rounded-[6px]"></div>
+      <div className="w-full aspect-[3/4] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] rounded-[6px]"></div>
     </div>
   );
 };
@@ -535,7 +535,7 @@ const CategoryContent = () => {
           {providers.map((provider) => (
             <div
               key={provider._id}
-              className="flex justify-start items-center gap-[10px] px-4 py-2 rounded-[3px] bg-[#222424] hover:bg-[#333333] transition-all cursor-pointer text-white"
+              className="flex justify-start items-center gap-[10px] px-4 py-2 border-[1px] border-indigo-500 rounded-[3px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:bg-[#333333] transition-all cursor-pointer text-white"
               onClick={() => handleProviderClick(provider)}
             >
               <img
@@ -627,10 +627,10 @@ const CategoryContent = () => {
                 {categories.map((category) => (
                   <div
                     key={category._id}
-                    className={`embla__slide flex-shrink-0 w-[calc(25.333%-0.5rem)] min-w-0 flex flex-col relative items-center justify-center p-3 rounded-[5px] transition-all group cursor-pointer ${
+                    className={`embla__slide flex-shrink-0 w-[calc(25.333%-0.5rem)] border-[1px] border-blue-500  min-w-0 flex flex-col relative items-center justify-center p-3 rounded-[5px] transition-all group cursor-pointer ${
                       activeCategory?._id === category._id
                         ? "bg-theme_color text-white"
-                        : "bg-box_bg hover:bg-[#333333]"
+                        : "bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]"
                     }`}
                     onClick={() => handleCategoryClick(category)}
                   >
@@ -660,10 +660,10 @@ const CategoryContent = () => {
             {categories.map((category) => (
               <div
                 key={category._id}
-                className={`flex flex-col relative items-center justify-center p-3 rounded-[5px] transition-all group cursor-pointer ${
+                className={`flex flex-col relative items-center justify-center p-3 border-[1px] border-blue-500 rounded-[5px] transition-all group cursor-pointer ${
                   activeCategory?._id === category._id
-                    ? "bg-theme_color text-white"
-                    : "bg-box_bg hover:bg-[#333333]"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]"
                 }`}
                 onClick={() => handleCategoryClick(category)}
               >

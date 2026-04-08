@@ -785,7 +785,7 @@ const AllGamesContent = () => {
                   <input
                     type="text"
                     placeholder={providerDisplayName ? `Search ${providerDisplayName} games...` : "Search all games..."}
-                    className="w-full pl-12 pr-4 py-3 bg-[#222] border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-theme_color focus:border-transparent transition-all duration-300 ease-in-out placeholder-gray-400"
+                    className="w-full pl-12 pr-4 py-3 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-theme_color focus:border-transparent transition-all duration-300 ease-in-out placeholder-gray-400"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => setShowSuggestions(true)}

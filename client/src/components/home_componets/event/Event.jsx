@@ -174,14 +174,14 @@ const Event = () => {
           <div className="flex space-x-2">
             <button
               onClick={scrollLeft}
-              className="p-2 bg-box_bg hover:bg-box_bg/90 cursor-pointer rounded-[3px] transition-colors duration-200"
+              className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 cursor-pointer rounded-[3px] transition-colors duration-200"
               aria-label="Scroll left"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
             </button>
             <button
               onClick={scrollRight}
-              className="p-2 bg-box_bg hover:bg-box_bg/90 cursor-pointer rounded-[3px] transition-colors duration-200"
+              className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 cursor-pointer rounded-[3px] transition-colors duration-200"
               aria-label="Scroll right"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>

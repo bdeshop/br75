@@ -201,14 +201,14 @@ const ProviderSlider = () => {
           <div className="flex space-x-2">
             <button
               onClick={scrollLeft}
-              className="p-2 bg-box_bg hover:bg-box_bg/90 cursor-pointer rounded-[3px] transition-colors duration-200"
+              className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 cursor-pointer rounded-[3px] transition-colors duration-200"
               aria-label="Scroll left"
             >
               <FaChevronLeft size={16} />
             </button>
             <button
               onClick={scrollRight}
-              className="p-2 bg-box_bg hover:bg-box_bg/90 cursor-pointer rounded-[3px] transition-colors duration-200"
+              className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 cursor-pointer rounded-[3px] transition-colors duration-200"
               aria-label="Scroll right"
             >
               <FaChevronRight size={16} />
@@ -227,7 +227,7 @@ const ProviderSlider = () => {
             providers.map((provider, index) => (
               <div
                 key={index}
-                className="provider-card flex-shrink-0 md:w-40  bg-box_bg flex rounded-[3px] items-center justify-start gap-4 p-2 py-2.5 snap-center transform transition-transform duration-200 hover:scale-105 cursor-pointer"
+                className="provider-card flex-shrink-0 md:w-40  bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border-[1px] border-blue-500 flex rounded-[3px] items-center justify-start gap-4 p-2 py-2.5 snap-center transform transition-transform duration-200 hover:scale-105 cursor-pointer"
                 onClick={() => handleProviderClick(provider)}
                 title={`View ${provider.name} games`}
               >

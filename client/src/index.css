@@ -34,6 +34,10 @@
 .hidescrollbar{
     overflow-x: hidden;
 }
+
+.active{
+    color:#C8A452
+}
 /* --------------------hide-scrollbar-------------------------- */
 /* add the code bellow */ 
 @layer utilities {

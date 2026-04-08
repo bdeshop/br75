@@ -65,7 +65,7 @@ const Myreferel = () => {
   };
 
   const copyLinkToClipboard = () => {
-    const link = `https://bajiman.com/register?ref=${userData?.referralCode || ""}`;
+    const link = `https://bir75.com/register?ref=${userData?.referralCode || ""}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -75,7 +75,7 @@ const Myreferel = () => {
     const shareData = {
       title: t?.joinMe || 'Join me!',
       text: t?.useMyReferralCode || 'Use my referral code to sign up',
-      url: `https://bajiman.com/register?ref=${userData?.referralCode || ""}`
+      url: `https://bir75.com/register?ref=${userData?.referralCode || ""}`
     };
     
     if (navigator.share) {
@@ -177,7 +177,7 @@ const Myreferel = () => {
                   {/* QR */}
                   <div className="w-[200px] sm:w-[200px] sm:h-[200px] bg-white p-2 border border-gray-200 flex items-center justify-center">
                     <QRCode 
-                      value={`https://bajiman.com/register?ref=${userData?.referralCode || ""}`} 
+                      value={`https://b.com/register?ref=${userData?.referralCode || ""}`} 
                       size={180}
                       className="w-full h-full"
                     />
@@ -222,7 +222,7 @@ const Myreferel = () => {
                 {/* Stats Section */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8 bg-[#22A27B] p-[20px]">
                   {/* Active Downlines */}
-                  <div className="bg-[#222424] p-4 sm:p-5 shadow-sm border border-gray-700 flex flex-col">
+                  <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4 sm:p-5 shadow-sm border border-gray-700 flex flex-col">
                     <div className="flex items-center gap-3 mb-3">
                       <FiUsers className="text-theme_color" />
                       <div className="text-xs sm:text-sm text-gray-400">{t?.activeDownlines || "Active downlines"}</div>
@@ -233,7 +233,7 @@ const Myreferel = () => {
                   </div>
 
                   {/* Lifetime Cash Rewards */}
-                  <div className="bg-[#222424] p-4 sm:p-5 shadow-sm border border-gray-700 flex flex-col">
+                  <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4 sm:p-5 shadow-sm border border-gray-700 flex flex-col">
                     <div className="flex items-center gap-3 mb-3">
                       <FiDollarSign className="text-theme_color" />
                       <div className="text-xs sm:text-sm text-gray-400">{t?.lifetimeRewards || "Lifetime rewards"}</div>
@@ -244,7 +244,7 @@ const Myreferel = () => {
                   </div>
 
                   {/* Referral Turnover */}
-                  <div className="bg-[#222424] p-4 sm:p-5 shadow-sm border border-gray-700 flex flex-col">
+                  <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4 sm:p-5 shadow-sm border border-gray-700 flex flex-col">
                     <div className="flex items-center gap-3 mb-3">
                       <FiTrendingUp className="text-theme_color" />
                       <div className="text-xs sm:text-sm text-gray-400">{t?.referralTurnover || "Referral turnover"}</div>
@@ -255,7 +255,7 @@ const Myreferel = () => {
                   </div>
 
                   {/* Cash Rewards */}
-                  <div className="bg-[#222424] p-4 sm:p-5 shadow-sm border border-gray-700 flex flex-col">
+                  <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4 sm:p-5 shadow-sm border border-gray-700 flex flex-col">
                     <div className="flex items-center gap-3 mb-3">
                       <FiAward className="text-theme_color" />
                       <div className="text-xs sm:text-sm text-gray-400">{t?.cashRewards || "Cash rewards"}</div>
@@ -307,7 +307,7 @@ const Myreferel = () => {
               </>
             ) : (
               // Info Tab Content
-              <div className="bg-[#222424] p-4 sm:p-6 shadow-sm border border-gray-700 text-gray-300">
+              <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4 sm:p-6 shadow-sm border border-gray-700 text-gray-300">
                 <h2 className="text-[18px] sm:text-[20px] font-[500] text-white mb-4 sm:mb-6">{t?.howReferralWorks || "How Our Referral Program Works"}</h2>
                 
                 <div className="space-y-3 sm:space-y-4">

@@ -145,7 +145,7 @@ const ContentSkeleton = ({ isExclusiveCategory }) => {
         {Array.from({ length: 14 }).map((_, index) => (
           <div
             key={index}
-            className="flex justify-start items-center gap-[10px] px-4 py-2 rounded-[3px] bg-[#222424]"
+            className="flex justify-start items-center gap-[10px] px-4 py-2 rounded-[3px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]"
           >
             <div className="w-[30px] h-[30px] bg-gray-700 rounded-full animate-pulse"></div>
             <div className="w-16 h-4 bg-gray-700 rounded animate-pulse"></div>
@@ -581,7 +581,7 @@ const CategoryContent = () => {
           {providers.map((provider) => (
             <div
               key={provider._id}
-              className="flex justify-start items-center gap-[10px] px-4 py-2 rounded-[3px] bg-[#222424] hover:bg-[#333333] transition-all cursor-pointer text-white"
+              className="flex justify-start items-center gap-[10px] px-4 py-2 rounded-[3px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:bg-[#333333] transition-all cursor-pointer text-white"
               onClick={() => handleProviderClick(provider)}
             >
               <img

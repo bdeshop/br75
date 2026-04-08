@@ -31,7 +31,7 @@ const Sports = () => {
   };
 
   if (loading) return (
-    <div className="min-h-[300px] flex items-center justify-center bg-[#0a0a0a]">
+    <div className="min-h-[300px] flex items-center justify-center">
        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
@@ -50,13 +50,13 @@ const Sports = () => {
           <div className="flex gap-1">
             <button 
               onClick={() => scroll('left')}
- className="p-2 bg-box_bg hover:bg-box_bg/90 cursor-pointer rounded-[3px] transition-colors duration-200"
+ className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 cursor-pointer rounded-[3px] transition-colors duration-200"
             >
               <ChevronLeft size={20} />
             </button>
             <button 
               onClick={() => scroll('right')}
-    className="p-2 bg-box_bg hover:bg-box_bg/90 cursor-pointer rounded-[3px] transition-colors duration-200"
+    className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 cursor-pointer rounded-[3px] transition-colors duration-200"
             >
               <ChevronRight size={20} />
             </button>
@@ -74,7 +74,7 @@ const Sports = () => {
               className={`
                 snap-start shrink-0
                 w-[320px] md:w-[380px]
-                bg-[#222424] border border-[#222] rounded-lg p-5
+                bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 rounded-lg p-5
                 flex flex-col relative transition-colors hover:border-[#333]
                 ${match.state === 'live' ? 'border-t-2' : ''}
               `}
@@ -124,7 +124,7 @@ const Sports = () => {
 
               {/* Status Bar */}
               <div className="mt-auto">
-                <div className="bg-[#1a1a1a] px-3 py-2 rounded flex items-center gap-2 mb-3">
+                <div className="px-3 py-2 rounded flex items-center gap-2 mb-3">
                   {/* Logic for Dots: Red Pulse for Live, Yellow Static for Upcoming */}
                   {match.status ? (
                     match.state === 'live' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />

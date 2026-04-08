@@ -143,13 +143,6 @@ export default function Login() {
       toast.error("Phone number is required.");
       return;
     }
-
-    if (!/^1[0-9]{9}$/.test(phone)) {
-      setPhoneError("Please enter a valid Bangladeshi phone number, starting with 1.");
-      toast.error("Please enter a valid Bangladeshi phone number, starting with 1.");
-      return;
-    }
-
     // Validate username
     if (!username) {
       setSignupError("Username is required.");
@@ -364,7 +357,7 @@ export default function Login() {
       </video>
 
       {/* Header Section */}
-      <header className="relative z-20 bg-[#141515] border-b-[1px] border-gray-700 bg-opacity-70 flex justify-between items-center px-4 py-3 md:px-8">
+      <header className="relative z-20 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e border-b-[1px] border-gray-700 bg-opacity-70 flex justify-between items-center px-4 py-3 md:px-8">
         <NavLink to="/">
           <img 
             src={dynamicLogo} 
@@ -394,7 +387,7 @@ export default function Login() {
           {/* Registration Box with Background */}
           <div className="overflow-hidden">
             {/* Tab Navigation */}
-            <div className="flex bg-opacity-80 border-b-[1px] border-[#222424]">
+            <div className="flex bg-opacity-80 gap-3 ">
               <button 
                 onClick={() => {
                   setIsSignUpActive(false);
@@ -402,7 +395,7 @@ export default function Login() {
                   setLoginUsername("");
                   setLoginPassword("");
                 }} 
-                className={`flex-1 py-3 md:py-4 text-center text-sm md:text-base font-medium cursor-pointer transition-colors duration-300 ${!isSignUpActive ? 'border-b-2 border-green-500 text-green-500' : 'text-gray-200 hover:text-gray-300'}`}
+                className={`flex-1 py-3 md:py-4  text-center text-sm md:text-base font-medium cursor-pointer transition-colors duration-300 ${!isSignUpActive ? 'border-b-2 bg-blue-500 text-white' : 'text-gray-200 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:text-gray-300'}`}
               >
                 {t.tabLogin}
               </button>
@@ -411,7 +404,7 @@ export default function Login() {
                   setIsSignUpActive(true);
                   setSignupError("");
                 }} 
-                className={`flex-1 py-3 md:py-4 text-center text-sm md:text-base font-medium cursor-pointer transition-colors duration-300 ${isSignUpActive ? 'border-b-2 border-green-500 text-green-500' : 'text-gray-200 hover:text-gray-300'}`}
+                className={`flex-1 py-3 md:py-4 text-center text-sm md:text-base font-medium cursor-pointer transition-colors duration-300 ${isSignUpActive ? 'border-b-2 bg-blue-500 text-white' : 'text-gray-200 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:text-gray-300'}`}
               >
                 {t.tabSignup}
               </button>
@@ -424,7 +417,7 @@ export default function Login() {
                   {/* Phone Number Input */}
                   <div className="mb-4">
                     <label htmlFor="phone" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">{t.phoneNumber}</label>
-                    <div className="flex items-stretch bg-[#222424] overflow-hidden hover:border-gray-600 transition-colors">
+                    <div className="flex items-stretch border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors">
                       {/* Country Code with Flag */}
                       <div className="flex items-center px-2 md:px-3 rounded-l border-r border-gray-700">
                         <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png?v=1754999737902&source=drccdnsrc" alt="Bangladesh Flag" className="w-5 h-5 md:w-6 md:h-6 mr-1 md:mr-2 rounded-full" />
@@ -455,7 +448,7 @@ export default function Login() {
                       id="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                      className="w-full p-2 md:p-4 text-sm bg-[#222424] font-[300] text-white focus:outline-none focus:border-[#0C4D38] hover:border-gray-600 transition-colors"
+                      className="w-full p-2 md:p-4 text-sm border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] font-[300] text-white focus:outline-none focus:border-[#0C4D38] hover:border-gray-600 transition-colors"
                       placeholder={t.enterUsername}
                       disabled={isLoading}
                     />
@@ -469,7 +462,7 @@ export default function Login() {
                       id="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full p-2 md:p-4 text-sm font-[300] bg-[#222424] text-white focus:outline-none focus:border-[#0C4D38] hover:border-gray-600 transition-colors"
+                      className="w-full p-2 md:p-4 text-sm border-[1px] border-blue-500 font-[300] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white focus:outline-none focus:border-[#0C4D38] hover:border-gray-600 transition-colors"
                       placeholder={t.createPassword}
                       disabled={isLoading}
                     />
@@ -483,7 +476,7 @@ export default function Login() {
                       id="confirmPassword"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full p-2 md:p-4 text-sm font-[300] bg-[#222424] text-white focus:outline-none focus:border-[#0C4D38] hover:border-gray-600 transition-colors"
+                      className="w-full p-2 md:p-4 text-sm border-[1px] border-blue-500 font-[300] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white focus:outline-none focus:border-[#0C4D38] hover:border-gray-600 transition-colors"
                       placeholder={t.confirmPasswordPlaceholder}
                       disabled={isLoading}
                     />
@@ -503,7 +496,7 @@ export default function Login() {
                           setReferralValid(false);
                           setReferrerInfo(null);
                         }}
-                        className="flex-1 p-2 md:p-4 text-sm bg-[#222424] font-[300] text-white focus:outline-none focus:border-green-500 hover:border-gray-600 transition-colors"
+                        className="flex-1 p-2 md:p-4 text-sm border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] font-[300] text-white focus:outline-none focus:border-green-500 hover:border-gray-600 transition-colors"
                         placeholder={t.enterReferralCode}
                         disabled={referralValid || isLoading}
                       />
@@ -565,7 +558,7 @@ export default function Login() {
                   {/* Username Input for Login */}
                   <div className="mb-4">
                     <label htmlFor="loginUsername" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">{t.usernameLabel}</label>
-                    <div className="flex items-stretch bg-[#222424] overflow-hidden hover:border-gray-600 transition-colors">
+                    <div className="flex items-stretch border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors">
                       <div className="flex items-center px-3 rounded-l border-r border-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -577,7 +570,7 @@ export default function Login() {
                           id="loginUsername"
                           value={loginUsername}
                           onChange={(e) => setLoginUsername(e.target.value)}
-                          className="w-full py-2 md:py-3.5 bg-transparent font-[400] text-white font-[300] focus:outline-none placeholder-gray-500 text-sm md:text-base"
+                          className="w-full py-2 md:py-3.5  bg-transparent font-[400] text-white font-[300] focus:outline-none placeholder-gray-500 text-sm md:text-base"
                           placeholder={t.enterYourUsername}
                           disabled={isLoading}
                         />
@@ -588,7 +581,7 @@ export default function Login() {
                   {/* Password Input for Login */}
                   <div className="mb-4">
                     <label htmlFor="loginPassword" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">{t.passwordLabel}</label>
-                    <div className="flex items-stretch bg-[#222424] overflow-hidden hover:border-gray-600 transition-colors">
+                    <div className="flex items-stretch border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors">
                       <div className="flex items-center px-3 rounded-l border-r border-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />

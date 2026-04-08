@@ -477,7 +477,7 @@ export default function ForgotPassword() {
                 <form onSubmit={handleRequestOTP}>
                   <div className="mb-6">
                     <label htmlFor="phone" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">Phone Number</label>
-                    <div className="flex items-stretch bg-[#222424] overflow-hidden hover:border-gray-600 transition-colors rounded">
+                    <div className="flex items-stretch bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors rounded">
                       <div className="flex items-center px-2 md:px-3 rounded-l border-r border-gray-700">
                         <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png?v=1754999737902&source=drccdnsrc" alt="Bangladesh Flag" className="w-5 h-5 md:w-6 md:h-6 mr-1 md:mr-2 rounded-full" />
                         <span className="text-white text-sm md:text-base font-[300]">+880</span>
@@ -546,7 +546,7 @@ export default function ForgotPassword() {
                           value={digit}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                          className="w-12 h-12 md:w-14 md:h-14 bg-[#222424] text-white text-center text-xl font-bold rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                          className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white text-center text-xl font-bold rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                           disabled={isLoading}
                         />
                       ))}
@@ -624,7 +624,7 @@ export default function ForgotPassword() {
                       id="newPassword"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full p-3 md:p-4 text-sm bg-[#222424] font-[300] text-white focus:outline-none focus:border-green-500 hover:border-gray-600 transition-colors rounded"
+                      className="w-full p-3 md:p-4 text-sm bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] font-[300] text-white focus:outline-none focus:border-green-500 hover:border-gray-600 transition-colors rounded"
                       placeholder="Enter new password (min. 6 characters)"
                       disabled={isLoading}
                     />
@@ -637,7 +637,7 @@ export default function ForgotPassword() {
                       id="confirmPassword"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full p-3 md:p-4 text-sm bg-[#222424] font-[300] text-white focus:outline-none focus:border-green-500 hover:border-gray-600 transition-colors rounded"
+                      className="w-full p-3 md:p-4 text-sm bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] font-[300] text-white focus:outline-none focus:border-green-500 hover:border-gray-600 transition-colors rounded"
                       placeholder="Confirm your new password"
                       disabled={isLoading}
                     />

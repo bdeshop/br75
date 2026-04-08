@@ -329,7 +329,7 @@ const FeaturedContent = () => {
           <div className="flex space-x-2">
             <button 
               onClick={() => scrollManual('left')} 
-              className="p-2 bg-box_bg rounded-[3px] hover:bg-gray-700 transition-colors"
+              className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 rounded-[3px] transition-colors"
               aria-label="Scroll left"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -338,7 +338,7 @@ const FeaturedContent = () => {
             </button>
             <button 
               onClick={() => scrollManual('right')} 
-              className="p-2 bg-box_bg rounded-[3px] hover:bg-gray-700 transition-colors"
+              className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 rounded-[3px] transition-colors"
               aria-label="Scroll right"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
