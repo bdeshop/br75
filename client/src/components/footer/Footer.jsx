@@ -115,7 +115,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-[#141515] font-poppins text-gray-400 text-[10px] md:text-sm pb-[80px] md:pb-0 md:px-[50px]">
+    <footer className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] font-poppins text-gray-400 text-[10px] md:text-sm pb-[80px] md:pb-0 md:px-[50px]">
       <div className="mx-auto w-full max-w-screen-xl px-3 py-4 md:px-2 lg:px-4 md:py-8">
 
         {/* ── Mobile Dropdown Sections ── */}
