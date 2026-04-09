@@ -893,7 +893,7 @@ const LogoutConfirmPopup = () => {
                 </NavLink>
                 <NavLink
                   to="/member/withdraw"
-                  className="text-white text-[12px] px-3 py-2 border-[1px] cursor-pointer border-gray-700 rounded hover:bg-[#333] transition-all duration-200"
+                  className="text-white text-[12px] pl-3 py-2 border-[1px] cursor-pointer border-gray-700 rounded hover:bg-[#333] transition-all duration-200"
                 >
                   {t.withdrawal}
                 </NavLink>
