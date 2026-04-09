@@ -866,7 +866,7 @@ const LogoutConfirmPopup = () => {
               </div>
 
               {/* Mobile View */}
-              <div className="md:hidden flex px-[10px] items-center gap-2">
+              <div className="md:hidden flex pl-[10px] items-center gap-2">
                 <div className="bg-box_bg rounded-[5px] border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm">
                     <img
