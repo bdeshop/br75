@@ -79,7 +79,9 @@ const translations = {
     // ── APK Toast ────────────────────────────────────────────────
     apkDownloadStarted: 'এপিকে ডাউনলোড শুরু হয়েছে!',
     failedRefreshBalance: 'ব্যালেন্স রিফ্রেশ ব্যর্থ হয়েছে',
-
+// Add inside the bn object
+logoutConfirmTitle: 'লগআউট?',
+logoutConfirmMessage: 'আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?',
     // ── Register / Login Page ─────────────────────────────────────
     tabLogin: 'লগইন',
     tabSignup: 'নিবন্ধন',
@@ -867,6 +869,9 @@ vipClub: 'VIP Club',
     proceedTo: 'Proceed to',
     payment: 'Payment',
     processing: 'Processing...',
+    // Add inside the en object
+logoutConfirmTitle: 'Logout?',
+logoutConfirmMessage: 'Are you sure you want to logout?',
     selectPaymentMethod: 'Please select a payment method',
     amountRequired: 'Amount is required',
     minDepositAmount: 'Minimum deposit amount is ৳5',

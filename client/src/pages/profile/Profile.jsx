@@ -327,13 +327,16 @@ const Profile = () => {
     }
   };
 
+  // ==================== FULL NAME UPDATE FUNCTION ====================
   const handleUpdateFullName = async () => {
+    // Check if already updated
     if (isFullNameUpdated) {
       toast.error(t?.fullNameAlreadyUpdated || "Full name can only be updated once. Contact support for changes.");
       setEditingFields(prev => ({ ...prev, fullName: false }));
       return false;
     }
     
+    // Validate full name
     if (!personalInfoForm.fullName || personalInfoForm.fullName.trim().length < 2) {
       toast.error(t?.fullNameRequired || "Full name must be at least 2 characters long");
       return false;
@@ -364,6 +367,7 @@ const Profile = () => {
     }
   };
 
+  // ==================== DATE OF BIRTH UPDATE FUNCTION ====================
   const handleUpdateDOB = async () => {
     if (isDOBUpdated) {
       toast.error(t?.dobAlreadyUpdated || "Date of birth can only be updated once. Contact support for changes.");
@@ -418,7 +422,7 @@ const Profile = () => {
       return;
     }
 
-    // ── FIXED: 11-digit BD number starting with 01 ──
+    // Fixed: 11-digit BD number starting with 01
     const phoneRegex = /^01[0-9]{9}$/;
     if (!phoneRegex.test(personalInfoForm.phone)) {
       toast.error(t?.invalidPhone || "Please enter a valid Bangladeshi phone number (format: 01XXXXXXXXX, 11 digits)");
@@ -996,7 +1000,7 @@ const Profile = () => {
                               <FiXCircle className="text-sm" /> {t?.cancel || "Cancel"}
                             </button>
                           </div>
-                          <p className="text-xs text-yellow-500">{t?.updateOnceWarning || " You can only update this once. Please ensure the date is correct."}</p>
+                          <p className="text-xs text-yellow-500">{t?.updateOnceWarning || "You can only update this once. Please ensure the date is correct."}</p>
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
@@ -1006,7 +1010,7 @@ const Profile = () => {
                       )}
                     </div>
 
-                    {/* ── Phone with OTP Verification (FIXED: 11-digit + OTP boxes) ── */}
+                    {/* Phone with OTP Verification */}
                     <div className="py-4 border-b border-gray-700">
                       <div className="flex items-center gap-2 mb-2">
                         <FiPhone className="text-gray-400" />
@@ -1027,7 +1031,6 @@ const Profile = () => {
                                 {maskPhone(personalInfoForm.phone)}
                               </p>
 
-                              {/* ── 6 individual OTP boxes ── */}
                               <OtpBoxes
                                 value={mobileVerification.otp}
                                 onChange={(val) => setMobileVerification(prev => ({ ...prev, otp: val }))}
@@ -1085,7 +1088,6 @@ const Profile = () => {
                                 value={personalInfoForm.phone}
                                 onChange={(e) => {
                                   const value = e.target.value.replace(/\D/g, '');
-                                  // ── FIXED: allow up to 11 digits ──
                                   if (value.length <= 11) {
                                     setPersonalInfoForm(prev => ({ ...prev, phone: value }));
                                   }
@@ -1095,7 +1097,6 @@ const Profile = () => {
                                 disabled={userData?.isPhoneVerified}
                               />
                             </div>
-                            {/* ── FIXED: show verify button when 11 digits entered ── */}
                             {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 11 && (
                               <button
                                 onClick={handleSendMobileOTP}
@@ -1127,7 +1128,6 @@ const Profile = () => {
                               </span>
                             </div>
                           )}
-                          {/* ── FIXED: hint for 11-digit ── */}
                           {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 11 && (
                             <p className="text-xs text-yellow-500">{t?.verifyPhoneToLock || "Phone number will be locked after verification."}</p>
                           )}
@@ -1138,7 +1138,7 @@ const Profile = () => {
                       )}
                     </div>
 
-                    {/* ── Email with OTP boxes for verification step ── */}
+                    {/* Email with OTP boxes for verification step */}
                     <div className="py-4">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
@@ -1177,7 +1177,6 @@ const Profile = () => {
                               disabled={emailUpdateForm.step === "verify"}
                             />
 
-                            {/* ── OTP boxes for email verification ── */}
                             {emailUpdateForm.step === "verify" && (
                               <div className="bg-[#1a1c1d] p-5 rounded-lg border border-gray-700">
                                 <p className="text-base font-semibold text-white text-center mb-1">

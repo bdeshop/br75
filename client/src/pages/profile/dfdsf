@@ -1,0 +1,152 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { 
+  FiBell, FiUser, FiLock, FiCheckCircle, 
+  FiFileText, FiChevronRight, FiEye, 
+  FiRefreshCw, FiShield, FiCopy, FiGift // Added FiGift
+} from "react-icons/fi";
+import { MdSportsSoccer } from "react-icons/md";
+import { IoMdClose } from "react-icons/io";
+import { Header } from "../../components/header/Header";
+import user_img from "../../assets/user.png";
+
+const Mprofile = () => {
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showBalance, setShowBalance] = useState(false);
+  const navigate = useNavigate();
+  const base_url = import.meta.env.VITE_API_KEY_Base_URL;
+  const token = localStorage.getItem("usertoken");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        const res = await axios.get(`${base_url}/api/user/my-information`);
+        if (res.data.success) {
+          setUserData(res.data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [token, base_url]);
+
+  if (loading) return <div className="bg-[#111111] h-screen" />;
+
+  const signupDate = userData?.createdAt
+    ? new Date(userData.createdAt).toISOString().split('T')[0] 
+    : "N/A";
+
+  return (
+    <section>
+      <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <div className="min-h-screen font-anek bg-[#111111] text-white selection:bg-emerald-500/30">
+        
+        <div className="flex items-center justify-between p-4 ">
+          <h1 className="text-lg font-medium">প্রোফাইল</h1>
+        </div>
+
+        <div className="max-w-md mx-auto px-4 pt-4">
+          
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img 
+                  src={user_img} 
+                  alt="Profile" 
+                  className="w-12 h-12 rounded-full object-cover bg-emerald-900/30" 
+                />
+              </div>
+              <div>
+                <p className="text-gray-500 text-[11px] mb-0.5">সম্পূর্ণ লিগ্যাল নাম</p>
+                <h2 className="text-sm font-medium flex items-center gap-1.5">
+                  {userData?.fullName} 
+                  <FiCopy className="text-gray-500 text-[10px] cursor-pointer" />
+                </h2>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-gray-500 text-[11px] mb-0.5">ব্যবহারকারীর নাম</p>
+              <p className="text-sm font-medium flex items-center justify-end gap-1.5">
+                {userData?.username} 
+                <FiCopy className="text-gray-500 text-[10px] cursor-pointer" />
+              </p>
+            </div>
+          </div>
+
+          <p className="text-gray-500 text-[11px] mb-6">
+            সাইন আপ এর তারিখ : {signupDate}
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <button className="py-3 rounded-md bg-[#222222] border border-gray-800 text-gray-300 font-semibold text-sm transition-active active:scale-95">
+              উইথড্র
+            </button>
+            <button className="py-3 rounded-md bg-[#008d5d] text-white font-semibold text-sm transition-active active:scale-95">
+              ডিপোজিট
+            </button>
+          </div>
+
+          <div className="bg-gradient-to-br from-[#132a21] to-[#0f0f0f] rounded-xl p-5 border border-white/5 mb-6 shadow-xl">
+            <div>
+              <p className="text-gray-400 text-[11px] mb-1.5">মেইন ওয়ালেট</p>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-[#00c87f] rounded-full flex items-center justify-center text-[11px] text-black font-bold">৳</div>
+                  <span className="text-xl font-bold tracking-tight">
+                    {showBalance ? `${userData?.balance?.toLocaleString()}` : "● ● ● ● ● ● ● ●"}
+                  </span>
+                </div>
+                <div className="flex gap-4 text-gray-400">
+                  <FiEye className="cursor-pointer text-lg" onClick={() => setShowBalance(!showBalance)} />
+                  <FiRefreshCw className="cursor-pointer text-lg hover:rotate-180 transition-transform duration-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* --- MENU LIST --- */}
+          <div className="space-y-1">
+            <MenuItem 
+              icon={<FiBell className="text-white" />} 
+              label="নোটিফিকেশন" 
+            />
+            {/* Added Menu Item */}
+            <MenuItem 
+              label="বোনাস" 
+            />
+            <MenuItem icon={<FiUser className="text-gray-400" />} label="ব্যক্তিগত তথ্য" />
+            <MenuItem icon={<FiLock className="text-gray-400" />} label="লগইন & সিকিউরিটি" />
+            <MenuItem icon={<FiShield className="text-gray-400" />} label="ভেরিফিকেশন" />
+            <MenuItem icon={<FiFileText className="text-gray-400" />} label="ট্রানজেকশন রেকর্ডস" />
+            <MenuItem icon={<MdSportsSoccer className="text-gray-400 text-xl" />} label="বেটিং রেকর্ডস" />
+          </div>
+
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const MenuItem = ({ icon, label, badge }) => (
+  <div className="flex items-center justify-between py-4 border-b border-gray-800/40 cursor-pointer hover:bg-white/5 transition-colors px-1">
+    <div className="flex items-center gap-4">
+      <span className="text-lg">{icon}</span>
+      <span className="text-[14px] text-gray-200 font-medium">{label}</span>
+      {badge && (
+        <span className="bg-[#ff0000] text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+          {badge}
+        </span>
+      )}
+    </div>
+    <FiChevronRight className="text-gray-600 text-xl" />
+  </div>
+);
+
+export default Mprofile;

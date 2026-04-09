@@ -17,7 +17,8 @@ import {
   FaTelegram,
   FaInstagram,
   FaTwitter,
-  FaCoins
+  FaCoins,
+  FaSignOutAlt
 } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
 import { MdSupportAgent } from "react-icons/md";
@@ -56,15 +57,28 @@ import US_FLAG from "../../assets/flag/us.webp";
 
 // ── Flag URLs ─────────────────────────────────────────────────────────────────
 
-const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdownOpen, setDropdownOpen, dropdownRef }) => {
-  // Check if user is logged in from localStorage
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdownOpen, setDropdownOpen, dropdownRef, userBalance, isLoggedIn }) => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [localIsLoggedIn, setLocalIsLoggedIn] = useState(false);
+  const [localUserBalance, setLocalUserBalance] = useState(null);
   
   useEffect(() => {
     const checkLoginStatus = () => {
       const token = localStorage.getItem("usertoken");
       const user = localStorage.getItem("user");
-      setIsLoggedIn(!!(token && user));
+      const isLoggedInStatus = !!(token && user);
+      setLocalIsLoggedIn(isLoggedInStatus);
+      
+      if (isLoggedInStatus && user) {
+        try {
+          const userData = JSON.parse(user);
+          setLocalUserBalance(userData?.balance || 0);
+        } catch (e) {
+          setLocalUserBalance(0);
+        }
+      } else {
+        setLocalUserBalance(null);
+      }
     };
     
     checkLoginStatus();
@@ -74,6 +88,10 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
     
     return () => window.removeEventListener("storage", checkLoginStatus);
   }, []);
+  
+  // Use props if provided, otherwise use local state
+  const finalIsLoggedIn = isLoggedIn !== undefined ? isLoggedIn : localIsLoggedIn;
+  const finalBalance = userBalance !== undefined ? userBalance : localUserBalance;
   
   const handleLogout = () => {
     // Remove user data from localStorage
@@ -87,113 +105,148 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
     
     // Close dropdown
     setDropdownOpen(false);
+    setShowLogoutConfirm(false);
     
     // Reload the page to update UI
     window.location.href = "/";
   };
   
-  return (
-    <div style={{ position: "relative" }} ref={dropdownRef}>
-      {/* Trigger Button */}
-      <button
-        onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="flex items-center gap-[6px] p-[6px_10px] cursor-pointer text-white transition-opacity hover:opacity-80"
-        aria-label="Currency and Language"
-      >
-        <span className="w-[30px] h-[30px] rounded-full overflow-hidden flex items-center justify-center border-[1.5px] border-white/40 shrink-0">
-          <img
-            src={isBangla ? BD_FLAG : US_FLAG}
-            alt={isBangla ? "BD" : "EN"}
-            className="w-full h-full object-cover block"
-          />
-        </span>
-      </button>
+  // Logout confirmation popup component
+  const LogoutConfirmPopup = () => {
+    if (!showLogoutConfirm) return null;
 
-      {/* Dropdown Panel */}
-      {dropdownOpen && (
-        <div className="absolute top-[calc(100%+12px)] p-[10px] right-0 min-w-[340px] bg-[#1c1c1c] rounded-[4px] shadow-[0_10px_40px_rgba(0,0,0,0.6)] z-[99999] overflow-hidden border border-[#2d2d2d] space-y-5">
-          
-          {/* Header row */}
-          <div className="flex items-center justify-between py-[14px_16px_10px]">
-            <span className="text-[13px] text-[#efefef] font-medium">
-              Currency and Language
-            </span>
-            <button
-              onClick={() => setDropdownOpen(false)}
-              className="bg-transparent border-none text-[#999] cursor-pointer hover:text-white transition-colors"
-            >
-              <IoClose size={20} />
-            </button>
-          </div>
-
-          {/* BDT Currency display */}
-          <div className="flex flex-col items-center py-6 bg-[#161616] rounded-[5px]">
-            <div className="w-[48px] h-[48px] rounded-full border-[3px] border-[#008a5e] flex items-center justify-center mb-2">
-              <span className="text-[#008a5e] text-xl font-bold">৳</span>
-            </div>
-            <span className="text-[15px] text-white font-semibold">৳ BDT</span>
-          </div>
-
-          {/* EN / BN language buttons */}
-          <div className="flex gap-2 ">
-            {/* English button */}
-            <button
-              onClick={onSelectEnglish}
-              className={`flex-1 py-[10px] rounded-[2px] border-none cursor-pointer font-medium text-[14px] transition-all duration-200 ${
-                !isBangla 
-                  ? "bg-theme_color2 text-white shadow-inner" 
-                  : "bg-[#2d2d2d] text-[#a0a0a0] hover:bg-[#353535]"
-              }`}
-            >
-              English
-            </button>
-
-            {/* Bangla button */}
-            <button
-              onClick={onSelectBangla}
-              className={`flex-1 py-[10px] rounded-[2px] border-none cursor-pointer font-medium text-[14px] transition-all duration-200 ${
-                isBangla 
-                  ? "bg-theme_color2 text-white shadow-inner" 
-                  : "bg-[#2d2d2d] text-[#a0a0a0] hover:bg-[#353535]"
-              }`}
-            >
-              বাংলা
-            </button>
-          </div>
-
-          {/* Logout Button - Only show when user is logged in (checked from localStorage) */}
-          {isLoggedIn && (
-            <div className="border-t border-[#2d2d2d] pt-3 pb-2">
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100000] p-8">
+        <div className="bg-white rounded-lg w-full max-w-[320px] shadow-2xl overflow-hidden">
+          <div className="p-6">
+            <h3 className="text-gray-900 text-xl font-medium mb-4 text-left">
+              {isBangla ? "নিশ্চিতি" : "Confirm"}
+            </h3>
+            <p className="text-gray-600 text-[15px] leading-relaxed text-left mb-8">
+              {isBangla 
+                ? "আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?" 
+                : "Are you sure you want to logout?"}
+            </p>
+            <div className="flex justify-end gap-6">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="text-gray-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-gray-50 px-2 py-1 rounded"
+              >
+                {isBangla ? "বাতিল" : "Cancel"}
+              </button>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 py-[10px] rounded-[2px] border border-[#3d3d3d] bg-[#2d2d2d] text-[#e0e0e0] font-medium text-[14px] transition-all duration-200 hover:bg-[#d32f2f] hover:border-[#d32f2f] hover:text-white cursor-pointer"
+                className="text-blue-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-blue-50 px-2 py-1 rounded"
               >
-                <FiLogOut size={16} />
-                <span>Logout</span>
+                {isBangla ? "নিশ্চিত" : "Confirm"}
               </button>
             </div>
-          )}
+          </div>
         </div>
-      )}
-    </div>
-  );
-};
-
-// Helper function to get image by category name
-const getCategoryImageByName = (categoryName) => {
-  const imageMap = {
-    'exclusive': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-exclusive.png?v=1767857219215&source=drccdnsrc',
-    'sports': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-sport.png?v=1767857219215&source=drccdnsrc',
-    'casino': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-casino.png?v=1767857219215&source=drccdnsrc',
-    'slots': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-slot.png?v=1767857219215&source=drccdnsrc',
-    'crash': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-crash.png?v=1767857219215&source=drccdnsrc',
-    'table': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-table.png?v=1767857219215&source=drccdnsrc',
-    'fishing': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-fish.png?v=1767857219215&source=drccdnsrc',
-    'arcade': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-arcade.png?v=1767857219215&source=drccdnsrc',
-    'lottery': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-lottery.png?v=1767857219215&source=drccdnsrc'
+      </div>
+    );
   };
   
-  return imageMap[categoryName.toLowerCase()] || 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-exclusive.png?v=1767857219215&source=drccdnsrc';
+  return (
+    <>
+      <LogoutConfirmPopup />
+      <div style={{ position: "relative" }} ref={dropdownRef}>
+        {/* Trigger Button */}
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="flex items-center gap-[6px] p-[6px_10px] cursor-pointer text-white transition-opacity hover:opacity-80"
+          aria-label="Currency and Language"
+        >
+          <span className="w-[30px] h-[30px] rounded-full overflow-hidden flex items-center justify-center border-[1.5px] border-white/40 shrink-0">
+            <img
+              src={isBangla ? BD_FLAG : US_FLAG}
+              alt={isBangla ? "BD" : "EN"}
+              className="w-full h-full object-cover block"
+            />
+          </span>
+        </button>
+
+        {/* Dropdown Panel */}
+        {dropdownOpen && (
+          <div className="absolute top-[calc(100%+12px)] p-[10px] right-0 min-w-[340px] bg-[#1c1c1c] rounded-[4px] shadow-[0_10px_40px_rgba(0,0,0,0.6)] z-[99999] overflow-hidden border border-[#2d2d2d] space-y-5">
+            
+            {/* Header row */}
+            <div className="flex items-center justify-between py-[14px_16px_10px]">
+              <span className="text-[13px] text-[#efefef] font-medium">
+                Currency and Language
+              </span>
+              <button
+                onClick={() => setDropdownOpen(false)}
+                className="bg-transparent border-none text-[#999] cursor-pointer hover:text-white transition-colors"
+              >
+                <IoClose size={20} />
+              </button>
+            </div>
+
+            {/* Dynamic Balance Display - Only show when logged in */}
+            {finalIsLoggedIn && finalBalance !== null && (
+              <div className="flex flex-col items-center py-6 bg-[#161616] rounded-[5px]">
+                <div className="w-[48px] h-[48px] rounded-full border-[3px] border-[#008a5e] flex items-center justify-center mb-2">
+                  <span className="text-[#008a5e] text-xl font-bold">৳</span>
+                </div>
+                <span className="text-[15px] text-white font-semibold">
+                  ৳ {parseFloat(finalBalance || 0).toFixed(2)}
+                </span>
+                <span className="text-[11px] text-gray-400 mt-1">Available Balance</span>
+              </div>
+            )}
+
+            {/* EN / BN language buttons */}
+            <div className="flex gap-2">
+              {/* English button */}
+              <button
+                onClick={onSelectEnglish}
+                className={`flex-1 py-[10px] rounded-[2px] border-none cursor-pointer font-medium text-[14px] transition-all duration-200 ${
+                  !isBangla 
+                    ? "bg-theme_color2 text-white shadow-inner" 
+                    : "bg-[#2d2d2d] text-[#a0a0a0] hover:bg-[#353535]"
+                }`}
+              >
+                English
+              </button>
+
+              {/* Bangla button */}
+              <button
+                onClick={onSelectBangla}
+                className={`flex-1 py-[10px] rounded-[2px] border-none cursor-pointer font-medium text-[14px] transition-all duration-200 ${
+                  isBangla 
+                    ? "bg-theme_color2 text-white shadow-inner" 
+                    : "bg-[#2d2d2d] text-[#a0a0a0] hover:bg-[#353535]"
+                }`}
+              >
+                বাংলা
+              </button>
+            </div>
+
+            {/* Logout Button - Only show when user is logged in */}
+            {finalIsLoggedIn && (
+              <div className="border-t border-[#2d2d2d] pt-3 pb-2">
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 py-[10px] rounded-[2px] border border-[#3d3d3d] bg-[#2d2d2d] text-[#e0e0e0] font-medium text-[14px] transition-all duration-200 hover:bg-[#d32f2f] hover:border-[#d32f2f] hover:text-white cursor-pointer"
+                >
+                  <FiLogOut size={16} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+// Helper function to get full image URL
+const getFullImageUrl = (imagePath, baseUrl) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith('http')) return imagePath;
+  const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+  return `${baseUrl}/${cleanPath}`;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -212,9 +265,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const [activeTab, setActiveTab] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [categories, setCategories] = useState(
-    JSON.parse(localStorage.getItem("categories")) || []
-  );
+  const [categories, setCategories] = useState([]);
   const [providers, setProviders] = useState([]);
   const [exclusiveGames, setExclusiveGames] = useState([]);
   const [promotions, setPromotions] = useState(
@@ -227,6 +278,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const [showMobileAppBanner, setShowMobileAppBanner] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Social links states
   const [socialLinks, setSocialLinks] = useState([]);
@@ -292,84 +344,6 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const dropdownRef = useRef(null);
   const popupRef = useRef(null);
 
-  // Default categories with provided images - Exclusive always first
-  const defaultCategories = [
-    {
-      name: "Exclusive",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-exclusive.png?v=1767857219215&source=drccdnsrc",
-      id: "exclusive"
-    },
-    {
-      name: "Sports",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-sport.png?v=1767857219215&source=drccdnsrc",
-      id: "sports"
-    },
-    {
-      name: "Casino",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-casino.png?v=1767857219215&source=drccdnsrc",
-      id: "casino"
-    },
-    {
-      name: "Slots",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-slot.png?v=1767857219215&source=drccdnsrc",
-      id: "slots"
-    },
-    {
-      name: "Crash",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-crash.png?v=1767857219215&source=drccdnsrc",
-      id: "crash"
-    },
-    {
-      name: "Table",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-table.png?v=1767857219215&source=drccdnsrc",
-      id: "table"
-    },
-    {
-      name: "Fishing",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-fish.png?v=1767857219215&source=drccdnsrc",
-      id: "fishing"
-    },
-    {
-      name: "Arcade",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-arcade.png?v=1767857219215&source=drccdnsrc",
-      id: "arcade"
-    },
-    {
-      name: "Lottery",
-      image: "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-lottery.png?v=1767857219215&source=drccdnsrc",
-      id: "lottery"
-    }
-  ];
-
-  const sortCategoriesWithExclusiveFirst = (categories) => {
-    if (!categories || categories.length === 0) return defaultCategories;
-    const exclusiveCategory = categories.find(cat => cat.name.toLowerCase() === "exclusive");
-    if (!exclusiveCategory) return categories;
-    const otherCategories = categories.filter(cat => cat.name.toLowerCase() !== "exclusive");
-    return [exclusiveCategory, ...otherCategories];
-  };
-
-  const getDefaultSocialLinks = () => [
-    {
-      platform: "whatsapp",
-      url: "https://wa.me/+4407386588951",
-      title: t.whatsapp,
-      icon: <FaWhatsapp className="w-4 h-4 mr-2" />
-    },
-    {
-      platform: "email",
-      url: "mailto:support@yourdomain.com",
-      title: t.email,
-      icon: <FaEnvelope className="w-4 h-4 mr-2" />
-    },
-    {
-      platform: "facebook",
-      url: "https://facebook.com/yourpage",
-      title: t.facebook,
-      icon: <FaFacebook className="w-4 h-4 mr-2" />
-    }
-  ];
-
   const isMobileDevice = () => window.innerWidth < 768;
 
   const checkBannerVisibility = () => {
@@ -384,7 +358,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
     if (isMobile) setSidebarOpen(false);
-    if (!categories.length) { setCategories(defaultCategories); fetchCategories(); }
+    fetchCategories();
     if (!promotions.length) fetchPromotions();
     checkAuthStatus();
     fetchBrandingData();
@@ -452,51 +426,52 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
         });
         setSocialLinks(mappedLinks);
       } else {
-        setSocialLinks(getDefaultSocialLinks());
+        // Default social links if API fails
+        setSocialLinks([
+          { platform: "whatsapp", url: "https://wa.me/+4407386588951", title: t.whatsapp, icon: <FaWhatsapp className="w-4 h-4 mr-2" /> },
+          { platform: "email", url: "mailto:support@yourdomain.com", title: t.email, icon: <FaEnvelope className="w-4 h-4 mr-2" /> },
+          { platform: "facebook", url: "https://facebook.com/yourpage", title: t.facebook, icon: <FaFacebook className="w-4 h-4 mr-2" /> }
+        ]);
       }
     } catch (error) {
       console.error("Error fetching social links:", error);
-      setSocialLinks(getDefaultSocialLinks());
+      setSocialLinks([
+        { platform: "whatsapp", url: "https://wa.me/+4407386588951", title: t.whatsapp, icon: <FaWhatsapp className="w-4 h-4 mr-2" /> },
+        { platform: "email", url: "mailto:support@yourdomain.com", title: t.email, icon: <FaEnvelope className="w-4 h-4 mr-2" /> }
+      ]);
     } finally {
       setLoadingSocialLinks(false);
     }
   };
 
-  // FIXED: fetchCategories function with proper image mapping
+  // fetchCategories - dynamic from API with NO default/status images
   const fetchCategories = async () => {
     try {
       setIsLoadingCategories(true);
       const response = await axios.get(`${API_BASE_URL}/api/categories`);
-      if (response.data && response.data.data) {
-        // Merge API categories with default images
-        const categoriesWithImages = response.data.data.map(cat => {
-          // Find matching default category by name (case-insensitive)
-          const defaultCat = defaultCategories.find(
-            defaultCat => defaultCat.name.toLowerCase() === cat.name.toLowerCase()
-          );
-          
-          // Use default image if available, otherwise use image map
-          return {
-            ...cat,
-            image: defaultCat?.image || getCategoryImageByName(cat.name)
-          };
-        });
-        
-        const sortedCategories = sortCategoriesWithExclusiveFirst(categoriesWithImages);
-        setCategories(sortedCategories);
-        localStorage.setItem("categories", JSON.stringify(sortedCategories));
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        // Use categories directly from API - NO default images, NO fallback
+        const apiCategories = response.data.data.map(cat => ({
+          ...cat,
+          // Use the image directly from API, or null if not provided
+          image: cat.image || null
+        }));
+        setCategories(apiCategories);
+        localStorage.setItem("categories", JSON.stringify(apiCategories));
       } else {
-        setCategories(defaultCategories);
+        // If API returns empty, set empty array - NO default categories
+        setCategories([]);
+        localStorage.setItem("categories", JSON.stringify([]));
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
-      setCategories(defaultCategories);
+      // On error, set empty array - NO default fallback
+      setCategories([]);
+      localStorage.setItem("categories", JSON.stringify([]));
     } finally {
       setIsLoadingCategories(false);
     }
   };
-
-  useEffect(() => { fetchCategories(); }, []);
 
   const fetchPromotions = async () => {
     try {
@@ -523,6 +498,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       }
     } catch (error) {
       console.error("Error fetching providers:", error);
+      setProviders([]);
     } finally {
       setSidebarLoading(false);
     }
@@ -554,11 +530,16 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
 
   const handleCategoryClick = (category) => {
     if (activeMenu === category.name) {
-      setActiveMenu(null); setProviders([]); setExclusiveGames([]);
+      setActiveMenu(null);
+      setProviders([]);
+      setExclusiveGames([]);
     } else {
       setActiveMenu(category.name);
-      if (category.name.toLowerCase() === "exclusive") fetchExclusiveGames();
-      else fetchProviders(category.name);
+      if (category.name && category.name.toLowerCase() === "exclusive") {
+        fetchExclusiveGames();
+      } else if (category.name) {
+        fetchProviders(category.name);
+      }
     }
   };
 
@@ -628,6 +609,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     setUserData(null);
     delete axios.defaults.headers.common["Authorization"];
     setProfileDropdownOpen(false);
+    setShowLogoutConfirm(false);
     navigate("/");
   };
 
@@ -715,9 +697,51 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
+  // Logout confirmation popup component
+const LogoutConfirmPopup = () => {
+  if (!showLogoutConfirm) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100000] p-8">
+      {/* Container: Rounded corners and white background */}
+      <div className="bg-white rounded-lg w-full max-w-[320px] shadow-2xl overflow-hidden">
+        
+        <div className="p-6">
+          {/* Title: Left aligned, bold, Bengali text */}
+          <h3 className="text-gray-900 text-xl font-medium mb-4 text-left">
+            নিশ্চিতি
+          </h3>
+          
+          {/* Message: Left aligned, smaller text */}
+          <p className="text-gray-600 text-[15px] leading-relaxed text-left mb-8">
+            আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?
+          </p>
+          
+          {/* Action Buttons: Right aligned as per Android standards shown in image */}
+          <div className="flex justify-end gap-6">
+            <button
+              onClick={() => setShowLogoutConfirm(false)}
+              className="text-gray-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-gray-50 px-2 py-1 rounded"
+            >
+              বাতিল
+            </button>
+            <button
+              onClick={logout}
+              className="text-blue-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-blue-50 px-2 py-1 rounded"
+            >
+              নিশ্চিত
+            </button>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  );
+};
   return (
     <>
       <Toaster />
+      <LogoutConfirmPopup />
       <header className="flex justify-between items-center px-1 py-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white border-b border-[#333] relative z-[10000]">
         <div className="flex items-center space-x-4 md:space-x-7">
           <button
@@ -786,7 +810,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   <div className="border-t border-[#333] p-3">
                     <button
                       className="flex items-center justify-center gap-2 w-full py-2 text-sm rounded-md border border-[#333] text-gray-300 hover:bg-[#222] hover:text-white transition cursor-pointer"
-                      onClick={logout}
+                      onClick={() => setShowLogoutConfirm(true)}
                     >
                       <FiLogOut /> {t.logout}
                     </button>
@@ -873,6 +897,14 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 >
                   {t.withdrawal}
                 </NavLink>
+                {/* Logout Icon for Mobile */}
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="text-white p-2 rounded-full transition-all duration-200"
+                  aria-label="Logout"
+                >
+                  <FiLogOut size={18} />
+                </button>
               </div>
             </>
           ) : (
@@ -892,15 +924,17 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
             </>
           )}
 
-          {/* ── Currency & Language Dropdown — always visible on right ── */}
-          <CurrencyLangButton
-            isBangla={isBangla}
-            onSelectEnglish={handleSelectEnglish}
-            onSelectBangla={handleSelectBangla}
-            dropdownOpen={langDropdownOpen}
-            setDropdownOpen={setLangDropdownOpen}
-            dropdownRef={langDropdownRef}
-          />
+          {/* ── Currency & Language Dropdown — always visible on right (desktop only) ── */}
+          <div className="hidden md:block">
+            <CurrencyLangButton
+              isBangla={isBangla}
+              onSelectEnglish={handleSelectEnglish}
+              onSelectBangla={handleSelectBangla}
+              dropdownOpen={langDropdownOpen}
+              setDropdownOpen={setLangDropdownOpen}
+              dropdownRef={langDropdownRef}
+            />
+          </div>
           {/* ────────────────────────────────────────────────────────── */}
 
         </div>
@@ -924,7 +958,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
             sidebarOpen ? "opacity-100" : "opacity-0"
           }`}
         >
-          <div className="w-full flex justify-start items-center px-4 pt-4 pb-3 md:sticky top-0 left-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]]">
+          <div className="w-full flex justify-start items-center px-4 border-b-[1px] border-gray-700 pt-4 pb-3 md:sticky top-0 left-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]]">
             <a href="https://wa.me/+4407386588951" target="_blank" rel="noopener noreferrer" className="block w-full">
               <span className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border-[1px] border-blue-500 text-[16px] px-2 py-2.5 mt-3 rounded-[3px] text-center flex justify-center items-center gap-3 cursor-pointer hover:bg-[#2a2a2a] transition">
                 <MdSupportAgent className="text-white text-[20px]" />
@@ -942,12 +976,12 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   onClick={handleSelectEnglish}
                   style={{
                     padding: "6px 14px",
-                    borderRadius: "6px",
+                    borderRadius: "2px",
                     border: "none",
                     cursor: "pointer",
                     fontWeight: 600,
                     fontSize: "12px",
-                    background: !isBangla ? "#22c55e" : "#2a2a2a",
+                    background: !isBangla ? "#14805E" : "#2a2a2a",
                     color: !isBangla ? "#fff" : "#888",
                     transition: "all 0.2s",
                   }}
@@ -958,12 +992,12 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   onClick={handleSelectBangla}
                   style={{
                     padding: "6px 14px",
-                    borderRadius: "6px",
+                    borderRadius: "2px",
                     border: "none",
                     cursor: "pointer",
                     fontWeight: 600,
                     fontSize: "12px",
-                    background: isBangla ? "#22c55e" : "#2a2a2a",
+                    background: isBangla ? "#14805E" : "#2a2a2a",
                     color: isBangla ? "#fff" : "#888",
                     transition: "all 0.2s",
                   }}
@@ -993,25 +1027,35 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
             </button>
           </div>
 
+          {/* Dynamic Categories Section - NO default images, only API images */}
           <div className="space-y-1 px-2 mt-[15px]">
             {isLoadingCategories && (
               <div className="text-center py-4 text-gray-400 text-sm">{t.loadingCategories}</div>
             )}
+            {!isLoadingCategories && categories.length === 0 && (
+              <div className="text-center py-4 text-gray-400 text-sm">No categories available</div>
+            )}
             {categories.map((category, index) => (
-              <div key={index}>
+              <div key={category._id || index}>
                 <div
                   className="flex items-center p-3 rounded cursor-pointer hover:text-gray-500 text-gray-400 transition-colors duration-200"
                   onClick={() => handleCategoryClick(category)}
                 >
-                  <img
-                    src={category.image || getCategoryImageByName(category.name)}
-                    alt={category.name}
-                    className="w-5 h-5 min-w-[20px]"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = getCategoryImageByName(category.name);
-                    }}
-                  />
+                  {/* Dynamic category image from API - NO fallback image */}
+                  {category.image ? (
+                    <img
+                      src={getFullImageUrl(category.image, API_BASE_URL)}
+                      alt={category.name}
+                      className="w-5 h-5 min-w-[20px] object-contain"
+                      onError={(e) => {
+                        // On image error, hide the image instead of showing a default
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    // No image placeholder - empty div with same dimensions, NO default icon
+                    <div className="w-5 h-5 min-w-[20px]"></div>
+                  )}
                   <div className="flex items-center ml-3 w-full">
                     <span className="text-sm flex-grow whitespace-nowrap">{category.name}</span>
                     {activeMenu === category.name ? (
@@ -1030,7 +1074,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     <div className="ml-2 mt-1 mb-2">
                       {sidebarLoading ? (
                         <div className="p-4 text-center text-[12px] text-gray-400">{t.loading}</div>
-                      ) : category.name.toLowerCase() === "exclusive" ? (
+                      ) : category.name && category.name.toLowerCase() === "exclusive" ? (
                         <div className="grid grid-cols-2 md:grid-cols-2 gap-2 p-2">
                           {exclusiveGames.map((game, gameIndex) => (
                             <div
@@ -1062,7 +1106,14 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                               className="flex items-center p-2 rounded cursor-pointer hover:bg-[#333] transition-colors duration-200"
                               onClick={() => handleProviderClick(provider)}
                             >
-                              <img src={`${API_BASE_URL}/${provider.image}`} alt={provider.name} className="w-6 h-6 mr-2" />
+                              {provider.image && (
+                                <img 
+                                  src={getFullImageUrl(provider.image, API_BASE_URL)} 
+                                  alt={provider.name} 
+                                  className="w-6 h-6 mr-2 object-contain"
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              )}
                               <span className="text-xs text-gray-400">{provider.name}</span>
                             </div>
                           ))}
@@ -1189,30 +1240,67 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       )}
 
       {/* Mobile App Download Banner */}
-      {showMobileAppBanner && isMobileDevice() && (
-        <div className="fixed bottom-0 left-0 h-full right-0 flex justify-center items-end bg-[rgba(0,0,0,0.4)] border-t border-[#333] z-[10001] shadow-lg">
-          <div className="w-full flex items-center justify-between bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] p-3">
-            <div className="flex items-center space-x-3">
-              <div className="border-[1px] border-theme_color rounded-[4px] px-2 py-3 ">
-                <img src={logo} className="w-[60px]" alt="" />
-              </div>
-              <div>
-                <h3 className="text-white text-sm font-[500]">{t.downloadOurApp}</h3>
-                <p className="text-gray-400 text-xs">{t.betterExperience}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button onClick={() => { downloadFileAtURL(APK_FILE) }} className="bg-theme_color cursor-pointer hover:bg-theme_color/90 text-white text-xs font-medium py-2 px-3 rounded transition-colors">
-                {t.download}
-              </button>
-              <button onClick={handleCloseBanner} className="text-gray-400 cursor-pointer hover:text-white p-1 transition-colors" aria-label="Close banner">
-                <IoClose size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  {showMobileAppBanner && isMobileDevice() && (
+  <div className="fixed bottom-0 left-0 right-0 flex justify-center items-end bg-[rgba(0,0,0,0.7)] border-t border-[#333] z-[10001] shadow-lg">
+    <div className="w-full flex flex-col items-center  p-4 relative">
+      
+      {/* Close Button - Positioned top right of the banner */}
+      <button 
+        onClick={handleCloseBanner} 
+        className="absolute top-2 right-2 text-gray-700 bg-white rounded-full p-1 border border-gray-600 shadow-md"
+      >
+        <IoClose size={18} />
+      </button>
 
+      {/* Text Content */}
+      <div className="text-center mb-4 pt-2">
+        <h3 className="text-white text-[13px] w-[96%] font-bold leading-tight">
+          ২০০ টাকা বোনাস পেতে সর্বশেষ আপডেট APP ডাউনলোড করুন
+        </h3>
+      </div>
+
+      {/* Button Row */}
+      <div className="flex w-full max-w-md space-x-3 items-end pb-2">
+        
+        {/* Left 3D Button (Silver) */}
+        <div className="relative flex-1">
+          {/* Red Floating Badge */}
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#ff0000] text-white text-[10px] px-2 py-0.5 rounded-full z-20 border border-white shadow-sm whitespace-nowrap">
+            অধিক সুবিধা
+          </span>
+          <button 
+            onClick={() => downloadFileAtURL(APK_FILE)}
+            className="w-full py-2.5 rounded-full font-bold text-[#333] text-sm tracking-tight
+              bg-gradient-to-b from-[#ffffff] via-[#e0e0e0] to-[#b8b8b8]
+              shadow-[0_3px_0_rgb(140,140,140),inset_0_1px_0_rgba(255,255,255,1)]
+              active:translate-y-[1px] active:shadow-[0_2px_0_rgb(140,140,140)] transition-all"
+          >
+            APP
+          </button>
+        </div>
+
+        {/* Right 3D Button (Gold) */}
+        <button 
+          onClick={() => {/* handle chrome logic */}}
+          className="flex-1 py-2.5 rounded-full font-bold text-[#222] text-sm
+            bg-gradient-to-b from-[#ffdb4d] via-[#f7b500] to-[#d99e00]
+            shadow-[0_3px_0_rgb(180,130,0),inset_0_1px_0_rgba(255,255,255,0.6)]
+            active:translate-y-[1px] active:shadow-[0_2px_0_rgb(180,130,0)] transition-all"
+        >
+          Chrome-এ খুলুন
+        </button>
+      </div>
+
+      {/* Footer Link */}
+      <button 
+        onClick={handleCloseBanner}
+        className="mt-2 text-white text-xs underline opacity-80 pb-1"
+      >
+        H5 ব্যবহার চালিয়ে যান
+      </button>
+    </div>
+  </div>
+)}
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 border-t-[2px] border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
            style={showMobileAppBanner ? { bottom: '80px' } : {}}>
@@ -1324,6 +1412,19 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
           .animate-pulse { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
           .no-scrollbar::-webkit-scrollbar { display: none; }
           .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .animate-fadeInUp {
+            animation: fadeInUp 0.2s ease-out forwards;
+          }
         `}
       </style>
     </>
