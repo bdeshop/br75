@@ -62,12 +62,12 @@ const Referprogramme = () => {
       return;
     }
 
-    const referralLink = `https://bajiman.com/register?ref=${userData.referralCode}`;
+    const referralLink = `https://bir75.com/register?ref=${userData.referralCode}`;
     
     // Try to use the Web Share API first
     if (navigator.share) {
       navigator.share({
-        title: 'Join me on Bajiman!',
+        title: 'Join me on Bir75!',
         text: `Use my referral code ${userData.referralCode} to sign up and get bonus!`,
         url: referralLink,
       })
@@ -157,7 +157,7 @@ const Referprogramme = () => {
           <div className="max-w-6xl mx-auto p-4 pl-[50px] space-y-6 mt-4">
             
             {/* 2. PROGRAM INFO SECTION */}
-            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+            <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] rounded-lg p-6 border border-gray-800">
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h2 className="text-xl font-bold">How does our Referral Program work?</h2>
@@ -198,7 +198,7 @@ const Referprogramme = () => {
             </div>
 
             {/* 3. STEPS SECTION */}
-            <div className="bg-[#1a1a1a] rounded-lg p-8 border border-gray-800">
+            <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] rounded-lg p-8 border border-gray-800">
               <h2 className="text-xl font-bold mb-8">How to earn more rewards</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Step 1 */}
@@ -234,7 +234,7 @@ const Referprogramme = () => {
             {/* 4. LEADERBOARD & RECENT BONUS */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Leaderboard */}
-              <div className="lg:col-span-4 bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+              <div className="lg:col-span-4 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] rounded-lg p-6 border border-gray-800">
                 <h2 className="text-lg font-bold mb-6">Referral leaderboard</h2>
                 <div className="flex justify-around items-end pt-10 pb-4">
                   {/* 2nd Place */}
@@ -268,7 +268,7 @@ const Referprogramme = () => {
               </div>
 
               {/* Recent Winners Table */}
-              <div className="lg:col-span-8 bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+              <div className="lg:col-span-8 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] rounded-lg p-6 border border-gray-800">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-bold">Who received the bonus?</h2>
                   <div className="w-2 h-2 rounded-full bg-green-500"></div>

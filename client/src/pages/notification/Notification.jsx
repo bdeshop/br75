@@ -178,7 +178,7 @@ const Notification = () => {
 
   if (loading) {
     return (
-      <div className="h-screen overflow-hidden font-poppins bg-[#0f0f0f] text-white">
+      <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)]">
           <Sidebar sidebarOpen={sidebarOpen} />
@@ -197,7 +197,7 @@ const Notification = () => {
   }
 
   return (
-    <div className="h-screen overflow-hidden w-full font-poppins bg-[#0f0f0f] text-white">
+    <div className="h-screen overflow-hidden w-full font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Header */}
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
@@ -282,7 +282,7 @@ const Notification = () => {
                       <button
                         onClick={() => fetchNotifications(pagination.page - 1)}
                         disabled={pagination.page === 1}
-                        className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] hover:bg-[#222] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs sm:text-sm"
+                        className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-[#2a2a2a] hover:bg-[#222] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs sm:text-sm"
                       >
                         {t?.previous || "Previous"}
                       </button>
@@ -290,7 +290,7 @@ const Notification = () => {
                       <button
                         onClick={() => fetchNotifications(pagination.page + 1)}
                         disabled={pagination.page === pagination.totalPages}
-                        className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] hover:bg-[#222] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs sm:text-sm"
+                        className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-[#2a2a2a] hover:bg-[#222] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs sm:text-sm"
                       >
                         {t?.next || "Next"}
                       </button>

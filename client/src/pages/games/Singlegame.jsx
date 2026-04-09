@@ -40,7 +40,7 @@ const Singlegame = () => {
 
   if (loading) {
     return (
-      <div className="h-screen overflow-hidden font-poppins bg-[#0f0f0f] text-white">
+      <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex h-[calc(100vh-56px)]">
           <Sidebar sidebarOpen={sidebarOpen} />
@@ -67,7 +67,7 @@ const Singlegame = () => {
 
   if (error) {
     return (
-      <div className="h-screen overflow-hidden font-poppins bg-[#0f0f0f] text-white">
+      <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex h-[calc(100vh-56px)]">
           <Sidebar sidebarOpen={sidebarOpen} />
@@ -90,7 +90,7 @@ const Singlegame = () => {
   }
 
   return (
-    <div className="h-screen overflow-hidden font-poppins bg-[#0f0f0f] text-white">
+    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       
       <div className="flex h-[calc(100vh-56px)]">
@@ -99,7 +99,7 @@ const Singlegame = () => {
         <div className="flex-1 overflow-auto relative">
           {/* Game Info Bar */}
           {gameInfo && (
-            <div className="bg-[#1a1a1a] p-3 flex justify-between items-center border-b border-[#333]">
+            <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-3 flex justify-between items-center border-b border-[#333]">
               <div className="flex items-center">
                 <button 
                   onClick={handleBackToGames}
@@ -131,7 +131,7 @@ const Singlegame = () => {
           
           {/* Loader Overlay */}
           {!iframeLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0f0f0f] z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-10">
               <div className="text-center">
                 <div className="golden-loader">
                   <span>L</span>

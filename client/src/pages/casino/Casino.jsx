@@ -691,7 +691,7 @@ const CasinoContent = () => {
                           onClick={() => handleGameClick(game)}
                         >
                           <div className="casino-game-image-container relative overflow-hidden w-full">
-                            <div className="relative w-full pb-[133.33%] overflow-hidden bg-[#1a1a1a]">
+                            <div className="relative w-full pb-[133.33%] overflow-hidden bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                               <img 
                                 src={imageUrl} 
                                 alt={game.name} 
@@ -771,7 +771,7 @@ const CasinoContent = () => {
         <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] z-40" onClick={() => setShowFilterSidebar(false)} />
       )}
       {showFilterSidebar && (
-        <div ref={filterSidebarRef} className={`fixed pt-6 top-0 right-0 h-full ${isMobile ? 'left-0 w-full' : 'w-80'} bg-[#0f0f0f] z-50 shadow-lg overflow-y-auto flex flex-col`}>
+        <div ref={filterSidebarRef} className={`fixed pt-6 top-0 right-0 h-full ${isMobile ? 'left-0 w-full' : 'w-80'} bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50 shadow-lg overflow-y-auto flex flex-col`}>
           <div className="flex items-center justify-between pt-[60px] px-4 pb-3 border-b border-[#333]">
             <h2 className="text-lg font-[600] text-white">Filter</h2>
             {isMobile && (
@@ -796,7 +796,7 @@ const CasinoContent = () => {
               {showProvidersDropdown && (
                 <div className="mt-2 pl-4 max-h-48 overflow-y-auto space-y-3">
                   {providers.map(provider => (
-                    <label key={provider.value} className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                    <label key={provider.value} className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                       <input 
                         type="checkbox" 
                         checked={selectedProviders.includes(provider.value)} 
@@ -823,7 +823,7 @@ const CasinoContent = () => {
               </label>
               {showGameTypeDropdown && (
                 <div className="mt-2 pl-4 space-y-3">
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedGameTypes.includes('hot games')} 
@@ -834,7 +834,7 @@ const CasinoContent = () => {
                       <span className="select-none text-gray-300">Hot Games</span>
                     </div>
                   </label>
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedGameTypes.includes('new games')} 
@@ -859,7 +859,7 @@ const CasinoContent = () => {
               </label>
               {showThemeDropdown && (
                 <div className="mt-2 pl-4 space-y-3">
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedThemes.includes('all')} 
@@ -870,7 +870,7 @@ const CasinoContent = () => {
                       <span className="select-none text-gray-300">All</span>
                     </div>
                   </label>
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedThemes.includes('lucky7')} 
@@ -881,7 +881,7 @@ const CasinoContent = () => {
                       <span className="select-none text-gray-300">Lucky7</span>
                     </div>
                   </label>
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedThemes.includes('monetary')} 
@@ -892,7 +892,7 @@ const CasinoContent = () => {
                       <span className="select-none text-gray-300">Monetary</span>
                     </div>
                   </label>
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedThemes.includes('western')} 
@@ -903,7 +903,7 @@ const CasinoContent = () => {
                       <span className="select-none text-gray-300">Western</span>
                     </div>
                   </label>
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedThemes.includes('egyptian')} 
@@ -914,7 +914,7 @@ const CasinoContent = () => {
                       <span className="select-none text-gray-300">Egyptian</span>
                     </div>
                   </label>
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedThemes.includes('mythology')} 
@@ -939,7 +939,7 @@ const CasinoContent = () => {
               </label>
               {showSpecialFeatureDropdown && (
                 <div className="mt-2 pl-4 space-y-3">
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedSpecialFeatures.includes('bonus games')} 
@@ -950,7 +950,7 @@ const CasinoContent = () => {
                       <span className="select-none text-gray-300">Bonus Games</span>
                     </div>
                   </label>
-                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-[#1a1a1a]">
+                  <label className="flex items-center cursor-pointer text-sm relative py-2 px-1 rounded transition-colors hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]">
                     <input 
                       type="checkbox" 
                       checked={selectedSpecialFeatures.includes('buy feature')} 
@@ -966,7 +966,7 @@ const CasinoContent = () => {
             </div>
           </div>
 
-          <div className="sticky bottom-0 bg-[#0f0f0f] p-4 border-t border-[#333] flex justify-between space-x-3">
+          <div className="sticky bottom-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4 border-t border-[#333] flex justify-between space-x-3">
             <button 
               onClick={clearAllFilters} 
               className="px-6 py-3 bg-[#222] border-[1px] text-nowrap border-gray-800 text-white rounded-[4px] text-[15px] cursor-pointer transition-all duration-200 flex-1 hover:bg-[#333] hover:border-gray-600"

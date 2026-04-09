@@ -33,6 +33,7 @@ import ForgotPassword from "./components/ForgotPassword/ForgotPassword";
 import Security from "./pages/profile/Security";
 import Verification from "./pages/profile/Verification";
 import Bonus from "./pages/bonus/Bonus";
+import Sports from "./pages/sports/Sports";
 
 const AuthContext = createContext();
 
@@ -305,6 +306,14 @@ const App = () => {
               element={
                 <PublicRoute>
                   <Slots />
+                </PublicRoute>
+              }
+            />
+                 <Route
+              path="/sports"
+              element={
+                <PublicRoute>
+                  <Sports />
                 </PublicRoute>
               }
             />

@@ -310,7 +310,7 @@ const Bonus = () => {
 
   if (isLoading && bonuses.length === 0 && bettingBonuses.length === 0) {
     return (
-      <div className="h-screen overflow-hidden font-poppins bg-[#0f0f0f] text-white">
+      <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)]">
           <Sidebar sidebarOpen={sidebarOpen} />
@@ -329,7 +329,7 @@ const Bonus = () => {
   }
 
   return (
-    <div className="h-screen overflow-hidden w-full font-poppins bg-[#0f0f0f] text-white">
+    <div className="h-screen overflow-hidden w-full font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       <Toaster 
         position="top-right" 
         toastOptions={{ 

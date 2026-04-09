@@ -8,9 +8,7 @@ import logo from "../../assets/logo.png";
 import { LanguageContext } from "../../context/LanguageContext";
 
 export default function Register() {
-  // ── Translation hook ──────────────────────────────────────────────────────
   const { t } = useContext(LanguageContext);
-  // ─────────────────────────────────────────────────────────────────────────
 
   const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
@@ -20,7 +18,6 @@ export default function Register() {
   const [referralCode, setReferralCode] = useState("");
   const [affiliateCode, setAffiliateCode] = useState("");
   
-  // Login specific state
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   
@@ -37,15 +34,12 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const [dynamicLogo, setDynamicLogo] = useState(logo);
 
-  // API base URL
   const API_BASE_URL = import.meta.env.VITE_API_KEY_Base_URL;
 
-  // Fetch branding data on component mount
   useEffect(() => {
     fetchBrandingData();
   }, []);
 
-  // Check for referral codes in URL parameters on component mount
   useEffect(() => {
     const userReferralCode = searchParams.get('ref');
     const affiliateCodeFromUrl = searchParams.get('aff');
@@ -77,7 +71,6 @@ export default function Register() {
     }
   };
 
-  // Track affiliate click separately
   const trackAffiliateClick = async (affiliateCode) => {
     const source = searchParams.get('source');
     const campaign = searchParams.get('campaign');
@@ -97,7 +90,29 @@ export default function Register() {
     }
   };
 
-  // Check if referral code is valid
+  // ✅ CHANGED: now validates 11 digits starting with 0
+  const validatePhone = (value) => {
+    if (!value) {
+      return "Phone number is required.";
+    }
+    if (!value.startsWith("0")) {
+      return "Phone number must start with 0.";
+    }
+    if (value.length !== 11) {
+      return "Phone number must be exactly 11 digits.";
+    }
+    return "";
+  };
+
+  // ✅ CHANGED: maxLength 11, hint updated
+  const handlePhoneChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    setPhone(raw);
+    if (phoneError) {
+      setPhoneError(validatePhone(raw));
+    }
+  };
+
   const checkReferralCode = async () => {
     if (!referralCode) {
       setReferralError("Please enter a referral code");
@@ -133,17 +148,16 @@ export default function Register() {
     }
   };
 
-  // Direct Signup Function (No OTP)
   const handleDirectSignup = async (e) => {
     e.preventDefault();
     
-    // Validate phone
-    if (!phone) {
-      setPhoneError("Phone number is required.");
-      toast.error("Phone number is required.");
+    const phoneValidationError = validatePhone(phone);
+    if (phoneValidationError) {
+      setPhoneError(phoneValidationError);
+      toast.error(phoneValidationError);
       return;
     }
-    // Validate username
+
     if (!username) {
       setSignupError("Username is required.");
       toast.error("Username is required.");
@@ -162,7 +176,6 @@ export default function Register() {
       return;
     }
 
-    // Validate password
     if (!password) {
       setSignupError("Password is required.");
       toast.error("Password is required.");
@@ -181,7 +194,6 @@ export default function Register() {
       return;
     }
 
-    // Validate referral code if provided
     if (referralCode && !referralValid) {
       setReferralError("Please validate your referral code first");
       toast.error("Please validate your referral code first");
@@ -193,7 +205,6 @@ export default function Register() {
     setSignupError("");
 
     try {
-      // Prepare user data
       const userData = {
         phone,
         username,
@@ -213,7 +224,6 @@ export default function Register() {
           autoClose: 3000,
         });
 
-        // Show appropriate referral success message
         if (response.data.user.affiliateId) {
           toast.success('Welcome! You joined through an affiliate partner.', {
             position: "top-right",
@@ -226,12 +236,10 @@ export default function Register() {
           });
         }
         
-        // Store token in localStorage
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('usertoken', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
 
-        // Reset form
         setPhone("");
         setEmail("");
         setUsername("");
@@ -242,7 +250,6 @@ export default function Register() {
         setReferralValid(false);
         setReferrerInfo(null);
 
-        // Redirect to home page after successful signup
         setTimeout(() => {
           window.location.href = '/';
         }, 1500);
@@ -264,11 +271,9 @@ export default function Register() {
     }
   };
 
-  // Direct Login Function (Username/Password)
   const handleUsernamePasswordLogin = async (e) => {
     e.preventDefault();
     
-    // Validate inputs
     if (!loginUsername) {
       setLoginError("Username is required.");
       toast.error("Username is required.");
@@ -296,12 +301,10 @@ export default function Register() {
           autoClose: 3000,
         });
 
-        // Store token in localStorage
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('usertoken', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
 
-        // Redirect to home page
         setTimeout(() => {
           window.location.href = '/';
         }, 1000);
@@ -323,13 +326,11 @@ export default function Register() {
     }
   };
 
-  // Handle sign up form submission
   const handleSignUpSubmit = async (e) => {
     e.preventDefault();
     await handleDirectSignup(e);
   };
 
-  // Handle login form submission
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     await handleUsernamePasswordLogin(e);
@@ -337,7 +338,6 @@ export default function Register() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gray-900 font-poppins text-white">
-      {/* Toast Container */}
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -351,12 +351,10 @@ export default function Register() {
         theme="dark"
       />
       
-      {/* Background Video */}
       <video className="md:flex hidden absolute top-0 left-0 w-full h-full object-cover" autoPlay loop muted>
         <source src={videoBackgroundUrl} type="video/mp4" />
       </video>
 
-      {/* Header Section */}
       <header className="relative z-20 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e border-b-[1px] border-gray-700 bg-opacity-70 flex justify-between items-center px-4 py-3 md:px-8">
         <NavLink to="/">
           <img 
@@ -366,7 +364,6 @@ export default function Register() {
           />
         </NavLink>
         
-        {/* Home Icon */}
         <div className="flex items-center">
           <NavLink to="/">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 cursor-pointer" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -381,12 +378,9 @@ export default function Register() {
         <source src={videoBackgroundUrl} type="video/mp4" />
       </video>
 
-      {/* Main Content */}
       <div className="relative flex justify-center md:justify-end items-center h-full md:min-h-[calc(100vh-76px)] md:p-6 lg:p-8 xl:p-[100px]">
         <div className="w-full px-[10px] md:px-0 md:max-w-lg overflow-hidden">
-          {/* Registration Box with Background */}
           <div className="overflow-hidden">
-            {/* Tab Navigation */}
             <div className="flex bg-opacity-80 gap-3 ">
               <button 
                 onClick={() => {
@@ -411,38 +405,47 @@ export default function Register() {
             </div>
 
             <div className="pt-[20px]">
-              {/* Sign Up Form */}
               {isSignUpActive ? (
                 <form onSubmit={handleSignUpSubmit}>
                   {/* Phone Number Input */}
                   <div className="mb-4">
-                    <label htmlFor="phone" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">{t.phoneNumber}</label>
-                    <div className="flex items-stretch border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors">
-                      {/* Country Code with Flag */}
+                    <label htmlFor="phone" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2 font-[300]">{t.phoneNumber}</label>
+                    <div className={`flex items-stretch border-[1px] ${phoneError ? 'border-red-500' : 'border-blue-500'} bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors`}>
                       <div className="flex items-center px-2 md:px-3 rounded-l border-r border-gray-700">
                         <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png?v=1754999737902&source=drccdnsrc" alt="Bangladesh Flag" className="w-5 h-5 md:w-6 md:h-6 mr-1 md:mr-2 rounded-full" />
-                        <span className="text-white text-sm md:text-base font-[300]">+880</span>
+                        <span className="text-white text-sm md:text-base font-[300]">+88</span>
                       </div>
                       
-                      {/* Phone Number Input Field */}
                       <div className="flex items-center flex-grow pl-2 md:pl-3">
                         <input
                           type="tel"
                           id="phone"
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                          onChange={handlePhoneChange}
+                          maxLength={11}
                           className="w-full py-2 md:py-3.5 bg-transparent font-[400] text-white font-[300] focus:outline-none placeholder-gray-500 text-sm md:text-base"
-                          placeholder={t.enterPhoneNumber}
+                          placeholder={t.enterPhoneNumber || "01XXXXXXXXX"}
                           disabled={isLoading}
                         />
                       </div>
+
+                      {/* ✅ CHANGED: counter now shows /11 */}
+                      <div className="flex items-center pr-3">
+                        <span className={`text-xs font-[300] ${phone.length === 11 ? 'text-green-400' : 'text-gray-500'}`}>
+                          {phone.length}/11
+                        </span>
+                      </div>
                     </div>
                     {phoneError && <p className="text-red-400 text-xs mt-1">{phoneError}</p>}
+                    {/* ✅ CHANGED: hint updated for 11 digits starting with 0 */}
+                    {!phoneError && phone.length > 0 && phone.length < 11 && (
+                      <p className="text-gray-400 text-xs mt-1">Must start with 0 and be 11 digits (e.g. 01XXXXXXXXX)</p>
+                    )}
                   </div>
 
                   {/* Username Input */}
                   <div className="mb-4">
-                    <label htmlFor="username" className="block text-sm md:text-sm text-gray-200 mb-2">{t.usernameLabel}</label>
+                    <label htmlFor="username" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2">{t.usernameLabel}</label>
                     <input
                       type="text"
                       id="username"
@@ -456,7 +459,7 @@ export default function Register() {
 
                   {/* Password Input */}
                   <div className="mb-4">
-                    <label htmlFor="password" className="block text-sm md:text-sm text-gray-200 mb-2">{t.passwordLabel}</label>
+                    <label htmlFor="password" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2">{t.passwordLabel}</label>
                     <input
                       type="password"
                       id="password"
@@ -470,7 +473,7 @@ export default function Register() {
 
                   {/* Confirm Password Input */}
                   <div className="mb-4">
-                    <label htmlFor="confirmPassword" className="block text-sm md:text-sm text-gray-200 mb-2">{t.confirmPasswordLabel}</label>
+                    <label htmlFor="confirmPassword" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2">{t.confirmPasswordLabel}</label>
                     <input
                       type="password"
                       id="confirmPassword"
@@ -481,9 +484,10 @@ export default function Register() {
                       disabled={isLoading}
                     />
                   </div>
+
                   {/* Referral Code Input */}
                   <div className="mb-4">
-                    <label htmlFor="referralCode" className="block text-sm md:text-sm font-[300] text-gray-200 mb-2">
+                    <label htmlFor="referralCode" className="block text-sm md:text-sm font-[300] text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2">
                       {t.referralCodeLabel}
                     </label>
                     <div className="flex gap-2">
@@ -553,11 +557,9 @@ export default function Register() {
                   {signupError && <p className="text-red-400 text-xs mt-3 text-center">{signupError}</p>}
                 </form>
               ) : (
-                /* Login Form - Username/Password */
                 <form onSubmit={handleLoginSubmit}>
-                  {/* Username Input for Login */}
                   <div className="mb-4">
-                    <label htmlFor="loginUsername" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">{t.usernameLabel}</label>
+                    <label htmlFor="loginUsername" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2 font-[300]">{t.usernameLabel}</label>
                     <div className="flex items-stretch border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors">
                       <div className="flex items-center px-3 rounded-l border-r border-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -578,9 +580,8 @@ export default function Register() {
                     </div>
                   </div>
 
-                  {/* Password Input for Login */}
                   <div className="mb-4">
-                    <label htmlFor="loginPassword" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">{t.passwordLabel}</label>
+                    <label htmlFor="loginPassword" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2 font-[300]">{t.passwordLabel}</label>
                     <div className="flex items-stretch border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors">
                       <div className="flex items-center px-3 rounded-l border-r border-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -601,12 +602,10 @@ export default function Register() {
                     </div>
                   </div>
 
-                  {/* Error Message */}
                   {loginError && (
                     <p className="text-red-400 text-xs mb-3 text-center">{loginError}</p>
                   )}
 
-                  {/* Login Button */}
                   <button
                     type="submit"
                     className="w-full py-3 md:py-4 bg-[#0C4D38] cursor-pointer text-white text-sm font-[500] mt-2 shadow-lg transition-all transform hover:scale-[1.02] hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded"
@@ -623,7 +622,6 @@ export default function Register() {
                     ) : t.loginBtn}
                   </button>
 
-                  {/* Forgot Password Link */}
                   <div className="mt-4 text-right">
                     <NavLink to="/forgot-password" className="text-xs md:text-sm text-green-400 hover:text-green-300 hover:underline transition-colors">
                       {t.forgotPassword}

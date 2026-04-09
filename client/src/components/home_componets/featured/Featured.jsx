@@ -235,7 +235,7 @@ const FeaturedContent = () => {
   }, [showLoginPopup]);
 
   if (loading) return (
-    <div className="bg-[#1a1a1a] p-4">
+    <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4">
       <div className="flex overflow-x-auto gap-4">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="flex-shrink-0 w-[130px] md:w-[175px]">
@@ -248,7 +248,7 @@ const FeaturedContent = () => {
 
   if (error) {
     return (
-      <div className="bg-[#1a1a1a] p-4 text-center text-gray-400">
+      <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4 text-center text-gray-400">
         <p>Unable to load featured games</p>
       </div>
     );

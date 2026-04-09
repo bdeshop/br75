@@ -243,7 +243,7 @@ const GamePage = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden font-poppins bg-[#0f0f0f] text-white">
+    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Main Content */}
       <div className="flex h-[100vh]">
         <div className={`flex-1 overflow-auto transition-all duration-300 relative`}>

@@ -123,8 +123,8 @@ const Sports = () => {
               </div>
 
               {/* Status Bar */}
-              <div className="mt-auto">
-                <div className="px-3 py-2 rounded flex items-center gap-2 mb-3">
+              <div className="">
+                <div className="px-3 py-1 rounded flex items-center gap-2">
                   {/* Logic for Dots: Red Pulse for Live, Yellow Static for Upcoming */}
                   {match.status ? (
                     match.state === 'live' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -138,29 +138,7 @@ const Sports = () => {
                     {match.status ? match.status : "UPCOMING"}
                   </p>
                 </div>
-                
-                {/* Dynamic Links from API */}
-                <div className="flex gap-4 justify-start px-1">
-                  {match.links && match.links.length > 0 ? (
-                    match.links.map((link, i) => (
-                      <a 
-                        key={i} 
-                        href={link.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[9px] font-bold text-gray-600 hover:text-blue-400 tracking-widest transition-colors uppercase"
-                      >
-                        {link.label}
-                      </a>
-                    ))
-                  ) : (
-                    ['FORECAST', 'TABLE', 'SCHEDULE'].map((label) => (
-                      <button key={label} className="text-[9px] font-bold text-gray-600 hover:text-gray-300 tracking-widest transition-colors">
-                        {label}
-                      </button>
-                    ))
-                  )}
-                </div>
+         
               </div>
             </div>
           ))}

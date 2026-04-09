@@ -543,7 +543,7 @@ const Table = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden font-poppins bg-[#0f0f0f] text-white">
+    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Header */}
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 

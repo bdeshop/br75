@@ -1169,7 +1169,35 @@ Userrouter.put("/update-dob", authenticateToken, async (req, res) => {
     });
   }
 });
+// Update full name
+Userrouter.put("/update-fullname", authenticateToken, async (req, res) => {
+  try {
+    const { fullName } = req.body;
+    const user = req.user;
 
+    if (!fullName || fullName.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name must be at least 2 characters"
+      });
+    }
+
+    user.fullName = fullName.trim();
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Full name updated successfully",
+      data: { fullName: user.fullName }
+    });
+  } catch (error) {
+    console.error("Update full name error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update full name"
+    });
+  }
+});
 // Set/update transaction password
 Userrouter.post(
   "/set-transaction-password",

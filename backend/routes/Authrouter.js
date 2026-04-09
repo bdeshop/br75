@@ -298,7 +298,6 @@ Authrouter.post("/signup", async (req, res) => {
       phone: formattedPhone,
       username,
       password,
-      fullName: fullName || username,
       player_id,
       referredBy,
       registrationSource,

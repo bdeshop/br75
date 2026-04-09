@@ -132,7 +132,7 @@ const Myreferel = () => {
   }
 
   return (
-    <div className="h-screen overflow-hidden font-poppins bg-[#141515] text-gray-900">
+    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-gray-900">
       {/* Header */}
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
@@ -173,9 +173,9 @@ const Myreferel = () => {
             {activeTab === "detail" ? (
               <>
                 {/* Referral Box */}
-                <div className="sm:py-6 rounded-lg shadow-sm flex md:flex-row md:justify-between gap-4 sm:gap-6 mb-6 sm:mb-8">
+                <div className="sm:py-6 rounded-lg shadow-sm flex flex-col md:flex-row md:justify-between gap-4 sm:gap-6 mb-6 sm:mb-8">
                   {/* QR */}
-                  <div className="w-[200px] sm:w-[200px] sm:h-[200px] bg-white p-2 border border-gray-200 flex items-center justify-center">
+                  <div className=" w-full h-[200px] sm:w-[200px] sm:h-[200px] md:bg-white p-2 md:border border-gray-200 flex items-center justify-center">
                     <QRCode 
                       value={`https://b.com/register?ref=${userData?.referralCode || ""}`} 
                       size={180}

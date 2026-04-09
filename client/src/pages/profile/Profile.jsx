@@ -1,5 +1,5 @@
 // Profile.js
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import Sidebar from "../../components/sidebar/Sidebar";
 import { Header } from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
@@ -35,6 +35,86 @@ import axios from "axios";
 import { LanguageContext } from "../../context/LanguageContext";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+// ─── Reusable 6-box OTP input component ───────────────────────────────────────
+const OtpBoxes = ({ value, onChange, disabled }) => {
+  const inputRefs = useRef([]);
+
+  const handleChange = (index, e) => {
+    const digit = e.target.value.replace(/\D/g, "").slice(-1);
+    const arr = value.split("");
+    arr[index] = digit;
+    const next = arr.join("").padEnd(6, "").slice(0, 6);
+    onChange(next);
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === "Backspace") {
+      const arr = value.split("");
+      if (arr[index]) {
+        arr[index] = "";
+        onChange(arr.join("").padEnd(6, "").slice(0, 6));
+      } else if (index > 0) {
+        inputRefs.current[index - 1]?.focus();
+        const prev = value.split("");
+        prev[index - 1] = "";
+        onChange(prev.join("").padEnd(6, "").slice(0, 6));
+      }
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    onChange(pasted.padEnd(6, "").slice(0, 6));
+    const nextFocus = Math.min(pasted.length, 5);
+    inputRefs.current[nextFocus]?.focus();
+  };
+
+  return (
+    <div style={{ display: "flex", gap: "10px", justifyContent: "center", margin: "12px 0" }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <input
+          key={i}
+          ref={(el) => (inputRefs.current[i] = el)}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[i] || ""}
+          onChange={(e) => handleChange(i, e)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          onPaste={handlePaste}
+          disabled={disabled}
+          style={{
+            width: "44px",
+            height: "48px",
+            textAlign: "center",
+            fontSize: "20px",
+            fontWeight: "500",
+            fontFamily: "monospace",
+            background: "#222",
+            border: value[i] ? "1.5px solid #4f8ef7" : "1.5px solid #444",
+            borderRadius: "8px",
+            color: "#fff",
+            outline: "none",
+            caretColor: "transparent",
+            transition: "border-color 0.15s",
+          }}
+          onFocus={(e) => (e.target.style.borderColor = "#4f8ef7")}
+          onBlur={(e) => (e.target.style.borderColor = value[i] ? "#4f8ef7" : "#444")}
+        />
+      ))}
+    </div>
+  );
+};
+// ──────────────────────────────────────────────────────────────────────────────
 
 const Profile = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -124,15 +204,11 @@ const Profile = () => {
     if (userData) {
       // Format phone number: remove any leading +880 or 880 if present, just keep the raw number
       let rawPhone = userData.phone || '';
-      // Remove +880 prefix if exists
       if (rawPhone.startsWith('+880')) {
         rawPhone = rawPhone.substring(4);
-      }
-      // Remove 880 prefix if exists
-      else if (rawPhone.startsWith('880')) {
+      } else if (rawPhone.startsWith('880')) {
         rawPhone = rawPhone.substring(3);
       }
-      // Remove any non-digit characters
       rawPhone = rawPhone.replace(/\D/g, '');
       
       setPersonalInfoForm({
@@ -141,12 +217,10 @@ const Profile = () => {
         phone: rawPhone
       });
       console.log("User data loaded:", userData);
-      // Check if fields have been updated before
       setIsFullNameUpdated(!!userData.fullName);
       setIsDOBUpdated(!!userData.dateOfBirth);
       setIsEmailUpdated(!!userData.email);
       
-      // Load address verification data if available
       if (userData.addressVerification) {
         setAddressForm({
           streetAddress: userData.addressVerification.streetAddress || "",
@@ -205,26 +279,17 @@ const Profile = () => {
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswordForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setPasswordForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handlePersonalInfoChange = (e) => {
     const { name, value } = e.target;
-    setPersonalInfoForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setPersonalInfoForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleEmailUpdateChange = (e) => {
     const { name, value } = e.target;
-    setEmailUpdateForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setEmailUpdateForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handlePasswordSubmit = async (e) => {
@@ -250,11 +315,7 @@ const Profile = () => {
 
       if (response.data.success) {
         toast.success(t?.passwordChangedSuccess || "Password changed successfully!");
-        setPasswordForm({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: ""
-        });
+        setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       } else {
         toast.error(response.data.message || (t?.failedToChangePassword || "Failed to change password"));
       }
@@ -351,16 +412,16 @@ const Profile = () => {
 
   // ==================== MOBILE VERIFICATION FUNCTIONS ====================
   
-  // Request OTP for mobile verification
   const handleSendMobileOTP = async () => {
     if (!personalInfoForm.phone) {
       toast.error(t?.addPhoneFirst || "Please enter your phone number first.");
       return;
     }
 
-    const phoneRegex = /^1[0-9]{9}$/;
+    // ── FIXED: 11-digit BD number starting with 01 ──
+    const phoneRegex = /^01[0-9]{9}$/;
     if (!phoneRegex.test(personalInfoForm.phone)) {
-      toast.error(t?.invalidPhone || "Please enter a valid Bangladeshi phone number (format: 01XXXXXXXXX)");
+      toast.error(t?.invalidPhone || "Please enter a valid Bangladeshi phone number (format: 01XXXXXXXXX, 11 digits)");
       return;
     }
 
@@ -378,16 +439,13 @@ const Profile = () => {
           pendingPhone: response.data.data.phone,
           expiresAt: response.data.data.expiresAt,
           isLoading: false,
-          showForm: true  // This is set to true
+          showForm: true
         });
         
         toast.success(t?.otpSent || "OTP sent successfully! Please check your phone.");
         
-        // Show development OTP if available
         if (response.data.data.otp) {
-          toast.success(`Development OTP: ${response.data.data.otp}`, {
-            autoClose: 10000,
-          });
+          toast.success(`Development OTP: ${response.data.data.otp}`, { autoClose: 10000 });
         }
       } else {
         toast.error(response.data.message || (t?.failedToSendOTP || "Failed to send OTP"));
@@ -400,9 +458,8 @@ const Profile = () => {
     }
   };
 
-  // Verify OTP for mobile
   const handleVerifyMobileOTP = async () => {
-    if (!mobileVerification.otp || mobileVerification.otp.length !== 6) {
+    if (!mobileVerification.otp || mobileVerification.otp.replace(/\s/g, "").length !== 6) {
       toast.error(t?.pleaseEnterValidOTP || "Please enter a valid 6-digit OTP");
       return;
     }
@@ -426,7 +483,6 @@ const Profile = () => {
         
         toast.success(t?.phoneVerifiedSuccessfully || "Phone number verified successfully!");
         
-        // Update user data
         setUserData(prev => ({ 
           ...prev, 
           phone: response.data.data.phone,
@@ -445,7 +501,6 @@ const Profile = () => {
     }
   };
 
-  // Resend OTP
   const handleResendMobileOTP = async () => {
     setMobileVerification(prev => ({ ...prev, isLoading: true }));
 
@@ -465,9 +520,7 @@ const Profile = () => {
         toast.success(t?.otpResent || "OTP resent successfully!");
         
         if (response.data.data.otp) {
-          toast.success(`Development OTP: ${response.data.data.otp}`, {
-            autoClose: 10000,
-          });
+          toast.success(`Development OTP: ${response.data.data.otp}`, { autoClose: 10000 });
         }
       } else {
         toast.error(response.data.message || (t?.failedToResendOTP || "Failed to resend OTP"));
@@ -480,7 +533,6 @@ const Profile = () => {
     }
   };
 
-  // Cancel mobile verification
   const handleCancelMobileVerification = () => {
     setMobileVerification({
       step: "request",
@@ -517,7 +569,7 @@ const Profile = () => {
 
       if (response.data.success) {
         toast.success(t?.verificationEmailSent || "Verification code sent to your new email address!");
-        setEmailUpdateForm(prev => ({ ...prev, step: "verify" }));
+        setEmailUpdateForm(prev => ({ ...prev, step: "verify", otp: "" }));
       } else {
         toast.error(response.data.message || (t?.failedToSendOTP || "Failed to send verification code"));
       }
@@ -530,8 +582,8 @@ const Profile = () => {
   };
 
   const handleVerifyEmailOTP = async () => {
-    if (!emailUpdateForm.otp) {
-      toast.error(t?.pleaseEnterOTP || "Please enter the verification code");
+    if (!emailUpdateForm.otp || emailUpdateForm.otp.replace(/\s/g, "").length !== 6) {
+      toast.error(t?.pleaseEnterOTP || "Please enter the 6-digit verification code");
       return;
     }
 
@@ -546,12 +598,7 @@ const Profile = () => {
         setUserData(prev => ({ ...prev, email: response.data.data.email, isEmailVerified: true }));
         setIsEmailUpdated(true);
         setVerificationStatus(prev => ({ ...prev, email: "verified" }));
-        setEmailUpdateForm({
-          newEmail: "",
-          otp: "",
-          step: "request",
-          showForm: false
-        });
+        setEmailUpdateForm({ newEmail: "", otp: "", step: "request", showForm: false });
       } else {
         toast.error(response.data.message || (t?.failedToVerifyOTP || "Failed to verify OTP"));
       }
@@ -656,10 +703,7 @@ const Profile = () => {
 
   const handleAddressFormChange = (e) => {
     const { name, value } = e.target;
-    setAddressForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setAddressForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleDocumentFileChange = (e) => {
@@ -670,22 +714,14 @@ const Profile = () => {
         toast.error('Please upload a valid image or PDF file');
         return;
       }
-      
       if (file.size > 5 * 1024 * 1024) {
         toast.error('File size must be less than 5MB');
         return;
       }
-      
-      setAddressForm(prev => ({
-        ...prev,
-        documentFile: file
-      }));
-      
+      setAddressForm(prev => ({ ...prev, documentFile: file }));
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
-        reader.onloadend = () => {
-          setSelectedDocument(reader.result);
-        };
+        reader.onloadend = () => setSelectedDocument(reader.result);
         reader.readAsDataURL(file);
       } else {
         setSelectedDocument(null);
@@ -698,14 +734,11 @@ const Profile = () => {
       toast.error('Please fill in all required address fields');
       return;
     }
-    
     if (!addressForm.documentFile) {
       toast.error('Please upload a proof of address document');
       return;
     }
-    
     setUploadingDocument(true);
-    
     try {
       const formData = new FormData();
       formData.append('document', addressForm.documentFile);
@@ -717,9 +750,7 @@ const Profile = () => {
       formData.append('country', addressForm.country);
       
       const response = await axios.post(`${API_BASE_URL}/api/user/verify-address`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       
       if (response.data.success) {
@@ -744,12 +775,8 @@ const Profile = () => {
       toast.error(t?.noEmailFound || "No email address found. Please update your email first.");
       return;
     }
-
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/user/forgot-password`, {
-        email: userData.email
-      });
-      
+      const response = await axios.post(`${API_BASE_URL}/api/user/forgot-password`, { email: userData.email });
       if (response.data.success) {
         toast.success(t?.passwordResetEmailSent || "Password reset instructions sent to your email!");
       } else {
@@ -764,10 +791,7 @@ const Profile = () => {
   const handleToggle2FA = async () => {
     try {
       const isCurrentlyEnabled = userData?.twoFactorEnabled || false;
-      const response = await axios.post(`${API_BASE_URL}/api/user/toggle-2fa`, {
-        enable: !isCurrentlyEnabled
-      });
-      
+      const response = await axios.post(`${API_BASE_URL}/api/user/toggle-2fa`, { enable: !isCurrentlyEnabled });
       if (response.data.success) {
         toast.success(response.data.message);
         setUserData(prev => ({ ...prev, twoFactorEnabled: !isCurrentlyEnabled }));
@@ -785,9 +809,7 @@ const Profile = () => {
       not_started: { color: "bg-gray-500", text: t?.notStarted || "Not Started", icon: <FiX className="inline mr-1" /> },
       rejected: { color: "bg-red-500", text: t?.rejected || "Rejected", icon: <FiX className="inline mr-1" /> }
     };
-    
     const config = statusConfig[status] || statusConfig.not_started;
-    
     return (
       <span className={`px-2 py-1 rounded text-xs ${config.color} text-white flex items-center`}>
         {config.icon} {config.text}
@@ -802,8 +824,16 @@ const Profile = () => {
     }
   };
 
+  // Mask phone for display: show first 3 and last 3 digits, mask middle
+  const maskPhone = (phone) => {
+    if (!phone) return '';
+    const clean = phone.replace(/^\+880/, '').replace(/^880/, '');
+    if (clean.length <= 6) return `+880${clean}`;
+    return `+880${clean.slice(0, 2)}${'*'.repeat(clean.length - 5)}${clean.slice(-3)}`;
+  };
+
   return (
-    <div className="h-screen overflow-hidden font-poppins bg-[#0f0f0f] text-white">
+    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -830,9 +860,7 @@ const Profile = () => {
                   <button 
                     onClick={() => setActiveTab("personal-info")}
                     className={`px-4 py-3 text-left cursor-pointer transition-colors ${
-                      activeTab === "personal-info" 
-                        ? "bg-[#1f1f1f] font-medium text-white" 
-                        : "text-gray-300 hover:bg-[#1f1f1f]"
+                      activeTab === "personal-info" ? "bg-[#1f1f1f] font-medium text-white" : "text-gray-300 hover:bg-[#1f1f1f]"
                     }`}
                   >
                     {t?.personalInfo || "Personal info"}
@@ -840,9 +868,7 @@ const Profile = () => {
                   <button 
                     onClick={() => setActiveTab("login-security")}
                     className={`px-4 py-3 text-left cursor-pointer transition-colors ${
-                      activeTab === "login-security" 
-                        ? "bg-[#1f1f1f] font-medium text-white" 
-                        : "text-gray-300 hover:bg-[#1f1f1f]"
+                      activeTab === "login-security" ? "bg-[#1f1f1f] font-medium text-white" : "text-gray-300 hover:bg-[#1f1f1f]"
                     }`}
                   >
                     {t?.loginSecurity || "Login & Security"}
@@ -850,9 +876,7 @@ const Profile = () => {
                   <button 
                     onClick={() => setActiveTab("verification")}
                     className={`px-4 py-3 text-left cursor-pointer transition-colors ${
-                      activeTab === "verification" 
-                        ? "bg-[#1f1f1f] font-medium text-white" 
-                        : "text-gray-300 hover:bg-[#1f1f1f]"
+                      activeTab === "verification" ? "bg-[#1f1f1f] font-medium text-white" : "text-gray-300 hover:bg-[#1f1f1f]"
                     }`}
                   >
                     {t?.verification || "Verification"}
@@ -873,10 +897,7 @@ const Profile = () => {
                         <p className="text-sm text-gray-400">{t?.username || "Username"}</p>
                         <p className="text-white flex items-center gap-2">
                           {userData?.username || 'N/A'} 
-                          <FiCopy 
-                            className="text-gray-400 cursor-pointer hover:text-white" 
-                            onClick={() => copyToClipboard(userData?.username)}
-                          />
+                          <FiCopy className="text-gray-400 cursor-pointer hover:text-white" onClick={() => copyToClipboard(userData?.username)} />
                         </p>
                       </div>
                     </div>
@@ -887,15 +908,12 @@ const Profile = () => {
                         <p className="text-sm text-gray-400">{t?.playerId || "Player ID"}</p>
                         <p className="text-white flex items-center gap-2">
                           {userData?.player_id || 'N/A'}
-                          <FiCopy 
-                            className="text-gray-400 cursor-pointer hover:text-white" 
-                            onClick={() => copyToClipboard(userData?.player_id)}
-                          />
+                          <FiCopy className="text-gray-400 cursor-pointer hover:text-white" onClick={() => copyToClipboard(userData?.player_id)} />
                         </p>
                       </div>
                     </div>
 
-                    {/* Full Legal Name - Can only be updated once */}
+                    {/* Full Legal Name */}
                     <div className="py-4 border-b border-gray-700">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -903,10 +921,7 @@ const Profile = () => {
                           <p className="text-sm text-gray-400">{t?.fullLegalName || "Full legal name"}</p>
                         </div>
                         {!isFullNameUpdated && !editingFields.fullName && (
-                          <button 
-                            onClick={() => setEditingFields(prev => ({ ...prev, fullName: true }))}
-                            className="text-theme_color hover:text-theme_color/80 text-sm flex items-center gap-1"
-                          >
+                          <button onClick={() => setEditingFields(prev => ({ ...prev, fullName: true }))} className="text-theme_color hover:text-theme_color/80 text-sm flex items-center gap-1">
                             <FiEdit className="text-sm" /> {t?.update || "Update"}
                           </button>
                         )}
@@ -916,7 +931,6 @@ const Profile = () => {
                           </span>
                         )}
                       </div>
-                      
                       {editingFields.fullName ? (
                         <div className="space-y-2">
                           <input
@@ -929,17 +943,10 @@ const Profile = () => {
                             disabled={isUpdating}
                           />
                           <div className="flex gap-2">
-                            <button
-                              onClick={handleUpdateFullName}
-                              disabled={isUpdating}
-                              className="bg-theme_color text-white px-3 py-1 rounded text-sm disabled:opacity-50 flex items-center gap-1"
-                            >
+                            <button onClick={handleUpdateFullName} disabled={isUpdating} className="bg-theme_color text-white px-3 py-1 rounded text-sm disabled:opacity-50 flex items-center gap-1">
                               <FiSave className="text-sm" /> {isUpdating ? (t?.saving || 'Saving...') : (t?.save || 'Save')}
                             </button>
-                            <button
-                              onClick={() => handleCancelEdit('fullName')}
-                              className="bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
-                            >
+                            <button onClick={() => handleCancelEdit('fullName')} className="bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
                               <FiXCircle className="text-sm" /> {t?.cancel || "Cancel"}
                             </button>
                           </div>
@@ -953,7 +960,7 @@ const Profile = () => {
                       )}
                     </div>
 
-                    {/* Date of Birth - Can only be updated once */}
+                    {/* Date of Birth */}
                     <div className="py-4 border-b border-gray-700">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -961,10 +968,7 @@ const Profile = () => {
                           <p className="text-sm text-gray-400">{t?.dateOfBirth || "Date of birth"}</p>
                         </div>
                         {!isDOBUpdated && !editingFields.dateOfBirth && (
-                          <button 
-                            onClick={() => setEditingFields(prev => ({ ...prev, dateOfBirth: true }))}
-                            className="text-theme_color hover:text-theme_color/80 text-sm flex items-center gap-1"
-                          >
+                          <button onClick={() => setEditingFields(prev => ({ ...prev, dateOfBirth: true }))} className="text-theme_color hover:text-theme_color/80 text-sm flex items-center gap-1">
                             <FiEdit className="text-sm" /> {t?.update || "Update"}
                           </button>
                         )}
@@ -974,7 +978,6 @@ const Profile = () => {
                           </span>
                         )}
                       </div>
-                      
                       {editingFields.dateOfBirth ? (
                         <div className="space-y-2">
                           <input
@@ -986,17 +989,10 @@ const Profile = () => {
                             disabled={isUpdating}
                           />
                           <div className="flex gap-2">
-                            <button
-                              onClick={handleUpdateDOB}
-                              disabled={isUpdating}
-                              className="bg-theme_color text-white px-3 py-1 rounded text-sm disabled:opacity-50 flex items-center gap-1"
-                            >
+                            <button onClick={handleUpdateDOB} disabled={isUpdating} className="bg-theme_color text-white px-3 py-1 rounded text-sm disabled:opacity-50 flex items-center gap-1">
                               <FiSave className="text-sm" /> {isUpdating ? (t?.saving || 'Saving...') : (t?.save || 'Save')}
                             </button>
-                            <button
-                              onClick={() => handleCancelEdit('dateOfBirth')}
-                              className="bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
-                            >
+                            <button onClick={() => handleCancelEdit('dateOfBirth')} className="bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
                               <FiXCircle className="text-sm" /> {t?.cancel || "Cancel"}
                             </button>
                           </div>
@@ -1010,7 +1006,7 @@ const Profile = () => {
                       )}
                     </div>
 
-                    {/* Phone with OTP Verification - Updated Section (Fixed double +880 issue) */}
+                    {/* ── Phone with OTP Verification (FIXED: 11-digit + OTP boxes) ── */}
                     <div className="py-4 border-b border-gray-700">
                       <div className="flex items-center gap-2 mb-2">
                         <FiPhone className="text-gray-400" />
@@ -1020,74 +1016,68 @@ const Profile = () => {
                       {!userData?.isPhoneVerified && mobileVerification.showForm ? (
                         <div className="space-y-3">
                           {mobileVerification.step === "verify" && (
-                            <>
-                              <div className="bg-[#1a1c1d] p-4 rounded-lg border border-gray-700">
-                                <p className="text-sm text-gray-300 mb-3 text-center">
-                                  {t?.otpSentTo || "OTP sent to"} +880{personalInfoForm.phone}
-                                </p>
-                                
-                                <div className="flex justify-center mb-4">
-                                  <input
-                                    type="text"
-                                    maxLength="6"
-                                    value={mobileVerification.otp}
-                                    onChange={(e) => {
-                                      const value = e.target.value.replace(/\D/g, '');
-                                      if (value.length <= 6) {
-                                        setMobileVerification(prev => ({ ...prev, otp: value }));
-                                      }
-                                    }}
-                                    className="w-48 text-center bg-[#222] border border-gray-700 rounded px-4 py-3 text-white text-2xl font-mono focus:outline-none focus:border-theme_color"
-                                    placeholder="000000"
-                                    disabled={mobileVerification.isLoading}
-                                  />
-                                </div>
-                                
-                                <div className="flex gap-2 justify-center">
-                                  <button
-                                    onClick={handleVerifyMobileOTP}
-                                    disabled={mobileVerification.isLoading || mobileVerification.otp.length !== 6}
-                                    className="bg-theme_color text-white px-4 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-1"
-                                  >
-                                    {mobileVerification.isLoading ? (
-                                      <span className="flex items-center">
-                                        <svg className="animate-spin h-4 w-4 mr-1" viewBox="0 0 24 24">
-                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                        </svg>
-                                        {t?.verifying || "Verifying..."}
-                                      </span>
-                                    ) : (t?.verify || "Verify")}
-                                  </button>
-                                  <button
-                                    onClick={handleResendMobileOTP}
-                                    disabled={mobileVerification.isLoading}
-                                    className="bg-gray-600 text-white px-4 py-2 rounded text-sm flex items-center gap-1"
-                                  >
-                                    <FiRefreshCw className="text-sm" /> {t?.resendOTP || "Resend"}
-                                  </button>
-                                  <button
-                                    onClick={handleCancelMobileVerification}
-                                    className="bg-gray-700 text-white px-4 py-2 rounded text-sm flex items-center gap-1"
-                                  >
-                                    <FiXCircle className="text-sm" /> {t?.cancel || "Cancel"}
-                                  </button>
-                                </div>
+                            <div className="bg-[#1a1c1d] p-5 rounded-lg border border-gray-700">
+                              <p className="text-base font-semibold text-white text-center mb-1">
+                                {t?.otpVerification || "OTP Verification"}
+                              </p>
+                              <p className="text-sm text-gray-400 text-center mb-1">
+                                {t?.otpSentTo || "Enter the OTP you received at"}
+                              </p>
+                              <p className="text-sm font-semibold text-white text-center mb-4">
+                                {maskPhone(personalInfoForm.phone)}
+                              </p>
+
+                              {/* ── 6 individual OTP boxes ── */}
+                              <OtpBoxes
+                                value={mobileVerification.otp}
+                                onChange={(val) => setMobileVerification(prev => ({ ...prev, otp: val }))}
+                                disabled={mobileVerification.isLoading}
+                              />
+
+                              <div className="flex gap-2 justify-center mt-4">
+                                <button
+                                  onClick={handleVerifyMobileOTP}
+                                  disabled={mobileVerification.isLoading || mobileVerification.otp.replace(/\s/g,"").length !== 6}
+                                  className="bg-theme_color text-white px-5 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-1"
+                                >
+                                  {mobileVerification.isLoading ? (
+                                    <span className="flex items-center gap-1">
+                                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                      </svg>
+                                      {t?.verifying || "Verifying..."}
+                                    </span>
+                                  ) : (t?.verify || "Verify")}
+                                </button>
+                                <button
+                                  onClick={handleResendMobileOTP}
+                                  disabled={mobileVerification.isLoading}
+                                  className="bg-gray-600 text-white px-4 py-2 rounded text-sm flex items-center gap-1"
+                                >
+                                  <FiRefreshCw className="text-sm" /> {t?.resendOTP || "Resend"}
+                                </button>
+                                <button
+                                  onClick={handleCancelMobileVerification}
+                                  className="bg-gray-700 text-white px-4 py-2 rounded text-sm flex items-center gap-1"
+                                >
+                                  <FiXCircle className="text-sm" /> {t?.cancel || "Cancel"}
+                                </button>
                               </div>
-                            </>
+                            </div>
                           )}
                         </div>
                       ) : (
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
                             <div className="flex items-center bg-[#222] border border-gray-700 rounded overflow-hidden flex-1">
-                              <div className="flex items-center px-3 py-2 w-[120px] bg-[#1a1c1d] border-r border-gray-700">
+                              <div className="flex items-center px-3 py-2 w-[80px] bg-[#1a1c1d] border-r border-gray-700">
                                 <img 
                                   src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png" 
                                   alt="BD" 
                                   className="w-5 h-5 rounded-full mr-1"
                                 />
-                                <span className="text-white text-sm">+880</span>
+                                <span className="text-white text-sm">+88</span>
                               </div>
                               <input
                                 type="tel"
@@ -1095,24 +1085,26 @@ const Profile = () => {
                                 value={personalInfoForm.phone}
                                 onChange={(e) => {
                                   const value = e.target.value.replace(/\D/g, '');
-                                  if (value.length <= 10) {
+                                  // ── FIXED: allow up to 11 digits ──
+                                  if (value.length <= 11) {
                                     setPersonalInfoForm(prev => ({ ...prev, phone: value }));
                                   }
                                 }}
                                 className="flex-1 bg-[#222] px-3 py-2 text-white focus:outline-none"
-                                placeholder="XXXXXXXXXX"
+                                placeholder="01XXXXXXXXX"
                                 disabled={userData?.isPhoneVerified}
                               />
                             </div>
-                            {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 10 && (
+                            {/* ── FIXED: show verify button when 11 digits entered ── */}
+                            {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 11 && (
                               <button
                                 onClick={handleSendMobileOTP}
                                 disabled={mobileVerification.isLoading}
                                 className="bg-theme_color text-white px-4 py-2 rounded text-sm whitespace-nowrap disabled:opacity-50 flex items-center gap-1"
                               >
                                 {mobileVerification.isLoading ? (
-                                  <span className="flex items-center">
-                                    <svg className="animate-spin h-4 w-4 mr-1" viewBox="0 0 24 24">
+                                  <span className="flex items-center gap-1">
+                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                     </svg>
@@ -1135,17 +1127,18 @@ const Profile = () => {
                               </span>
                             </div>
                           )}
-                          {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 10 && (
+                          {/* ── FIXED: hint for 11-digit ── */}
+                          {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 11 && (
                             <p className="text-xs text-yellow-500">{t?.verifyPhoneToLock || "Phone number will be locked after verification."}</p>
                           )}
-                          {!userData?.isPhoneVerified && (!personalInfoForm.phone || personalInfoForm.phone.length !== 10) && (
-                            <p className="text-xs text-gray-500">Enter 10-digit phone number (e.g., 1712345678)</p>
+                          {!userData?.isPhoneVerified && (!personalInfoForm.phone || personalInfoForm.phone.length !== 11) && (
+                            <p className="text-xs text-gray-500">Enter 11-digit phone number starting with 01 (e.g., 01712345678)</p>
                           )}
                         </div>
                       )}
                     </div>
 
-                    {/* Email with Separate Update - Can only be set once (Added green check icon for verified) */}
+                    {/* ── Email with OTP boxes for verification step ── */}
                     <div className="py-4">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
@@ -1181,35 +1174,58 @@ const Profile = () => {
                               onChange={handleEmailUpdateChange}
                               className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-theme_color"
                               placeholder={t?.enterEmail || "Enter email address"}
+                              disabled={emailUpdateForm.step === "verify"}
                             />
+
+                            {/* ── OTP boxes for email verification ── */}
                             {emailUpdateForm.step === "verify" && (
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  name="otp"
+                              <div className="bg-[#1a1c1d] p-5 rounded-lg border border-gray-700">
+                                <p className="text-base font-semibold text-white text-center mb-1">
+                                  {t?.otpVerification || "OTP Verification"}
+                                </p>
+                                <p className="text-sm text-gray-400 text-center mb-1">
+                                  {t?.otpSentToEmail || "Enter the OTP you received at"}
+                                </p>
+                                <p className="text-sm font-semibold text-white text-center mb-4">
+                                  {emailUpdateForm.newEmail}
+                                </p>
+
+                                <OtpBoxes
                                   value={emailUpdateForm.otp}
-                                  onChange={handleEmailUpdateChange}
-                                  className="flex-1 bg-[#222] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-theme_color"
-                                  placeholder={t?.enterOTP || "Enter verification code"}
-                                />
-                                <button
-                                  onClick={handleVerifyEmailOTP}
+                                  onChange={(val) => setEmailUpdateForm(prev => ({ ...prev, otp: val }))}
                                   disabled={isVerifyingOTP}
-                                  className="bg-theme_color text-white px-4 py-2 rounded text-sm disabled:opacity-50"
-                                >
-                                  {isVerifyingOTP ? (t?.verifying || "Verifying...") : (t?.verify || "Verify")}
-                                </button>
+                                />
+
+                                <div className="flex gap-2 justify-center mt-4">
+                                  <button
+                                    onClick={handleVerifyEmailOTP}
+                                    disabled={isVerifyingOTP || emailUpdateForm.otp.replace(/\s/g,"").length !== 6}
+                                    className="bg-theme_color text-white px-5 py-2 rounded text-sm disabled:opacity-50"
+                                  >
+                                    {isVerifyingOTP ? (t?.verifying || "Verifying...") : (t?.verify || "Verify")}
+                                  </button>
+                                  <button
+                                    onClick={handleSendEmailOTP}
+                                    disabled={isSendingOTP}
+                                    className="bg-gray-600 text-white px-4 py-2 rounded text-sm flex items-center gap-1"
+                                  >
+                                    <FiRefreshCw className="text-sm" /> {t?.resendOTP || "Resend"}
+                                  </button>
+                                </div>
                               </div>
                             )}
+
                             <div className="flex gap-2">
-                              <button
-                                onClick={handleSendEmailOTP}
-                                disabled={isSendingOTP}
-                                className="bg-theme_color text-white px-4 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-1"
-                              >
-                                {isSendingOTP ? (t?.sending || "Sending...") : (t?.sendOTP || "Send OTP")}
-                                <FiSend />
-                              </button>
+                              {emailUpdateForm.step === "request" && (
+                                <button
+                                  onClick={handleSendEmailOTP}
+                                  disabled={isSendingOTP}
+                                  className="bg-theme_color text-white px-4 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-1"
+                                >
+                                  {isSendingOTP ? (t?.sending || "Sending...") : (t?.sendOTP || "Send OTP")}
+                                  <FiSend />
+                                </button>
+                              )}
                               <button
                                 onClick={() => setEmailUpdateForm({ newEmail: "", otp: "", step: "request", showForm: false })}
                                 className="bg-gray-600 text-white px-4 py-2 rounded text-sm"
@@ -1238,16 +1254,10 @@ const Profile = () => {
                             </div>
                             {userData?.email && !userData?.isEmailVerified && (
                               <>
-                                <button 
-                                  onClick={handleEmailVerificationRequest}
-                                  className="mt-2 text-yellow-500 hover:text-yellow-400 text-sm flex items-center gap-1"
-                                >
+                                <button onClick={handleEmailVerificationRequest} className="mt-2 text-yellow-500 hover:text-yellow-400 text-sm flex items-center gap-1">
                                   <FiMail /> {t?.verifyEmailNow || "Verify Email Now"}
                                 </button>
-                                <button 
-                                  onClick={handleResendVerificationEmail}
-                                  className="mt-2 text-blue-500 hover:text-blue-400 text-sm flex items-center gap-1 ml-4"
-                                >
+                                <button onClick={handleResendVerificationEmail} className="mt-2 text-blue-500 hover:text-blue-400 text-sm flex items-center gap-1 ml-4">
                                   <FiRefreshCw /> {t?.resendCode || "Resend Code"}
                                 </button>
                               </>
@@ -1281,11 +1291,7 @@ const Profile = () => {
                               className="w-full bg-[#222] border border-gray-700 rounded px-4 py-3 text-white focus:outline-none focus:border-theme_color"
                               required
                             />
-                            <button
-                              type="button"
-                              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                              className="absolute right-3 top-3 text-gray-400 hover:text-white"
-                            >
+                            <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-white">
                               {showCurrentPassword ? <FiEyeOff /> : <FiEye />}
                             </button>
                           </div>
@@ -1303,11 +1309,7 @@ const Profile = () => {
                               required
                               minLength={6}
                             />
-                            <button
-                              type="button"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
-                              className="absolute right-3 top-3 text-gray-400 hover:text-white"
-                            >
+                            <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-white">
                               {showNewPassword ? <FiEyeOff /> : <FiEye />}
                             </button>
                           </div>
@@ -1324,11 +1326,7 @@ const Profile = () => {
                               className="w-full bg-[#222] border border-gray-700 rounded px-4 py-3 text-white focus:outline-none focus:border-theme_color"
                               required
                             />
-                            <button
-                              type="button"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              className="absolute right-3 top-3 text-gray-400 hover:text-white"
-                            >
+                            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-white">
                               {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
                             </button>
                           </div>
@@ -1368,20 +1366,14 @@ const Profile = () => {
                           {t?.emailVerificationDesc || "Verify your email address to receive important notifications and updates."}
                         </p>
                         {verificationStatus.email === "not_started" && userData?.email && (
-                          <button 
-                            onClick={handleEmailVerificationRequest}
-                            className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80"
-                          >
+                          <button onClick={handleEmailVerificationRequest} className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80">
                             {t?.verifyEmail || "Verify Email"}
                           </button>
                         )}
                         {verificationStatus.email === "pending" && (
                           <div>
                             <p className="text-yellow-400 text-sm mb-2">{t?.verificationEmailSent || "Verification email sent. Please check your inbox."}</p>
-                            <button 
-                              onClick={handleResendVerificationEmail}
-                              className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80"
-                            >
+                            <button onClick={handleResendVerificationEmail} className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80">
                               {t?.resendCode || "Resend Code"}
                             </button>
                           </div>
@@ -1396,7 +1388,7 @@ const Profile = () => {
                         )}
                       </div>
 
-                      {/* Phone Verification - Updated */}
+                      {/* Phone Verification */}
                       <div className="bg-[#222] rounded-lg p-4 border border-gray-700">
                         <div className="flex justify-between items-center mb-3">
                           <div className="flex items-center gap-3">
@@ -1411,19 +1403,13 @@ const Profile = () => {
                         {!userData?.phone ? (
                           <p className="text-orange-400 text-sm mb-2">{t?.addPhoneFirst || "Please add your phone number in Personal Info first."}</p>
                         ) : verificationStatus.phone === "not_started" ? (
-                          <button 
-                            onClick={() => setMobileVerification(prev => ({ ...prev, showForm: true }))}
-                            className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80"
-                          >
+                          <button onClick={() => setMobileVerification(prev => ({ ...prev, showForm: true }))} className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80">
                             {t?.verifyPhone || "Verify Phone"}
                           </button>
                         ) : verificationStatus.phone === "pending" ? (
                           <div>
                             <p className="text-yellow-400 text-sm mb-2">{t?.verificationSmsSent || "Verification SMS sent. Please check your phone."}</p>
-                            <button 
-                              onClick={handlePhoneVerificationRequest}
-                              className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80"
-                            >
+                            <button onClick={handlePhoneVerificationRequest} className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80">
                               {t?.resendCode || "Resend Code"}
                             </button>
                           </div>

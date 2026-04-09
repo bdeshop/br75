@@ -30,7 +30,7 @@ const Vipclub = () => {
   ];
 
   return (
-    <div className="min-h-screen font-poppins bg-[#0f0f0f] text-white">
+    <div className="min-h-screen font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="flex">
@@ -47,7 +47,7 @@ const Vipclub = () => {
               <div className="absolute inset-0 bg-black/20 md:bg-transparent"></div>
               <div className="relative z-10 px-8 md:px-16 space-y-4 max-w-xl">
                 <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white uppercase italic">
-                  BajiMan VIP Club
+                  Bir75 VIP Club
                 </h1>
                 <p className="text-sm md:text-lg font-medium text-gray-200">
                   The Most Exclusive VIP Program Ever

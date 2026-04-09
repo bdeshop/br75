@@ -32,6 +32,7 @@ import {
   FiUsers,
   FiLogOut,
   FiRefreshCw,
+  FiGlobe,
 } from "react-icons/fi";
 import { MdSportsSoccer } from "react-icons/md";
 import axios from "axios";
@@ -48,108 +49,153 @@ import telegram_icon from "../../assets/social_icon/telegram.png"
 import whatsapp_icon from "../../assets/social_icon/whatsapp.png"
 import home_img from "../../assets/home.png";
 import menu_img from "../../assets/menu.png"
+import sports_img from "../../assets/sports.png"
 const APK_FILE = "https://bir75.com/Bajiman.apk";
+import BD_FLAG from "../../assets/flag/Flag-Bangladesh.webp";
+import US_FLAG from "../../assets/flag/us.webp";
 
 // ── Flag URLs ─────────────────────────────────────────────────────────────────
-const US_FLAG = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Flag_of_the_United_States.svg/1280px-Flag_of_the_United_States.svg.png";
-const BD_FLAG = "https://cdn.britannica.com/67/6267-050-8A26DFEE/Flag-Bangladesh.jpg";
 
-// ── Language Toggle Switch Component ─────────────────────────────────────────
-const LanguageToggle = ({ isBangla, onToggle, compact = false }) => {
+const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdownOpen, setDropdownOpen, dropdownRef }) => {
+  // Check if user is logged in from localStorage
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  useEffect(() => {
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem("usertoken");
+      const user = localStorage.getItem("user");
+      setIsLoggedIn(!!(token && user));
+    };
+    
+    checkLoginStatus();
+    
+    // Listen for storage changes (login/logout in other tabs)
+    window.addEventListener("storage", checkLoginStatus);
+    
+    return () => window.removeEventListener("storage", checkLoginStatus);
+  }, []);
+  
+  const handleLogout = () => {
+    // Remove user data from localStorage
+    localStorage.removeItem("usertoken");
+    localStorage.removeItem("user");
+    
+    // Remove axios authorization header if axios is available
+    if (typeof axios !== 'undefined') {
+      delete axios.defaults.headers.common["Authorization"];
+    }
+    
+    // Close dropdown
+    setDropdownOpen(false);
+    
+    // Reload the page to update UI
+    window.location.href = "/";
+  };
+  
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: compact ? "6px" : "8px",
-        userSelect: "none",
-      }}
-    >
-      {/* EN label (only shown when not compact) */}
-      {!compact && (
-        <span
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            color: !isBangla ? "#fff" : "#888",
-            letterSpacing: "0.05em",
-            transition: "color 0.25s",
-            minWidth: "20px",
-            textAlign: "right",
-          }}
-        >
-          EN
-        </span>
-      )}
-
-      {/* Toggle pill */}
+    <div style={{ position: "relative" }} ref={dropdownRef}>
+      {/* Trigger Button */}
       <button
-        onClick={onToggle}
-        aria-label={isBangla ? "Switch to English" : "Switch to Bangla"}
-        className="border-[1px] border-gray-700"
-        style={{
-          position: "relative",
-          width: compact ? "52px" : "58px",
-          height: compact ? "28px" : "30px",
-          borderRadius: "999px",
-          background: "#222424",
-          cursor: "pointer",
-          padding: 0,
-          outline: "none",
-          flexShrink: 0,
-          boxShadow: "inset 0 1px 3px rgba(0,0,0,0.25)",
-          transition: "background 0.25s",
-        }}
+        onClick={() => setDropdownOpen(!dropdownOpen)}
+        className="flex items-center gap-[6px] p-[6px_10px] cursor-pointer text-white transition-opacity hover:opacity-80"
+        aria-label="Currency and Language"
       >
-        {/* Sliding flag circle */}
-        <span
-          style={{
-            position: "absolute",
-            top: "3px",
-            left: isBangla
-              ? `calc(100% - ${compact ? "25px" : "27px"})`
-              : "3px",
-            width: compact ? "22px" : "24px",
-            height: compact ? "22px" : "24px",
-            borderRadius: "50%",
-            overflow: "hidden",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
-            transition: "left 0.28s cubic-bezier(0.4,0,0.2,1)",
-            border: "1.5px solid rgba(255,255,255,0.8)",
-            display: "block",
-          }}
-        >
+        <span className="w-[30px] h-[30px] rounded-full overflow-hidden flex items-center justify-center border-[1.5px] border-white/40 shrink-0">
           <img
             src={isBangla ? BD_FLAG : US_FLAG}
-            alt={isBangla ? "Bangladesh" : "USA"}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
+            alt={isBangla ? "BD" : "EN"}
+            className="w-full h-full object-cover block"
           />
         </span>
       </button>
 
-      {/* BN label (only shown when not compact) */}
-      {!compact && (
-        <span
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            color: isBangla ? "#fff" : "#888",
-            letterSpacing: "0.05em",
-            transition: "color 0.25s",
-            minWidth: "20px",
-          }}
-        >
-          BN
-        </span>
+      {/* Dropdown Panel */}
+      {dropdownOpen && (
+        <div className="absolute top-[calc(100%+12px)] p-[10px] right-0 min-w-[340px] bg-[#1c1c1c] rounded-[4px] shadow-[0_10px_40px_rgba(0,0,0,0.6)] z-[99999] overflow-hidden border border-[#2d2d2d] space-y-5">
+          
+          {/* Header row */}
+          <div className="flex items-center justify-between py-[14px_16px_10px]">
+            <span className="text-[13px] text-[#efefef] font-medium">
+              Currency and Language
+            </span>
+            <button
+              onClick={() => setDropdownOpen(false)}
+              className="bg-transparent border-none text-[#999] cursor-pointer hover:text-white transition-colors"
+            >
+              <IoClose size={20} />
+            </button>
+          </div>
+
+          {/* BDT Currency display */}
+          <div className="flex flex-col items-center py-6 bg-[#161616] rounded-[5px]">
+            <div className="w-[48px] h-[48px] rounded-full border-[3px] border-[#008a5e] flex items-center justify-center mb-2">
+              <span className="text-[#008a5e] text-xl font-bold">৳</span>
+            </div>
+            <span className="text-[15px] text-white font-semibold">৳ BDT</span>
+          </div>
+
+          {/* EN / BN language buttons */}
+          <div className="flex gap-2 ">
+            {/* English button */}
+            <button
+              onClick={onSelectEnglish}
+              className={`flex-1 py-[10px] rounded-[2px] border-none cursor-pointer font-medium text-[14px] transition-all duration-200 ${
+                !isBangla 
+                  ? "bg-theme_color2 text-white shadow-inner" 
+                  : "bg-[#2d2d2d] text-[#a0a0a0] hover:bg-[#353535]"
+              }`}
+            >
+              English
+            </button>
+
+            {/* Bangla button */}
+            <button
+              onClick={onSelectBangla}
+              className={`flex-1 py-[10px] rounded-[2px] border-none cursor-pointer font-medium text-[14px] transition-all duration-200 ${
+                isBangla 
+                  ? "bg-theme_color2 text-white shadow-inner" 
+                  : "bg-[#2d2d2d] text-[#a0a0a0] hover:bg-[#353535]"
+              }`}
+            >
+              বাংলা
+            </button>
+          </div>
+
+          {/* Logout Button - Only show when user is logged in (checked from localStorage) */}
+          {isLoggedIn && (
+            <div className="border-t border-[#2d2d2d] pt-3 pb-2">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 py-[10px] rounded-[2px] border border-[#3d3d3d] bg-[#2d2d2d] text-[#e0e0e0] font-medium text-[14px] transition-all duration-200 hover:bg-[#d32f2f] hover:border-[#d32f2f] hover:text-white cursor-pointer"
+              >
+                <FiLogOut size={16} />
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 };
+
+// Helper function to get image by category name
+const getCategoryImageByName = (categoryName) => {
+  const imageMap = {
+    'exclusive': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-exclusive.png?v=1767857219215&source=drccdnsrc',
+    'sports': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-sport.png?v=1767857219215&source=drccdnsrc',
+    'casino': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-casino.png?v=1767857219215&source=drccdnsrc',
+    'slots': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-slot.png?v=1767857219215&source=drccdnsrc',
+    'crash': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-crash.png?v=1767857219215&source=drccdnsrc',
+    'table': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-table.png?v=1767857219215&source=drccdnsrc',
+    'fishing': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-fish.png?v=1767857219215&source=drccdnsrc',
+    'arcade': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-arcade.png?v=1767857219215&source=drccdnsrc',
+    'lottery': 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-lottery.png?v=1767857219215&source=drccdnsrc'
+  };
+  
+  return imageMap[categoryName.toLowerCase()] || 'https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-exclusive.png?v=1767857219215&source=drccdnsrc';
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const Header = ({ sidebarOpen, setSidebarOpen }) => {
@@ -186,8 +232,12 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const [socialLinks, setSocialLinks] = useState([]);
   const [loadingSocialLinks, setLoadingSocialLinks] = useState(false);
 
-  // ── Language state — now derived from LanguageContext ────────────────────────
-  // isBangla is true when the context language code is "bn"
+  // ── Currency/Language dropdown state ────────────────────────────────────────
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const langDropdownRef = useRef(null);
+  // ────────────────────────────────────────────────────────────────────────────
+
+  // ── Language state — derived from LanguageContext ────────────────────────
   const isBangla = language.code === "bn";
 
   const handleLanguageToggle = () => {
@@ -203,19 +253,38 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
           name: "English",
           flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Flag_of_the_United_States.svg/1280px-Flag_of_the_United_States.svg.png",
         };
-
     changeLanguage(nextLang);
-
-    // Keep localStorage string key "language" = "bn"/"en" for backward-compat
     localStorage.setItem("language", next ? "bn" : "en");
-
-    // Notify other components
     window.dispatchEvent(
       new StorageEvent("storage", {
         key: "language",
         newValue: next ? "bn" : "en",
       })
     );
+  };
+
+  const handleSelectEnglish = () => {
+    const nextLang = {
+      code: "en",
+      name: "English",
+      flag: US_FLAG,
+    };
+    changeLanguage(nextLang);
+    localStorage.setItem("language", "en");
+    window.dispatchEvent(new StorageEvent("storage", { key: "language", newValue: "en" }));
+    setLangDropdownOpen(false);
+  };
+
+  const handleSelectBangla = () => {
+    const nextLang = {
+      code: "bn",
+      name: "বাংলা",
+      flag: "https://images.5849492029.com//TCG_PROD_IMAGES/COUNTRY_FLAG/CIRCLE/BD.svg",
+    };
+    changeLanguage(nextLang);
+    localStorage.setItem("language", "bn");
+    window.dispatchEvent(new StorageEvent("storage", { key: "language", newValue: "bn" }));
+    setLangDropdownOpen(false);
   };
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -272,24 +341,14 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   ];
 
-  // Function to sort categories with Exclusive always first
   const sortCategoriesWithExclusiveFirst = (categories) => {
     if (!categories || categories.length === 0) return defaultCategories;
-
-    const exclusiveCategory = categories.find(cat =>
-      cat.name.toLowerCase() === "exclusive"
-    );
-
+    const exclusiveCategory = categories.find(cat => cat.name.toLowerCase() === "exclusive");
     if (!exclusiveCategory) return categories;
-
-    const otherCategories = categories.filter(cat =>
-      cat.name.toLowerCase() !== "exclusive"
-    );
-
+    const otherCategories = categories.filter(cat => cat.name.toLowerCase() !== "exclusive");
     return [exclusiveCategory, ...otherCategories];
   };
 
-  // Default social links fallback
   const getDefaultSocialLinks = () => [
     {
       platform: "whatsapp",
@@ -311,63 +370,33 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   ];
 
-  // Check if device is mobile
-  const isMobileDevice = () => {
-    return window.innerWidth < 768;
-  };
+  const isMobileDevice = () => window.innerWidth < 768;
 
-  // Check banner visibility based on localStorage
   const checkBannerVisibility = () => {
     if (!isMobileDevice()) return false;
-
     const bannerHiddenUntil = localStorage.getItem("mobileAppBannerHiddenUntil");
     const downloadHiddenUntil = localStorage.getItem("mobileAppDownloadHiddenUntil");
-
-    if (downloadHiddenUntil) {
-      const downloadHideTime = parseInt(downloadHiddenUntil);
-      if (Date.now() < downloadHideTime) {
-        return false;
-      }
-    }
-
-    if (bannerHiddenUntil) {
-      const bannerHideTime = parseInt(bannerHiddenUntil);
-      if (Date.now() < bannerHideTime) {
-        return false;
-      }
-    }
-
+    if (downloadHiddenUntil && Date.now() < parseInt(downloadHiddenUntil)) return false;
+    if (bannerHiddenUntil && Date.now() < parseInt(bannerHiddenUntil)) return false;
     return true;
   };
 
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-
-    if (!categories.length) {
-      setCategories(defaultCategories);
-      fetchCategories();
-    }
-
+    if (isMobile) setSidebarOpen(false);
+    if (!categories.length) { setCategories(defaultCategories); fetchCategories(); }
     if (!promotions.length) fetchPromotions();
     checkAuthStatus();
     fetchBrandingData();
     fetchSocialLinks();
-
     const hasShownSignupPopup = localStorage.getItem("hasShownSignupPopup");
     if (isLoggedIn && !hasShownSignupPopup) {
       setShowSignupPopup(true);
       localStorage.setItem("hasShownSignupPopup", "true");
     }
-
     const timer = setTimeout(() => {
-      if (checkBannerVisibility()) {
-        setShowMobileAppBanner(true);
-      }
+      if (checkBannerVisibility()) setShowMobileAppBanner(true);
     }, 2000);
-
     return () => clearTimeout(timer);
   }, [isLoggedIn]);
 
@@ -379,12 +408,12 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       if (popupRef.current && !popupRef.current.contains(event.target)) {
         setShowSignupPopup(false);
       }
+      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target)) {
+        setLangDropdownOpen(false);
+      }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const fetchBrandingData = async () => {
@@ -410,48 +439,19 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
         const mappedLinks = response.data.data.map(link => {
           let icon;
           let title;
-
           switch(link.platform.toLowerCase()) {
-            case 'whatsapp':
-              icon = <FaWhatsapp className="w-4 h-4 mr-2" />;
-              title = t.whatsapp;
-              break;
-            case 'email':
-              icon = <FaEnvelope className="w-4 h-4 mr-2" />;
-              title = t.email;
-              break;
-            case 'facebook':
-              icon = <FaFacebook className="w-4 h-4 mr-2" />;
-              title = t.facebook;
-              break;
-            case 'instagram':
-              icon = <FaInstagram className="w-4 h-4 mr-2" />;
-              title = t.instagram;
-              break;
-            case 'telegram':
-              icon = <FaTelegram className="w-4 h-4 mr-2" />;
-              title = t.telegram;
-              break;
-            case 'twitter':
-            case 'x':
-              icon = <FaTwitter className="w-4 h-4 mr-2" />;
-              title = t.twitter;
-              break;
-            default:
-              icon = <FaWhatsapp className="w-4 h-4 mr-2" />;
-              title = link.platform;
+            case 'whatsapp': icon = <FaWhatsapp className="w-4 h-4 mr-2" />; title = t.whatsapp; break;
+            case 'email': icon = <FaEnvelope className="w-4 h-4 mr-2" />; title = t.email; break;
+            case 'facebook': icon = <FaFacebook className="w-4 h-4 mr-2" />; title = t.facebook; break;
+            case 'instagram': icon = <FaInstagram className="w-4 h-4 mr-2" />; title = t.instagram; break;
+            case 'telegram': icon = <FaTelegram className="w-4 h-4 mr-2" />; title = t.telegram; break;
+            case 'twitter': case 'x': icon = <FaTwitter className="w-4 h-4 mr-2" />; title = t.twitter; break;
+            default: icon = <FaWhatsapp className="w-4 h-4 mr-2" />; title = link.platform;
           }
-
-          return {
-            ...link,
-            icon,
-            title
-          };
+          return { ...link, icon, title };
         });
-
         setSocialLinks(mappedLinks);
       } else {
-        console.error("Failed to fetch social links");
         setSocialLinks(getDefaultSocialLinks());
       }
     } catch (error) {
@@ -462,14 +462,31 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
+  // FIXED: fetchCategories function with proper image mapping
   const fetchCategories = async () => {
     try {
       setIsLoadingCategories(true);
       const response = await axios.get(`${API_BASE_URL}/api/categories`);
       if (response.data && response.data.data) {
-        const sortedCategories = sortCategoriesWithExclusiveFirst(response.data.data);
+        // Merge API categories with default images
+        const categoriesWithImages = response.data.data.map(cat => {
+          // Find matching default category by name (case-insensitive)
+          const defaultCat = defaultCategories.find(
+            defaultCat => defaultCat.name.toLowerCase() === cat.name.toLowerCase()
+          );
+          
+          // Use default image if available, otherwise use image map
+          return {
+            ...cat,
+            image: defaultCat?.image || getCategoryImageByName(cat.name)
+          };
+        });
+        
+        const sortedCategories = sortCategoriesWithExclusiveFirst(categoriesWithImages);
         setCategories(sortedCategories);
         localStorage.setItem("categories", JSON.stringify(sortedCategories));
+      } else {
+        setCategories(defaultCategories);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -479,9 +496,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  useEffect(() => { fetchCategories(); }, []);
 
   const fetchPromotions = async () => {
     try {
@@ -501,9 +516,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const fetchProviders = async (categoryName) => {
     try {
       setSidebarLoading(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/api/providers/${categoryName}`
-      );
+      const response = await axios.get(`${API_BASE_URL}/api/providers/${categoryName}`);
       if (response.data.success) {
         setProviders(response.data.data);
         setExclusiveGames([]);
@@ -519,27 +532,16 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     try {
       setSidebarLoading(true);
       const response = await axios.get(`${API_BASE_URL}/api/menu-games`);
-
       let gamesData = [];
-
-      if (response.data && response.data.data) {
-        gamesData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        gamesData = response.data;
-      }
-
+      if (response.data && response.data.data) { gamesData = response.data.data; }
+      else if (Array.isArray(response.data)) { gamesData = response.data; }
       const exclusiveGamesData = gamesData.filter(game => {
         if (!game) return false;
-
         const categoryName = (game.categoryname || game.category || game.categoryName || '').toLowerCase();
         const gameName = (game.name || game.gameName || '').toLowerCase();
-
-        return categoryName.includes("exclusive") ||
-               categoryName.includes("exlusive") ||
-               gameName.includes("exclusive") ||
-               gameName.includes("exlusive");
+        return categoryName.includes("exclusive") || categoryName.includes("exlusive") ||
+               gameName.includes("exclusive") || gameName.includes("exlusive");
       });
-
       setExclusiveGames(exclusiveGamesData);
       setProviders([]);
     } catch (error) {
@@ -552,41 +554,30 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
 
   const handleCategoryClick = (category) => {
     if (activeMenu === category.name) {
-      setActiveMenu(null);
-      setProviders([]);
-      setExclusiveGames([]);
+      setActiveMenu(null); setProviders([]); setExclusiveGames([]);
     } else {
       setActiveMenu(category.name);
-      if (category.name.toLowerCase() === "exclusive") {
-        fetchExclusiveGames();
-      } else {
-        fetchProviders(category.name);
-      }
+      if (category.name.toLowerCase() === "exclusive") fetchExclusiveGames();
+      else fetchProviders(category.name);
     }
   };
 
   const handleProviderClick = (provider) => {
     if (activeMenu) {
-      navigate(
-        `/games?category=${activeMenu.toLowerCase()}&provider=${provider.name.toLowerCase()}`
-      );
+      navigate(`/games?category=${activeMenu.toLowerCase()}&provider=${provider.name.toLowerCase()}`);
       setSidebarOpen(false);
     }
   };
 
   const { user } = useAuth();
   const handleGameClick = (game) => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
+    if (!user) { navigate("/login"); return; }
     navigate(`/game/${game.gameId}`);
   };
 
   const checkAuthStatus = () => {
     const token = localStorage.getItem("usertoken");
     const user = localStorage.getItem("user");
-
     if (token && user) {
       setIsLoggedIn(true);
       setUserData(JSON.parse(user));
@@ -600,9 +591,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const verifyToken = async (token) => {
     try {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      const response = await axios.get(
-        `${API_BASE_URL}/api/user/my-information`
-      );
+      const response = await axios.get(`${API_BASE_URL}/api/user/my-information`);
       if (response.data.success) {
         setUserData(response.data.data);
         localStorage.setItem("user", JSON.stringify(response.data.data));
@@ -615,16 +604,11 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
 
   const refreshBalance = async () => {
     if (!isLoggedIn) return;
-
     try {
       setIsRefreshingBalance(true);
       const token = localStorage.getItem("usertoken");
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      const response = await axios.get(
-        `${API_BASE_URL}/api/user/my-information`
-      );
-
+      const response = await axios.get(`${API_BASE_URL}/api/user/my-information`);
       if (response.data.success) {
         setUserData(response.data.data);
         localStorage.setItem("user", JSON.stringify(response.data.data));
@@ -654,152 +638,37 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   const menuItems = [
-    {
-      id: "notifications",
-      label: t.notifications,
-      icon: <FiBell />,
-      path: "/member/inbox/notification",
-    },
-    {
-      id: "personal-info",
-      label: t.personalInfo,
-      icon: <FiUser />,
-      path: "/member/profile/info",
-    },
-    {
-      id: "login-security",
-      label: t.loginSecurity,
-      icon: <FiLock />,
-      path: "/member/profile/account",
-    },
-    {
-      id: "verification",
-      label: t.verification,
-      icon: <FiCheckCircle />,
-      path: "/member/profile/verify",
-    },
-    {
-      id: "transactions",
-      label: t.transactions,
-      icon: <FiFileText />,
-      path: "/member/transaction-records",
-    },
-    {
-      id: "betting-records",
-      label: t.bettingRecords,
-      icon: <MdSportsSoccer />,
-      path: "/member/betting-records/settled",
-    },
-    {
-      id: "turnover",
-      label: t.turnover,
-      icon: <FiTrendingUp />,
-      path: "/member/turnover/uncomplete",
-    },
-    {
-      id: "referral",
-      label: t.myReferral,
-      icon: <FiUsers />,
-      path: "/referral-program/details",
-    },
-    // NEW: Bonuses menu item
-    {
-      id: "bonuses",
-      label: t.bonuses || "Bonuses",
-      icon: <FaGift />,
-      path: "/member/bonuses",
-    },
-  ];
-
-  const secondaryMenuItems = [
-    {
-      title: t.promotions,
-      icon: <FaGift className="w-5 h-5 min-w-[20px]" />,
-      subItems: ["Welcome Bonus", "Reload Bonus", "Cashback"],
-    },
-    {
-      title: t.vipClub,
-      icon: <FaCrown className="w-5 h-5 min-w-[20px]" />,
-      subItems: ["VIP Levels", "Exclusive Rewards", "Personal Manager"],
-    },
-    {
-      title: t.referralProgram,
-      icon: <FaUserFriends className="w-5 h-5 min-w-[20px]" />,
-      subItems: ["Invite Friends", "Earn Commission", "Bonus Terms"],
-    },
-    {
-      title: t.affiliate,
-      icon: <FaHandshake className="w-5 h-5 min-w-[20px]" />,
-      subItems: ["Join Program", "Marketing Tools", "Commission Rates"],
-    },
+    { id: "notifications", label: t.notifications, icon: <FiBell />, path: "/member/inbox/notification" },
+    { id: "personal-info", label: t.personalInfo, icon: <FiUser />, path: "/member/profile/info" },
+    { id: "login-security", label: t.loginSecurity, icon: <FiLock />, path: "/member/profile/account" },
+    { id: "verification", label: t.verification, icon: <FiCheckCircle />, path: "/member/profile/verify" },
+    { id: "transactions", label: t.transactions, icon: <FiFileText />, path: "/member/transaction-records" },
+    { id: "betting-records", label: t.bettingRecords, icon: <MdSportsSoccer />, path: "/member/betting-records/settled" },
+    { id: "turnover", label: t.turnover, icon: <FiTrendingUp />, path: "/member/turnover/uncomplete" },
+    { id: "referral", label: t.myReferral, icon: <FiUsers />, path: "/referral-program/details" },
+    { id: "bonuses", label: t.bonuses || "Bonuses", icon: <FaGift />, path: "/member/bonuses" },
   ];
 
   const bottomMenuItems = [
-    {
-      title: t.vipClub,
-      icon: <FaCrown className="w-5 h-5 min-w-[20px]" />,
-      subItems: [],
-      path: "/vip-club"
-    },
-    {
-      title: t.referralProgram,
-      icon: <FaUserFriends className="w-5 h-5 min-w-[20px]" />,
-      subItems: [],
-      path: "/referral-program"
-    },
-    {
-      title: t.affiliate,
-      icon: <FaHandshake className="w-5 h-5 min-w-[20px]" />,
-      subItems: [],
-      onClick: () => { window.location.href = "https://m-affiliate.bir75.com" },
-    },
-    {
-      title: t.brandAmbassadors,
-      icon: <MdSupportAgent className="w-5 h-5 min-w-[20px]" />,
-      subItems: [],
-      path: "/coming-soon?title=Brand Ambassadors"
-    },
-    {
-      title: t.appDownload,
-      icon: <FaMobileAlt className="w-5 h-5 min-w-[20px]" />,
-      subItems: [],
-      onClick: () => downloadFileAtURL(APK_FILE),
-    },
-    {
-      title: t.contactUs,
-      icon: <FaPhone className="w-5 h-5 min-w-[20px]" />,
-      subItems: [],
-      isContact: true
-    },
-    {
-      title: t.newMemberGuide,
-      icon: <FaBook className="w-5 h-5 min-w-[20px]" />,
-      subItems: [],
-      path: "/coming-soon?title=New Member Guide"
-    },
-    {
-      title: t.bjForum,
-      icon: <FaComments className="w-5 h-5 min-w-[20px]" />,
-      subItems: [],
-      path: "/coming-soon?title=BJ Forum"
-    },
+    { title: t.vipClub, icon: <FaCrown className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/vip-club" },
+    { title: t.referralProgram, icon: <FaUserFriends className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/referral-program" },
+    { title: t.affiliate, icon: <FaHandshake className="w-5 h-5 min-w-[20px]" />, subItems: [], onClick: () => { window.location.href = "https://m-affiliate.bir75.com" } },
+    { title: t.brandAmbassadors, icon: <MdSupportAgent className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/coming-soon?title=Brand Ambassadors" },
+    { title: t.appDownload, icon: <FaMobileAlt className="w-5 h-5 min-w-[20px]" />, subItems: [], onClick: () => downloadFileAtURL(APK_FILE) },
+    { title: t.contactUs, icon: <FaPhone className="w-5 h-5 min-w-[20px]" />, subItems: [], isContact: true },
+    { title: t.newMemberGuide, icon: <FaBook className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/coming-soon?title=New Member Guide" },
+    { title: t.bjForum, icon: <FaComments className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/coming-soon?title=BJ Forum" },
   ];
 
   const toggleMenu = (title) => {
     if (activeMenu === title) {
-      setActiveMenu(null);
-      setActiveSubMenu(null);
-      setProviders([]);
-      setExclusiveGames([]);
+      setActiveMenu(null); setActiveSubMenu(null); setProviders([]); setExclusiveGames([]);
     } else {
-      setActiveMenu(title);
-      setActiveSubMenu(null);
+      setActiveMenu(title); setActiveSubMenu(null);
     }
   };
 
-  const toggleSubMenu = (subItem) => {
-    setActiveSubMenu(activeSubMenu === subItem ? null : subItem);
-  };
+  const toggleSubMenu = (subItem) => setActiveSubMenu(activeSubMenu === subItem ? null : subItem);
 
   const downloadFileAtURL = (url) => {
     const fileName = url.split("/").pop();
@@ -813,47 +682,39 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   const handleContactClick = (url) => {
-    if (url) {
-      window.open(url, '_blank');
-    }
+    if (url) window.open(url, '_blank');
   };
 
   const getGameImageUrl = (game) => {
     if (!game) return '';
-
     const imagePath = game.portraitImage || game.image || game.thumbnail || '';
     if (!imagePath) return '';
-
-    if (imagePath.startsWith('http')) {
-      return imagePath;
-    }
-
+    if (imagePath.startsWith('http')) return imagePath;
     const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
     return `${API_BASE_URL}/${cleanPath}`;
   };
-const [isRefreshingCoinBalance, setIsRefreshingCoinBalance] = useState(false);
 
-const refreshCoinBalance = async () => {
-  if (!isLoggedIn) return;
-  
-  try {
-    setIsRefreshingCoinBalance(true);
-    const token = localStorage.getItem("usertoken");
-    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    
-    const response = await axios.get(`${API_BASE_URL}/api/user/my-information`);
-    
-    if (response.data.success) {
-      setUserData(response.data.data);
-      localStorage.setItem("user", JSON.stringify(response.data.data));
+  const [isRefreshingCoinBalance, setIsRefreshingCoinBalance] = useState(false);
+
+  const refreshCoinBalance = async () => {
+    if (!isLoggedIn) return;
+    try {
+      setIsRefreshingCoinBalance(true);
+      const token = localStorage.getItem("usertoken");
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      const response = await axios.get(`${API_BASE_URL}/api/user/my-information`);
+      if (response.data.success) {
+        setUserData(response.data.data);
+        localStorage.setItem("user", JSON.stringify(response.data.data));
+      }
+    } catch (error) {
+      console.error("Error refreshing coin balance:", error);
+      toast.error(t.failedRefreshCoinBalance);
+    } finally {
+      setIsRefreshingCoinBalance(false);
     }
-  } catch (error) {
-    console.error("Error refreshing coin balance:", error);
-    toast.error(t.failedRefreshCoinBalance);
-  } finally {
-    setIsRefreshingCoinBalance(false);
-  }
-};
+  };
+
   return (
     <>
       <Toaster />
@@ -866,25 +727,19 @@ const refreshCoinBalance = async () => {
             <FaBars size={18} />
           </button>
           <a href="/">
-            <img
-              src={dynamicLogo}
-              alt="Logo"
-              className="w-[80px] md:w-[95px]"
-            />
+            <img src={dynamicLogo} alt="Logo" className="w-[80px] md:w-[95px]" />
           </a>
-          <NavLink
-            to="/slots"
-            className="md:flex hidden items-center space-x-2 text-[13px] font-[400] text-gray-400 hover:text-yellow-400"
-          >
+          <NavLink to="/slots" className="md:flex hidden items-center space-x-2 text-[13px] font-[400] text-gray-400 hover:text-yellow-400">
             <img src={slot_img} alt="Slots" className="h-5 w-5" />
             <span>{t.slots}</span>
           </NavLink>
-          <NavLink
-            to="/casino"
-            className="md:flex hidden items-center space-x-2 text-gray-400 text-[13px] font-[400] hover:text-yellow-400"
-          >
+          <NavLink to="/casino" className="md:flex hidden items-center space-x-2 text-gray-400 text-[13px] font-[400] hover:text-yellow-400">
             <img src={casino_img} alt="Casino" className="h-5 w-5" />
             <span>{t.casino}</span>
+          </NavLink>
+            <NavLink to="/sports" className="md:flex hidden items-center space-x-2 text-gray-400 text-[13px] font-[400] hover:text-yellow-400">
+            <img src={sports_img} alt="Sports" className="h-5 w-5" />
+            <span>{t.sports}</span>
           </NavLink>
           {isLoggedIn && (
             <div className="relative" ref={dropdownRef}>
@@ -906,12 +761,8 @@ const refreshCoinBalance = async () => {
                       />
                     </div>
                     <div>
-                      <div className="font-[500] text-sm">
-                        {t.username}: {userData?.username || "N/A"}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {t.playerId}: {userData?.player_id || "N/A"}
-                      </div>
+                      <div className="font-[500] text-sm">{t.username}: {userData?.username || "N/A"}</div>
+                      <div className="text-xs text-gray-500 mt-1">{t.playerId}: {userData?.player_id || "N/A"}</div>
                     </div>
                   </div>
                   <div className="flex flex-col py-3">
@@ -922,38 +773,33 @@ const refreshCoinBalance = async () => {
                         className={`flex items-center gap-3 px-4 py-3 text-sm transition ${
                           activeTab === item.id
                             ? "bg-[#222] text-white"
-                            : "text-gray-300 hover:bg-[#1a1a1a] hover:text-white"
+                            : "text-gray-300 hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:text-white"
                         }`}
-                        onClick={() => {
-                          setActiveTab(item.id);
-                          setProfileDropdownOpen(false);
-                        }}
+                        onClick={() => { setActiveTab(item.id); setProfileDropdownOpen(false); }}
                       >
                         <span className="text-lg">{item.icon}</span>
                         <span>{item.label}</span>
                       </NavLink>
                     ))}
                   </div>
+                  {/* ── Logout button at the bottom of profile dropdown ── */}
                   <div className="border-t border-[#333] p-3">
                     <button
-                      className="flex items-center justify-center gap-2 w-full py-2 text-sm rounded-md border border-[#333] text-gray-300 hover:bg-[#222] hover:text-white transition"
+                      className="flex items-center justify-center gap-2 w-full py-2 text-sm rounded-md border border-[#333] text-gray-300 hover:bg-[#222] hover:text-white transition cursor-pointer"
                       onClick={logout}
                     >
                       <FiLogOut /> {t.logout}
                     </button>
                   </div>
+                  {/* ────────────────────────────────────────────────────── */}
                 </div>
               )}
             </div>
           )}
         </div>
-        <div className="flex items-center space-x-3">
 
-          {/* ── Language Toggle — desktop only ────────────────────────────── */}
-          <div className="hidden md:flex items-center">
-            <LanguageToggle isBangla={isBangla} onToggle={handleLanguageToggle} />
-          </div>
-          {/* ──────────────────────────────────────────────────────────────── */}
+        {/* ── Right side of header ──────────────────────────────────────────── */}
+        <div className="flex items-center space-x-2 md:space-x-3">
 
           {isLoggedIn ? (
             <>
@@ -967,9 +813,7 @@ const refreshCoinBalance = async () => {
                       className="w-4 h-4"
                       alt="BDT"
                     />
-                    <span className="min-w-[60px]">
-                      {parseFloat(userData?.balance || 0).toFixed(2)}
-                    </span>
+                    <span className="min-w-[60px]">{parseFloat(userData?.balance || 0).toFixed(2)}</span>
                   </div>
                   <button
                     className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -977,14 +821,9 @@ const refreshCoinBalance = async () => {
                     disabled={isRefreshingBalance}
                     aria-label={t.refreshBalance}
                   >
-                    <FiRefreshCw
-                      className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`}
-                    />
+                    <FiRefreshCw className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
-
-                {/* Coin Balance Box */}
-           {/* Coin Balance Box - Same style as BDT but with different icon and color */}
 
                 <div className="flex justify-center items-center gap-2">
                   <NavLink
@@ -1002,7 +841,7 @@ const refreshCoinBalance = async () => {
                 </div>
               </div>
 
-              {/* Mobile View - Only show balance, no coin balance */}
+              {/* Mobile View */}
               <div className="md:hidden flex px-[10px] items-center gap-2">
                 <div className="bg-box_bg rounded-[5px] border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm">
@@ -1011,9 +850,7 @@ const refreshCoinBalance = async () => {
                       className="w-4 h-4"
                       alt="BDT"
                     />
-                    <span className="text-white min-w-[40px]">
-                      {parseFloat(userData?.balance || 0).toFixed(2)}
-                    </span>
+                    <span className="text-white min-w-[40px]">{parseFloat(userData?.balance || 0).toFixed(2)}</span>
                   </div>
                   <button
                     className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1021,9 +858,7 @@ const refreshCoinBalance = async () => {
                     disabled={isRefreshingBalance}
                     aria-label={t.refreshBalance}
                   >
-                    <FiRefreshCw
-                      className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`}
-                    />
+                    <FiRefreshCw className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
                 <NavLink
@@ -1056,7 +891,20 @@ const refreshCoinBalance = async () => {
               </NavLink>
             </>
           )}
+
+          {/* ── Currency & Language Dropdown — always visible on right ── */}
+          <CurrencyLangButton
+            isBangla={isBangla}
+            onSelectEnglish={handleSelectEnglish}
+            onSelectBangla={handleSelectBangla}
+            dropdownOpen={langDropdownOpen}
+            setDropdownOpen={setLangDropdownOpen}
+            dropdownRef={langDropdownRef}
+          />
+          {/* ────────────────────────────────────────────────────────── */}
+
         </div>
+        {/* ──────────────────────────────────────────────────────────────────── */}
       </header>
 
       <div
@@ -1077,12 +925,7 @@ const refreshCoinBalance = async () => {
           }`}
         >
           <div className="w-full flex justify-start items-center px-4 pt-4 pb-3 md:sticky top-0 left-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]]">
-            <a
-              href="https://wa.me/+4407386588951"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full"
-            >
+            <a href="https://wa.me/+4407386588951" target="_blank" rel="noopener noreferrer" className="block w-full">
               <span className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border-[1px] border-blue-500 text-[16px] px-2 py-2.5 mt-3 rounded-[3px] text-center flex justify-center items-center gap-3 cursor-pointer hover:bg-[#2a2a2a] transition">
                 <MdSupportAgent className="text-white text-[20px]" />
                 <span className="text-[13px]">{t.liveChat}</span>
@@ -1093,15 +936,40 @@ const refreshCoinBalance = async () => {
           {/* ── Language Toggle in Sidebar ────────────────────────────────── */}
           <div className="px-4 py-3 border-b border-[#2a2a2a]">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">{t.language}</span>
-              <div className="flex items-center gap-2">
-                <span style={{ fontSize: "11px", fontWeight: 600, color: !isBangla ? "#fff" : "#666", transition: "color 0.25s" }}>
-                  EN
-                </span>
-                <LanguageToggle isBangla={isBangla} onToggle={handleLanguageToggle} compact />
-                <span style={{ fontSize: "11px", fontWeight: 600, color: isBangla ? "#fff" : "#666", transition: "color 0.25s" }}>
-                  বাং
-                </span>
+              <span className="text-sm text-gray-400">{t.language || "Language"}</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSelectEnglish}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "6px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    fontSize: "12px",
+                    background: !isBangla ? "#22c55e" : "#2a2a2a",
+                    color: !isBangla ? "#fff" : "#888",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  English
+                </button>
+                <button
+                  onClick={handleSelectBangla}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "6px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    fontSize: "12px",
+                    background: isBangla ? "#22c55e" : "#2a2a2a",
+                    color: isBangla ? "#fff" : "#888",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  বাংলা
+                </button>
               </div>
             </div>
           </div>
@@ -1127,33 +995,25 @@ const refreshCoinBalance = async () => {
 
           <div className="space-y-1 px-2 mt-[15px]">
             {isLoadingCategories && (
-              <div className="text-center py-4 text-gray-400 text-sm">
-                {t.loadingCategories}
-              </div>
+              <div className="text-center py-4 text-gray-400 text-sm">{t.loadingCategories}</div>
             )}
-
-            {/* Categories List - Exclusive always at top */}
             {categories.map((category, index) => (
               <div key={index}>
                 <div
-                  className={`flex items-center p-3 rounded cursor-pointer hover:text-gray-500 text-gray-400 transition-colors duration-200 ${
-                    activeMenu === category.name ? "" : ""
-                  }`}
+                  className="flex items-center p-3 rounded cursor-pointer hover:text-gray-500 text-gray-400 transition-colors duration-200"
                   onClick={() => handleCategoryClick(category)}
                 >
                   <img
-                    src={category.image}
+                    src={category.image || getCategoryImageByName(category.name)}
                     alt={category.name}
                     className="w-5 h-5 min-w-[20px]"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = `https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-exclusive.png?v=1767857219215&source=drccdnsrc`;
+                      e.target.src = getCategoryImageByName(category.name);
                     }}
                   />
                   <div className="flex items-center ml-3 w-full">
-                    <span className="text-sm flex-grow whitespace-nowrap">
-                      {category.name}
-                    </span>
+                    <span className="text-sm flex-grow whitespace-nowrap">{category.name}</span>
                     {activeMenu === category.name ? (
                       <FaChevronDown className="text-xs transition-transform duration-200" />
                     ) : (
@@ -1169,9 +1029,7 @@ const refreshCoinBalance = async () => {
                   {activeMenu === category.name && (
                     <div className="ml-2 mt-1 mb-2">
                       {sidebarLoading ? (
-                        <div className="p-4 text-center text-[12px] text-gray-400">
-                          {t.loading}
-                        </div>
+                        <div className="p-4 text-center text-[12px] text-gray-400">{t.loading}</div>
                       ) : category.name.toLowerCase() === "exclusive" ? (
                         <div className="grid grid-cols-2 md:grid-cols-2 gap-2 p-2">
                           {exclusiveGames.map((game, gameIndex) => (
@@ -1185,9 +1043,7 @@ const refreshCoinBalance = async () => {
                                   src={getGameImageUrl(game)}
                                   alt={game.name || game.gameName}
                                   className="game-image rounded-[6px] transition-transform duration-300 group-hover:scale-105"
-                                  onError={(e) => {
-                                    e.target.src = "https://via.placeholder.com/100x133?text=Game";
-                                  }}
+                                  onError={(e) => { e.target.src = "https://via.placeholder.com/100x133?text=Game"; }}
                                 />
                               </div>
                               <div className="w-full pt-1">
@@ -1206,14 +1062,8 @@ const refreshCoinBalance = async () => {
                               className="flex items-center p-2 rounded cursor-pointer hover:bg-[#333] transition-colors duration-200"
                               onClick={() => handleProviderClick(provider)}
                             >
-                              <img
-                                src={`${API_BASE_URL}/${provider.image}`}
-                                alt={provider.name}
-                                className="w-6 h-6 mr-2"
-                              />
-                              <span className="text-xs text-gray-400">
-                                {provider.name}
-                              </span>
+                              <img src={`${API_BASE_URL}/${provider.image}`} alt={provider.name} className="w-6 h-6 mr-2" />
+                              <span className="text-xs text-gray-400">{provider.name}</span>
                             </div>
                           ))}
                         </div>
@@ -1229,10 +1079,7 @@ const refreshCoinBalance = async () => {
           <div className="px-2 mb-2">
             <div className="flex justify-between items-center p-2">
               <span className="text-sm font-medium">{t.promotions}</span>
-              <NavLink
-                to="/promotions"
-                className="text-xs text-theme_color2 underline cursor-pointer"
-              >
+              <NavLink to="/promotions" className="text-xs text-theme_color2 underline cursor-pointer">
                 {t.viewAll}
               </NavLink>
             </div>
@@ -1247,23 +1094,15 @@ const refreshCoinBalance = async () => {
                     activeMenu === item.title ? "bg-[#222]" : ""
                   }`}
                   onClick={() => {
-                    if (item.isContact) {
-                      toggleMenu(item.title);
-                    } else if (item.onClick) {
-                      item.onClick();
-                    } else if (item.path) {
-                      navigate(item.path);
-                      setSidebarOpen(false);
-                    } else {
-                      toggleMenu(item.title);
-                    }
+                    if (item.isContact) toggleMenu(item.title);
+                    else if (item.onClick) item.onClick();
+                    else if (item.path) { navigate(item.path); setSidebarOpen(false); }
+                    else toggleMenu(item.title);
                   }}
                 >
                   {item.icon}
                   <div className="flex items-center ml-3 w-full">
-                    <span className="text-sm flex-grow whitespace-nowrap">
-                      {item.title}
-                    </span>
+                    <span className="text-sm flex-grow whitespace-nowrap">{item.title}</span>
                     <div className="flex items-center">
                       {item.isContact && activeMenu === item.title ? (
                         <FaChevronDown className="text-xs text-gray-400 transition-transform duration-200" />
@@ -1274,7 +1113,6 @@ const refreshCoinBalance = async () => {
                   </div>
                 </div>
 
-                {/* Contact Us Submenu */}
                 {item.isContact && activeMenu === item.title && (
                   <div className="pl-3 mb-2 space-y-2 animate-fadeIn">
                     {loadingSocialLinks ? (
@@ -1284,126 +1122,52 @@ const refreshCoinBalance = async () => {
                     ) : socialLinks.length > 0 ? (
                       <div className="grid grid-cols-2 gap-3 p-2">
                         {socialLinks.map((contact, contactIndex) => {
-                          let bgColor = "";
-                          let iconColor = "";
-                          let textColor = "";
-
+                          let bgColor = "", iconColor = "", textColor = "";
                           switch(contact.platform.toLowerCase()) {
-                            case 'whatsapp':
-                              bgColor = "bg-gradient-to-r from-green-900/20 to-green-700/10";
-                              iconColor = "text-green-400";
-                              textColor = "text-green-300";
-                              break;
-                            case 'email':
-                              bgColor = "bg-gradient-to-r from-blue-900/20 to-blue-700/10";
-                              iconColor = "text-blue-400";
-                              textColor = "text-blue-300";
-                              break;
-                            case 'facebook':
-                              bgColor = "bg-gradient-to-r from-indigo-900/20 to-indigo-700/10";
-                              iconColor = "text-indigo-400";
-                              textColor = "text-indigo-300";
-                              break;
-                            case 'instagram':
-                              bgColor = "bg-gradient-to-r from-pink-900/20 to-purple-700/10";
-                              iconColor = "text-pink-400";
-                              textColor = "text-pink-300";
-                              break;
-                            case 'telegram':
-                              bgColor = "bg-gradient-to-r from-sky-900/20 to-sky-700/10";
-                              iconColor = "text-sky-400";
-                              textColor = "text-sky-300";
-                              break;
-                            case 'twitter':
-                            case 'x':
-                              bgColor = "bg-gradient-to-r from-gray-900/20 to-gray-700/10";
-                              iconColor = "text-gray-400";
-                              textColor = "text-gray-300";
-                              break;
-                            default:
-                              bgColor = "bg-gradient-to-r from-gray-900/20 to-gray-700/10";
-                              iconColor = "text-gray-400";
-                              textColor = "text-gray-300";
+                            case 'whatsapp': bgColor = "bg-gradient-to-r from-green-900/20 to-green-700/10"; iconColor = "text-green-400"; textColor = "text-green-300"; break;
+                            case 'email': bgColor = "bg-gradient-to-r from-blue-900/20 to-blue-700/10"; iconColor = "text-blue-400"; textColor = "text-blue-300"; break;
+                            case 'facebook': bgColor = "bg-gradient-to-r from-indigo-900/20 to-indigo-700/10"; iconColor = "text-indigo-400"; textColor = "text-indigo-300"; break;
+                            case 'instagram': bgColor = "bg-gradient-to-r from-pink-900/20 to-purple-700/10"; iconColor = "text-pink-400"; textColor = "text-pink-300"; break;
+                            case 'telegram': bgColor = "bg-gradient-to-r from-sky-900/20 to-sky-700/10"; iconColor = "text-sky-400"; textColor = "text-sky-300"; break;
+                            case 'twitter': case 'x': bgColor = "bg-gradient-to-r from-gray-900/20 to-gray-700/10"; iconColor = "text-gray-400"; textColor = "text-gray-300"; break;
+                            default: bgColor = "bg-gradient-to-r from-gray-900/20 to-gray-700/10"; iconColor = "text-gray-400"; textColor = "text-gray-300";
                           }
-
                           return (
                             <div
                               key={contactIndex}
                               className={`flex p-3 rounded-lg cursor-pointer ${bgColor} border border-opacity-30 hover:scale-105 transition-all duration-200 hover:shadow-lg`}
                               onClick={() => handleContactClick(contact.url)}
                             >
-                              <div className="mb-2">
-                                <span className={`text-2xl ${iconColor}`}>
-                                  {contact.icon}
-                                </span>
-                              </div>
-                              <span className={`text-xs font-medium ${textColor}`}>
-                                {contact.title}
-                              </span>
+                              <div className="mb-2"><span className={`text-2xl ${iconColor}`}>{contact.icon}</span></div>
+                              <span className={`text-xs font-medium ${textColor}`}>{contact.title}</span>
                             </div>
                           );
                         })}
                       </div>
                     ) : (
-                      // Fallback grid
                       <div className="grid grid-cols-2 gap-3 p-2">
-                        <div
-                          className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-green-900/20 to-green-700/10 border border-green-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg"
-                          onClick={() => window.open("https://wa.me/+4407386588951", "_blank")}
-                        >
-                          <div className="mb-2">
-                            <FaWhatsapp className="text-2xl text-green-400" />
-                          </div>
+                        <div className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-green-900/20 to-green-700/10 border border-green-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg" onClick={() => window.open("https://wa.me/+4407386588951", "_blank")}>
+                          <div className="mb-2"><FaWhatsapp className="text-2xl text-green-400" /></div>
                           <span className="text-xs font-medium text-green-300">{t.whatsapp}</span>
                         </div>
-
-                        <div
-                          className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-blue-900/20 to-blue-700/10 border border-blue-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg"
-                          onClick={() => window.open("mailto:support@yourdomain.com", "_blank")}
-                        >
-                          <div className="mb-2">
-                            <FaEnvelope className="text-2xl text-blue-400" />
-                          </div>
+                        <div className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-blue-900/20 to-blue-700/10 border border-blue-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg" onClick={() => window.open("mailto:support@yourdomain.com", "_blank")}>
+                          <div className="mb-2"><FaEnvelope className="text-2xl text-blue-400" /></div>
                           <span className="text-xs font-medium text-blue-300">{t.email}</span>
                         </div>
-
-                        <div
-                          className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-indigo-900/20 to-indigo-700/10 border border-indigo-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg"
-                          onClick={() => window.open("https://facebook.com", "_blank")}
-                        >
-                          <div className="mb-2">
-                            <FaFacebook className="text-2xl text-indigo-400" />
-                          </div>
+                        <div className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-indigo-900/20 to-indigo-700/10 border border-indigo-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg" onClick={() => window.open("https://facebook.com", "_blank")}>
+                          <div className="mb-2"><FaFacebook className="text-2xl text-indigo-400" /></div>
                           <span className="text-xs font-medium text-indigo-300">{t.facebook}</span>
                         </div>
-
-                        <div
-                          className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-pink-900/20 to-purple-700/10 border border-pink-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg"
-                          onClick={() => window.open("https://instagram.com", "_blank")}
-                        >
-                          <div className="mb-2">
-                            <FaInstagram className="text-2xl text-pink-400" />
-                          </div>
+                        <div className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-pink-900/20 to-purple-700/10 border border-pink-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg" onClick={() => window.open("https://instagram.com", "_blank")}>
+                          <div className="mb-2"><FaInstagram className="text-2xl text-pink-400" /></div>
                           <span className="text-xs font-medium text-pink-300">{t.instagram}</span>
                         </div>
-
-                        <div
-                          className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-sky-900/20 to-sky-700/10 border border-sky-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg"
-                          onClick={() => window.open("https://t.me/bajiman", "_blank")}
-                        >
-                          <div className="mb-2">
-                            <FaTelegram className="text-2xl text-sky-400" />
-                          </div>
+                        <div className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-sky-900/20 to-sky-700/10 border border-sky-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg" onClick={() => window.open("https://t.me/bajiman", "_blank")}>
+                          <div className="mb-2"><FaTelegram className="text-2xl text-sky-400" /></div>
                           <span className="text-xs font-medium text-sky-300">{t.telegram}</span>
                         </div>
-
-                        <div
-                          className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-gray-900/20 to-gray-700/10 border border-gray-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg"
-                          onClick={() => window.open("https://twitter.com", "_blank")}
-                        >
-                          <div className="mb-2">
-                            <FaTwitter className="text-2xl text-gray-400" />
-                          </div>
+                        <div className="flex flex-col items-center p-3 rounded-lg cursor-pointer bg-gradient-to-r from-gray-900/20 to-gray-700/10 border border-gray-700/30 hover:scale-105 transition-all duration-200 hover:shadow-lg" onClick={() => window.open("https://twitter.com", "_blank")}>
+                          <div className="mb-2"><FaTwitter className="text-2xl text-gray-400" /></div>
                           <span className="text-xs font-medium text-gray-300">{t.twitter}</span>
                         </div>
                       </div>
@@ -1438,17 +1202,10 @@ const refreshCoinBalance = async () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => { downloadFileAtURL(APK_FILE) }}
-                className="bg-theme_color cursor-pointer hover:bg-theme_color/90 text-white text-xs font-medium py-2 px-3 rounded transition-colors"
-              >
+              <button onClick={() => { downloadFileAtURL(APK_FILE) }} className="bg-theme_color cursor-pointer hover:bg-theme_color/90 text-white text-xs font-medium py-2 px-3 rounded transition-colors">
                 {t.download}
               </button>
-              <button
-                onClick={handleCloseBanner}
-                className="text-gray-400 cursor-pointer hover:text-white p-1 transition-colors"
-                aria-label="Close banner"
-              >
+              <button onClick={handleCloseBanner} className="text-gray-400 cursor-pointer hover:text-white p-1 transition-colors" aria-label="Close banner">
                 <IoClose size={18} />
               </button>
             </div>
@@ -1459,90 +1216,48 @@ const refreshCoinBalance = async () => {
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 border-t-[2px] border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
            style={showMobileAppBanner ? { bottom: '80px' } : {}}>
-        <div className="flex justify-around items-center py-2">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex flex-col items-center cursor-pointer justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors"
-          >
+        <div className="flex justify-around items-end">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex flex-col items-center cursor-pointer justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors">
             <img src={menu_img} alt="Menu" className="h-6 w-6 mb-1" />
             <span>{t.menu}</span>
           </button>
-            <NavLink
-            to="/"
-            className="flex flex-col items-center cursor-pointer justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors"
-          >
-            <img src={home_img} alt="Menu" className="h-6 w-6 mb-1" />
-            <span>{t.home}</span>
-          </NavLink>
-          <NavLink
-            to="/casino"
-            className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors"
-            onClick={() => setSidebarOpen(false)}
-          >
+          <NavLink to="/casino" className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
             <img src={casino_img} alt="Casino" className="h-6 w-6 mb-1" />
             <span>{t.casino}</span>
           </NavLink>
-          <NavLink
-            to="/slots"
-            className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors"
-            onClick={() => setSidebarOpen(false)}
-          >
+          <div className="relative" style={{ top: '-20px' }}>
+            <NavLink to="/" className="flex flex-col items-center justify-center text-xs transition-colors" onClick={() => setSidebarOpen(false)}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#166E5B', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #1a2344', boxShadow: '0 4px 16px rgba(22,163,74,0.55)' }}>
+                <img src={home_img} alt="Home" className="h-6 w-6" />
+              </div>
+              <span style={{ marginTop: '4px', fontWeight: 600, fontSize: '12px' }}>{t.home}</span>
+            </NavLink>
+          </div>
+          <NavLink to="/slots" className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
             <img src={slot_img} alt="Slots" className="h-6 w-6 mb-1" />
             <span>{t.slots}</span>
           </NavLink>
-
-          {/* Download App Button in Mobile Bottom Bar */}
-
           {isLoggedIn ? (
-            <NavLink
-              to="/my-profile"
-              className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors"
-              onClick={() => setSidebarOpen(false)}
-            >
+            <NavLink to="/my-profile" className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
               <img src={profile_img} alt="Profile" className="h-6 w-6 mb-1" />
               <span>{t.profile}</span>
             </NavLink>
           ) : (
-            <NavLink
-              to="/promotions"
-              className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <img
-                src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/favorite.png?v=1757670016214&source=drccdnsrc"
-                alt="Promotions"
-                className="h-6 w-6 mb-1"
-              />
+            <NavLink to="/promotions" className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
+              <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/favorite.png?v=1757670016214&source=drccdnsrc" alt="Promotions" className="h-6 w-6 mb-1" />
               <span>{t.promotions}</span>
             </NavLink>
           )}
         </div>
       </div>
 
-      {/* WhatsApp & Telegram Floating Buttons - Vertical Stack */}
+      {/* WhatsApp & Telegram Floating Buttons */}
       <div className="fixed bottom-32 md:bottom-20 right-4 z-[1000] flex flex-col gap-2">
-        {/* Telegram Button - Top */}
-        <a
-          href="https://t.me/bajiman"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition-all duration-300 animate-bounce hover:animate-pulse"
-          aria-label="Join Telegram Channel"
-          style={{ animationDelay: '0.1s' }}
-        >
-         <img src={telegram_icon} className="w-[65px] md:w-[80px]" alt="" />
+        <a href="https://t.me/bajiman" target="_blank" rel="noopener noreferrer" className="transition-all duration-300 animate-bounce hover:animate-pulse" aria-label="Join Telegram Channel" style={{ animationDelay: '0.1s' }}>
+          <img src={telegram_icon} className="w-[65px] md:w-[80px]" alt="" />
         </a>
-
-        {/* WhatsApp Button - Bottom */}
-        <a
-          href="https://wa.me/+4407386588951"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition-all duration-300 animate-bounce hover:animate-pulse"
-          aria-label="Contact Support on WhatsApp"
-          style={{ animationDelay: '0.2s' }}
-        >
-                 <img src={whatsapp_icon} className="w-[65px] md:w-[80px]" alt="" />
+        <a href="https://wa.me/+4407386588951" target="_blank" rel="noopener noreferrer" className="transition-all duration-300 animate-bounce hover:animate-pulse" aria-label="Contact Support on WhatsApp" style={{ animationDelay: '0.2s' }}>
+          <img src={whatsapp_icon} className="w-[65px] md:w-[80px]" alt="" />
         </a>
       </div>
 
@@ -1550,10 +1265,7 @@ const refreshCoinBalance = async () => {
       {showSignupPopup && (
         <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-70 backdrop-blur-md flex items-center justify-center z-[10000] p-4">
           <div ref={popupRef} className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-6 max-w-md w-full relative">
-            <button
-              onClick={() => setShowSignupPopup(false)}
-              className="absolute -top-3 -right-3 bg-[#333] hover:bg-[#444] text-white cursor-pointer hover:text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-            >
+            <button onClick={() => setShowSignupPopup(false)} className="absolute -top-3 -right-3 bg-[#333] hover:bg-[#444] text-white cursor-pointer hover:text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -1567,13 +1279,8 @@ const refreshCoinBalance = async () => {
               </div>
             </div>
             <h2 className="text-white text-center text-lg font-semibold mb-2">{t.signupSuccess}</h2>
-            <p className="text-gray-300 text-xs md:text-[15px] text-center mb-6">
-              {t.signupSuccessMessage}
-            </p>
-            <NavLink
-              to="/member/deposit"
-              className="bg-theme_color text-center hover:bg-theme_color/90 text-[14px] text-white font-medium py-3 px-4 rounded-md transition-colors w-full block"
-            >
+            <p className="text-gray-300 text-xs md:text-[15px] text-center mb-6">{t.signupSuccessMessage}</p>
+            <NavLink to="/member/deposit" className="bg-theme_color text-center hover:bg-theme_color/90 text-[14px] text-white font-medium py-3 px-4 rounded-md transition-colors w-full block">
               {t.depositNow}
             </NavLink>
           </div>
@@ -1592,19 +1299,16 @@ const refreshCoinBalance = async () => {
         </div>
       )}
 
-      {/* Add CSS for game images in sidebar */}
       <style>
         {`
-          /* Force consistent image size and aspect ratio - Portrait 3:4 for exclusive games */
           .game-image-container {
             position: relative;
             width: 100%;
             height: 0;
-            padding-bottom: 133.33%; /* 3:4 aspect ratio (portrait) */
+            padding-bottom: 133.33%;
             overflow: hidden;
             border-radius: 6px;
           }
-          
           .game-image {
             position: absolute;
             top: 0;
@@ -1613,29 +1317,13 @@ const refreshCoinBalance = async () => {
             height: 100%;
             object-fit: cover;
           }
-
-          /* Smooth skeleton animation */
           @keyframes pulse {
-            0%, 100% {
-              opacity: 1;
-            }
-            50% {
-              opacity: 0.5;
-            }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
           }
-
-          .animate-pulse {
-            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-          }
-
-          /* Custom scrollbar hide for mobile */
-          .no-scrollbar::-webkit-scrollbar {
-            display: none;
-          }
-          .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
+          .animate-pulse { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         `}
       </style>
     </>

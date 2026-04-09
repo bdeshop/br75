@@ -191,7 +191,7 @@ const Transaction = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden font-poppins bg-[#1a1a1a] text-white">
+    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Header */}
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
