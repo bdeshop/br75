@@ -1210,11 +1210,11 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       <div className="md:hidden fixed bottom-0 border-t-[2px] font-semibold border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
            style={showMobileAppBanner ? { bottom: '80px' } : {}}>
         <div className="flex justify-around items-end">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex flex-col items-center cursor-pointer justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex flex-col items-center cursor-pointer justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors">
             <img src={menu_img} alt="Menu" className="h-6 w-6 mb-1" />
             <span>{t.menu}</span>
           </button>
-          <NavLink to="/casino" className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
+          <NavLink to="/casino" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
             <img src={casino_img} alt="Casino" className="h-6 w-6 mb-1" />
             <span>{t.casino}</span>
           </NavLink>
@@ -1226,17 +1226,17 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
               <span style={{ marginTop: '4px', fontWeight: 600, fontSize: '12px' }}>{t.home}</span>
             </NavLink>
           </div>
-          <NavLink to="/slots" className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
+          <NavLink to="/slots" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
             <img src={slot_img} alt="Slots" className="h-6 w-6 mb-1" />
             <span>{t.slots}</span>
           </NavLink>
           {isLoggedIn ? (
-            <NavLink to="/my-profile" className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
+            <NavLink to="/my-profile" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
               <img src={profile_img} alt="Profile" className="h-6 w-6 mb-1" />
               <span>{t.profile}</span>
             </NavLink>
           ) : (
-            <NavLink to="/promotions" className="flex flex-col items-center justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
+            <NavLink to="/promotions" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
               <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/favorite.png?v=1757670016214&source=drccdnsrc" alt="Promotions" className="h-6 w-6 mb-1" />
               <span>{t.promotions}</span>
             </NavLink>
