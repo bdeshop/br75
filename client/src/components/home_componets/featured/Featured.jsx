@@ -321,7 +321,7 @@ const FeaturedContent = () => {
       </style>
       
       <div className=" pt-6 md:py-4 font-inter text-gray-200">
-        <div className="flex justify-between items-center mb-2 md:mb-4 px-4">
+        <div className="flex justify-between items-center mb-2 md:mb-4">
           <h2 className="text-[16px] md:text-lg font-semibold flex items-center">
             <span className="w-1 h-6 bg-theme_color mr-2 rounded-full"></span>
             Featured Games
@@ -354,7 +354,7 @@ const FeaturedContent = () => {
           onMouseLeave={handleMouseLeave}
           onMouseUp={handleMouseUp}
           onMouseMove={handleMouseMove}
-          className="flex overflow-x-auto py-2 scrollbar-hide gap-2 md:gap-3 px-4"
+          className="flex overflow-x-auto py-2 scrollbar-hide gap-2 md:gap-3 "
           style={{ userSelect: 'none', cursor: isDragging ? 'grabbing' : 'grab' }}
         >
           {featuredGames.map((game, index) => (
@@ -374,15 +374,7 @@ const FeaturedContent = () => {
                   }}
                 />
                 <div className="glow-sweep"></div>
-                <div className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${
-                  isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                }`}>
-                  <div className="bg-theme_color p-3 rounded-full transform scale-90 group-hover:scale-100 transition-all">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                  </div>
-                </div>
+    
               </div>
             </div>
           ))}

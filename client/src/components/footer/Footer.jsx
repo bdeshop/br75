@@ -98,7 +98,7 @@ const Footer = () => {
           {/* Gaming Dropdown */}
           <div className=" py-3">
             <button
-              className="flex justify-between cursor-pointer items-center w-full text-left font-medium text-gray-500 text-[14px]"
+              className="flex justify-between cursor-pointer items-center w-full text-left font-medium text-gray-200 text-[14px]"
               onClick={() => toggleSection("gaming")}
             >
               <span>{t.footerGaming}</span>
@@ -116,7 +116,7 @@ const Footer = () => {
                   { label: t.footerLottery, href: "#" },
                 ].map(({ label, href }) => (
                   <li key={label}>
-                    <a href={href} className="hover:text-white flex justify-start items-center gap-2 text-gray-500 transition-colors duration-200 text-[13px]">
+                    <a href={href} className="hover:text-white flex justify-start items-center gap-2 text-gray-200 transition-colors duration-200 text-[13px]">
                       {label} <IoOpenOutline />
                     </a>
                   </li>
@@ -128,7 +128,7 @@ const Footer = () => {
           {/* About Dropdown */}
           <div className=" py-3">
             <button
-              className="flex justify-between items-center cursor-pointer w-full text-left font-medium text-gray-500 text-[14px]"
+              className="flex justify-between items-center cursor-pointer w-full text-left font-medium text-gray-200 text-[14px]"
               onClick={() => toggleSection("about")}
             >
               <span>{t.footerAbout}</span>
@@ -144,7 +144,7 @@ const Footer = () => {
                   t.footerKyc,
                 ].map((label) => (
                   <li key={label}>
-                    <a href="#" className="hover:text-white text-gray-500 transition-colors duration-200 text-[13px] flex items-center gap-1">
+                    <a href="#" className="hover:text-white text-gray-200 transition-colors duration-200 text-[13px] flex items-center gap-1">
                       {label} <IoOpenOutline />
                     </a>
                   </li>
@@ -156,7 +156,7 @@ const Footer = () => {
           {/* Features Dropdown */}
           <div className=" py-3">
             <button
-              className="flex cursor-pointer justify-between items-center w-full text-left font-medium text-gray-500 text-[14px]"
+              className="flex cursor-pointer justify-between items-center w-full text-left font-medium text-gray-200 text-[14px]"
               onClick={() => toggleSection("features")}
             >
               <span>{t.footerFeatures}</span>
@@ -164,11 +164,11 @@ const Footer = () => {
             </button>
             {openSection === "features" && (
               <ul className="mt-2 space-y-3.5 pl-2">
-                <li><a href="/promotions" className="hover:text-white flex justify-start items-center gap-2 text-gray-500 transition-colors duration-200 text-[13px]">{t.footerPromotions}  <IoOpenOutline /></a></li>
-                <li><a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-500 transition-colors duration-200 text-[13px]">{t.footerVipClub}  <IoOpenOutline /></a></li>
-                <li><a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-500 transition-colors duration-200 text-[13px]">{t.footerReferral}  <IoOpenOutline /> </a></li>
-                <li><a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-500 transition-colors duration-200 text-[13px]">{t.footerBrandAmbassadors}  <IoOpenOutline /></a></li>
-                <li><a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-500 transition-colors duration-200 text-[13px]">{t.footerAppDownload}  <IoOpenOutline /></a></li>
+                <li><a href="/promotions" className="hover:text-white flex justify-start items-center gap-2 text-gray-200 transition-colors duration-200 text-[13px]">{t.footerPromotions}  <IoOpenOutline /></a></li>
+                <li><a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-200 transition-colors duration-200 text-[13px]">{t.footerVipClub}  <IoOpenOutline /></a></li>
+                <li><a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-200 transition-colors duration-200 text-[13px]">{t.footerReferral}  <IoOpenOutline /> </a></li>
+                <li><a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-200 transition-colors duration-200 text-[13px]">{t.footerBrandAmbassadors}  <IoOpenOutline /></a></li>
+                <li><a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-200 transition-colors duration-200 text-[13px]">{t.footerAppDownload}  <IoOpenOutline /></a></li>
               </ul>
             )}
           </div>
@@ -176,7 +176,7 @@ const Footer = () => {
           {/* Help Dropdown */}
           <div className=" py-3">
             <button
-              className="flex cursor-pointer justify-between items-center w-full text-left font-medium text-gray-500 text-[14px]"
+              className="flex cursor-pointer justify-between items-center w-full text-left font-medium text-gray-200 text-[14px]"
               onClick={() => toggleSection("help")}
             >
               <span>{t.footerHelp}</span>
@@ -185,7 +185,7 @@ const Footer = () => {
             {openSection === "help" && (
               <ul className="mt-2 space-y-3.5 pl-2">
                 <li>
-                  <a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-500 transition-colors duration-200 text-[13px]">
+                  <a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-200 transition-colors duration-200 text-[13px]">
                     {t.footerBjForum}  <IoOpenOutline />
                   </a>
                 </li>
@@ -285,8 +285,8 @@ const Footer = () => {
                 <img src={item.img} alt={item.name} className="h-9 w-9 object-contain" />
                 <div>
                   <h4 className="text-gray-300 font-semibold text-[13px]">{item.name}</h4>
-                  <p className="text-[10px] text-gray-600 uppercase">{item.role}</p>
-                  <p className="text-[10px] text-gray-700">{item.date}</p>
+                  <p className="text-[10px] text-yellow_theme uppercase">{item.role}</p>
+                  <p className="text-[10px] text-yellow_theme">{item.date}</p>
                 </div>
               </div>
             ))}
@@ -313,7 +313,7 @@ const Footer = () => {
                 <img src={item.img} alt={item.name} className="h-8 w-8 object-contain grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" />
                 <div>
                   <h4 className="text-gray-300 font-semibold text-[13px]">{item.name}</h4>
-                  <p className="text-[10px] text-gray-700">{item.date}</p>
+                  <p className="text-[10px] text-yellow_theme">{item.date}</p>
                 </div>
               </div>
             ))}
@@ -378,7 +378,7 @@ const Footer = () => {
           )}
           <button
             onClick={() => setShowMoreText(!showMoreText)}
-            className="mt-3 px-4 py-1 border border-gray-800 rounded-full text-[10px] text-gray-200 hover:bg-gray-900"
+            className="mt-3 px-4 py-1 border border-gray-400 rounded-full text-[10px] text-gray-200 hover:bg-gray-900"
           >
             {showMoreText ? t.footerShowLess : t.footerShowMore}
           </button>

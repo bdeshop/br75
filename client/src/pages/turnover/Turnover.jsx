@@ -131,12 +131,12 @@ const Turnover = () => {
         <Sidebar sidebarOpen={sidebarOpen} />
 
         {/* Main Area */}
-        <div className="w-full pb-[50px]">
+        <div className="w-full pb-[50px] px-[15px] md:px-0">
           <div className="mx-auto h-[calc(100vh-56px)] no-scrollbar overflow-y-auto w-full max-w-screen-xl md:px-4 py-4">
             {/* Title */}
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold mb-1">{t?.turnoverRequirement || "Turnover Requirement"}</h2>
+                <h2 className="text-xl md:text-2xl font-bold mb-1">{t?.turnoverRequirement || "Turnover Requirement"}</h2>
                 <p className="text-gray-400 text-sm">
                   {t?.turnoverDescription || "Complete wagering requirements to enable withdrawals"}
                 </p>
@@ -178,13 +178,13 @@ const Turnover = () => {
               </div>
             ) : !hasWageringRequirement ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-8 max-w-md">
+                <div className="rounded-xl p-8 max-w-md">
                   <FaCheckCircle className="text-5xl text-green-500 mb-4 mx-auto" />
-                  <h3 className="text-xl font-semibold text-white mb-2">{t?.noTurnoverRequirement || "No Turnover Requirement"}</h3>
-                  <p className="text-gray-400 mb-4">
+                  <h3 className="text-base md:text-xl font-semibold text-white mb-2">{t?.noTurnoverRequirement || "No Turnover Requirement"}</h3>
+                  <p className="text-gray-200 mb-4">
                     {t?.noTurnoverRequirementDesc || "You don't have any wagering requirements at the moment."}
                   </p>
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-gray-200 text-[14px] md:text-sm">
                     {t?.freeWithdrawalMessage || "You can withdraw freely as there are no turnover restrictions."}
                   </p>
                 </div>

@@ -46,21 +46,31 @@ import profile_img from "../../assets/profile.png";
 import toast, { Toaster } from "react-hot-toast";
 import { useAuth } from "../../App";
 import { LanguageContext } from "../../context/LanguageContext";
-import telegram_icon from "../../assets/social_icon/telegram.png"
-import whatsapp_icon from "../../assets/social_icon/whatsapp.png"
+import telegram_icon from "../../assets/social_icon/telegram.png";
+import whatsapp_icon from "../../assets/social_icon/whatsapp.png";
 import home_img from "../../assets/home.png";
-import menu_img from "../../assets/menu.png"
-import sports_img from "../../assets/sports.png"
-const APK_FILE = "https://bir75.com/Bajiman.apk";
+import menu_img from "../../assets/menu.png";
+import sports_img from "../../assets/sports.png";
+
+const APK_FILE = "https://bir75.com/Bir75.apk";
 import BD_FLAG from "../../assets/flag/Flag-Bangladesh.webp";
 import US_FLAG from "../../assets/flag/us.webp";
+import { FiPower } from "react-icons/fi";
 
-// ── Flag URLs ─────────────────────────────────────────────────────────────────
+// ── Helper function to get full image URL ───────────────────────────────────
+const getFullImageUrl = (imagePath, baseUrl) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith('http')) return imagePath;
+  const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+  return `${baseUrl}/${cleanPath}`;
+};
 
+// ── Currency/Language Dropdown Component (Desktop) ──────────────────────────
 const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdownOpen, setDropdownOpen, dropdownRef, userBalance, isLoggedIn }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [localIsLoggedIn, setLocalIsLoggedIn] = useState(false);
   const [localUserBalance, setLocalUserBalance] = useState(null);
+  const { t } = useContext(LanguageContext);
   
   useEffect(() => {
     const checkLoginStatus = () => {
@@ -82,63 +92,50 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
     };
     
     checkLoginStatus();
-    
-    // Listen for storage changes (login/logout in other tabs)
     window.addEventListener("storage", checkLoginStatus);
-    
     return () => window.removeEventListener("storage", checkLoginStatus);
   }, []);
   
-  // Use props if provided, otherwise use local state
   const finalIsLoggedIn = isLoggedIn !== undefined ? isLoggedIn : localIsLoggedIn;
   const finalBalance = userBalance !== undefined ? userBalance : localUserBalance;
   
   const handleLogout = () => {
-    // Remove user data from localStorage
     localStorage.removeItem("usertoken");
     localStorage.removeItem("user");
-    
-    // Remove axios authorization header if axios is available
     if (typeof axios !== 'undefined') {
       delete axios.defaults.headers.common["Authorization"];
     }
-    
-    // Close dropdown
     setDropdownOpen(false);
     setShowLogoutConfirm(false);
-    
-    // Reload the page to update UI
     window.location.href = "/";
   };
   
-  // Logout confirmation popup component
   const LogoutConfirmPopup = () => {
     if (!showLogoutConfirm) return null;
-
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100000] p-8">
         <div className="bg-white rounded-lg w-full max-w-[320px] shadow-2xl overflow-hidden">
           <div className="p-6">
             <h3 className="text-gray-900 text-xl font-medium mb-4 text-left">
-              {isBangla ? "নিশ্চিতি" : "Confirm"}
+              {isBangla ? "নিশ্চিতি" : t.logoutConfirmTitle || "Confirm"}
             </h3>
             <p className="text-gray-600 text-[15px] leading-relaxed text-left mb-8">
               {isBangla 
                 ? "আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?" 
-                : "Are you sure you want to logout?"}
+                : t.logoutConfirmMessage || "Are you sure you want to logout?"}
             </p>
             <div className="flex justify-end gap-6">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
                 className="text-gray-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-gray-50 px-2 py-1 rounded"
               >
-                {isBangla ? "বাতিল" : "Cancel"}
+                {isBangla ? "বাতিল" : t.cancel || "Cancel"}
               </button>
               <button
                 onClick={handleLogout}
                 className="text-blue-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-blue-50 px-2 py-1 rounded"
               >
-                {isBangla ? "নিশ্চিত" : "Confirm"}
+                {isBangla ? "নিশ্চিত" : t.confirm || "Confirm"}
               </button>
             </div>
           </div>
@@ -151,7 +148,6 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
     <>
       <LogoutConfirmPopup />
       <div style={{ position: "relative" }} ref={dropdownRef}>
-        {/* Trigger Button */}
         <button
           onClick={() => setDropdownOpen(!dropdownOpen)}
           className="flex items-center gap-[6px] p-[6px_10px] cursor-pointer text-white transition-opacity hover:opacity-80"
@@ -166,14 +162,11 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
           </span>
         </button>
 
-        {/* Dropdown Panel */}
         {dropdownOpen && (
           <div className="absolute top-[calc(100%+12px)] p-[10px] right-0 min-w-[340px] bg-[#1c1c1c] rounded-[4px] shadow-[0_10px_40px_rgba(0,0,0,0.6)] z-[99999] overflow-hidden border border-[#2d2d2d] space-y-5">
-            
-            {/* Header row */}
             <div className="flex items-center justify-between py-[14px_16px_10px]">
               <span className="text-[13px] text-[#efefef] font-medium">
-                Currency and Language
+                {t.language || "Currency and Language"}
               </span>
               <button
                 onClick={() => setDropdownOpen(false)}
@@ -183,7 +176,6 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
               </button>
             </div>
 
-            {/* Dynamic Balance Display - Only show when logged in */}
             {finalIsLoggedIn && finalBalance !== null && (
               <div className="flex flex-col items-center py-6 bg-[#161616] rounded-[5px]">
                 <div className="w-[48px] h-[48px] rounded-full border-[3px] border-[#008a5e] flex items-center justify-center mb-2">
@@ -192,13 +184,11 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
                 <span className="text-[15px] text-white font-semibold">
                   ৳ {parseFloat(finalBalance || 0).toFixed(2)}
                 </span>
-                <span className="text-[11px] text-gray-400 mt-1">Available Balance</span>
+                <span className="text-[11px] text-gray-400 mt-1">{t.mainWallet || "Available Balance"}</span>
               </div>
             )}
 
-            {/* EN / BN language buttons */}
             <div className="flex gap-2">
-              {/* English button */}
               <button
                 onClick={onSelectEnglish}
                 className={`flex-1 py-[10px] rounded-[2px] border-none cursor-pointer font-medium text-[14px] transition-all duration-200 ${
@@ -209,8 +199,6 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
               >
                 English
               </button>
-
-              {/* Bangla button */}
               <button
                 onClick={onSelectBangla}
                 className={`flex-1 py-[10px] rounded-[2px] border-none cursor-pointer font-medium text-[14px] transition-all duration-200 ${
@@ -223,7 +211,6 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
               </button>
             </div>
 
-            {/* Logout Button - Only show when user is logged in */}
             {finalIsLoggedIn && (
               <div className="border-t border-[#2d2d2d] pt-3 pb-2">
                 <button
@@ -231,7 +218,7 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
                   className="w-full flex items-center justify-center gap-2 py-[10px] rounded-[2px] border border-[#3d3d3d] bg-[#2d2d2d] text-[#e0e0e0] font-medium text-[14px] transition-all duration-200 hover:bg-[#d32f2f] hover:border-[#d32f2f] hover:text-white cursor-pointer"
                 >
                   <FiLogOut size={16} />
-                  <span>Logout</span>
+                  <span>{t.logout || "Logout"}</span>
                 </button>
               </div>
             )}
@@ -241,23 +228,15 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
     </>
   );
 };
-// Helper function to get full image URL
-const getFullImageUrl = (imagePath, baseUrl) => {
-  if (!imagePath) return null;
-  if (imagePath.startsWith('http')) return imagePath;
-  const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
-  return `${baseUrl}/${cleanPath}`;
-};
 
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─── Main Header Component ────────────────────────────────────────────────────
 export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const API_BASE_URL = import.meta.env.VITE_API_KEY_Base_URL;
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
 
   // ── Translation hook ────────────────────────────────────────────────────────
   const { t, language, changeLanguage } = useContext(LanguageContext);
-  // ────────────────────────────────────────────────────────────────────────────
+  const isBangla = language.code === "bn";
 
   const [activeMenu, setActiveMenu] = useState(null);
   const [activeSubMenu, setActiveSubMenu] = useState(null);
@@ -279,42 +258,17 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  // Social links states
   const [socialLinks, setSocialLinks] = useState([]);
   const [loadingSocialLinks, setLoadingSocialLinks] = useState(false);
-
-  // ── Currency/Language dropdown state ────────────────────────────────────────
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const langDropdownRef = useRef(null);
-  // ────────────────────────────────────────────────────────────────────────────
+  const [isRefreshingCoinBalance, setIsRefreshingCoinBalance] = useState(false);
 
-  // ── Language state — derived from LanguageContext ────────────────────────
-  const isBangla = language.code === "bn";
+  const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+  const popupRef = useRef(null);
 
-  const handleLanguageToggle = () => {
-    const next = !isBangla;
-    const nextLang = next
-      ? {
-          code: "bn",
-          name: "বাংলা",
-          flag: "https://images.5849492029.com//TCG_PROD_IMAGES/COUNTRY_FLAG/CIRCLE/BD.svg",
-        }
-      : {
-          code: "en",
-          name: "English",
-          flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Flag_of_the_United_States.svg/1280px-Flag_of_the_United_States.svg.png",
-        };
-    changeLanguage(nextLang);
-    localStorage.setItem("language", next ? "bn" : "en");
-    window.dispatchEvent(
-      new StorageEvent("storage", {
-        key: "language",
-        newValue: next ? "bn" : "en",
-      })
-    );
-  };
-
+  // ── Language handlers ───────────────────────────────────────────────────────
   const handleSelectEnglish = () => {
     const nextLang = {
       code: "en",
@@ -338,11 +292,6 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     window.dispatchEvent(new StorageEvent("storage", { key: "language", newValue: "bn" }));
     setLangDropdownOpen(false);
   };
-  // ────────────────────────────────────────────────────────────────────────────
-
-  const navigate = useNavigate();
-  const dropdownRef = useRef(null);
-  const popupRef = useRef(null);
 
   const isMobileDevice = () => window.innerWidth < 768;
 
@@ -355,41 +304,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     return true;
   };
 
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) setSidebarOpen(false);
-    fetchCategories();
-    if (!promotions.length) fetchPromotions();
-    checkAuthStatus();
-    fetchBrandingData();
-    fetchSocialLinks();
-    const hasShownSignupPopup = localStorage.getItem("hasShownSignupPopup");
-    if (isLoggedIn && !hasShownSignupPopup) {
-      setShowSignupPopup(true);
-      localStorage.setItem("hasShownSignupPopup", "true");
-    }
-    const timer = setTimeout(() => {
-      if (checkBannerVisibility()) setShowMobileAppBanner(true);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setProfileDropdownOpen(false);
-      }
-      if (popupRef.current && !popupRef.current.contains(event.target)) {
-        setShowSignupPopup(false);
-      }
-      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target)) {
-        setLangDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
+  // ── Fetch functions ─────────────────────────────────────────────────────────
   const fetchBrandingData = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/branding`);
@@ -426,7 +341,6 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
         });
         setSocialLinks(mappedLinks);
       } else {
-        // Default social links if API fails
         setSocialLinks([
           { platform: "whatsapp", url: "https://wa.me/+4407386588951", title: t.whatsapp, icon: <FaWhatsapp className="w-4 h-4 mr-2" /> },
           { platform: "email", url: "mailto:support@yourdomain.com", title: t.email, icon: <FaEnvelope className="w-4 h-4 mr-2" /> },
@@ -444,28 +358,23 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
-  // fetchCategories - dynamic from API with NO default/status images
   const fetchCategories = async () => {
     try {
       setIsLoadingCategories(true);
       const response = await axios.get(`${API_BASE_URL}/api/categories`);
       if (response.data && response.data.data && response.data.data.length > 0) {
-        // Use categories directly from API - NO default images, NO fallback
         const apiCategories = response.data.data.map(cat => ({
           ...cat,
-          // Use the image directly from API, or null if not provided
           image: cat.image || null
         }));
         setCategories(apiCategories);
         localStorage.setItem("categories", JSON.stringify(apiCategories));
       } else {
-        // If API returns empty, set empty array - NO default categories
         setCategories([]);
         localStorage.setItem("categories", JSON.stringify([]));
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
-      // On error, set empty array - NO default fallback
       setCategories([]);
       localStorage.setItem("categories", JSON.stringify([]));
     } finally {
@@ -479,12 +388,9 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       if (response.data) {
         setPromotions(response.data.data);
         localStorage.setItem("promotions", JSON.stringify(response.data.data));
-      } else {
-        toast.error(response.data.message);
       }
     } catch (err) {
       console.error("Failed to fetch promotions:", err);
-      toast.error("Failed to fetch promotions.");
     }
   };
 
@@ -526,34 +432,6 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     } finally {
       setSidebarLoading(false);
     }
-  };
-
-  const handleCategoryClick = (category) => {
-    if (activeMenu === category.name) {
-      setActiveMenu(null);
-      setProviders([]);
-      setExclusiveGames([]);
-    } else {
-      setActiveMenu(category.name);
-      if (category.name && category.name.toLowerCase() === "exclusive") {
-        fetchExclusiveGames();
-      } else if (category.name) {
-        fetchProviders(category.name);
-      }
-    }
-  };
-
-  const handleProviderClick = (provider) => {
-    if (activeMenu) {
-      navigate(`/games?category=${activeMenu.toLowerCase()}&provider=${provider.name.toLowerCase()}`);
-      setSidebarOpen(false);
-    }
-  };
-
-  const { user } = useAuth();
-  const handleGameClick = (game) => {
-    if (!user) { navigate("/login"); return; }
-    navigate(`/game/${game.gameId}`);
   };
 
   const checkAuthStatus = () => {
@@ -602,6 +480,26 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
+  const refreshCoinBalance = async () => {
+    if (!isLoggedIn) return;
+    try {
+      setIsRefreshingCoinBalance(true);
+      const token = localStorage.getItem("usertoken");
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      const response = await axios.get(`${API_BASE_URL}/api/user/my-information`);
+      if (response.data.success) {
+        setUserData(response.data.data);
+        localStorage.setItem("user", JSON.stringify(response.data.data));
+        toast.success(t.coinBalanceRefreshed);
+      }
+    } catch (error) {
+      console.error("Error refreshing coin balance:", error);
+      toast.error(t.failedRefreshCoinBalance);
+    } finally {
+      setIsRefreshingCoinBalance(false);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("usertoken");
     localStorage.removeItem("user");
@@ -613,12 +511,72 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     navigate("/");
   };
 
+  const handleCategoryClick = (category) => {
+    if (activeMenu === category.name) {
+      setActiveMenu(null);
+      setProviders([]);
+      setExclusiveGames([]);
+    } else {
+      setActiveMenu(category.name);
+      if (category.name && category.name.toLowerCase() === "exclusive") {
+        fetchExclusiveGames();
+      } else if (category.name) {
+        fetchProviders(category.name);
+      }
+    }
+  };
+
+  const handleProviderClick = (provider) => {
+    if (activeMenu) {
+      navigate(`/games?category=${activeMenu.toLowerCase()}&provider=${provider.name.toLowerCase()}`);
+      setSidebarOpen(false);
+    }
+  };
+
+  const { user } = useAuth();
+  const handleGameClick = (game) => {
+    if (!user) { navigate("/login"); return; }
+    navigate(`/game/${game.gameId}`);
+  };
+
+  const handleContactClick = (url) => {
+    if (url) window.open(url, '_blank');
+  };
+
+  const downloadFileAtURL = (url) => {
+    const fileName = url.split("/").pop();
+    const aTag = document.createElement("a");
+    aTag.href = url;
+    aTag.setAttribute("download", fileName);
+    document.body.appendChild(aTag);
+    aTag.click();
+    aTag.remove();
+    toast.success(t.apkDownloadStarted);
+  };
+
   const handleCloseBanner = () => {
     const hideUntil = Date.now() + (10 * 60 * 1000);
     localStorage.setItem("mobileAppBannerHiddenUntil", hideUntil.toString());
     setShowMobileAppBanner(false);
   };
 
+  const getGameImageUrl = (game) => {
+    if (!game) return '';
+    const imagePath = game.portraitImage || game.image || game.thumbnail || '';
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http')) return imagePath;
+    const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+    return `${API_BASE_URL}/${cleanPath}`;
+  };
+
+  // Translate category name using translation keys
+  const translateCategoryName = (name) => {
+    if (!name) return name;
+    const key = name.toLowerCase();
+    return t[key] || name;
+  };
+
+  // Menu items with translations
   const menuItems = [
     { id: "notifications", label: t.notifications, icon: <FiBell />, path: "/member/inbox/notification" },
     { id: "personal-info", label: t.personalInfo, icon: <FiUser />, path: "/member/profile/info" },
@@ -642,102 +600,76 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     { title: t.bjForum, icon: <FaComments className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/coming-soon?title=BJ Forum" },
   ];
 
-  const toggleMenu = (title) => {
-    if (activeMenu === title) {
-      setActiveMenu(null); setActiveSubMenu(null); setProviders([]); setExclusiveGames([]);
-    } else {
-      setActiveMenu(title); setActiveSubMenu(null);
+  // Effects
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) setSidebarOpen(false);
+    fetchCategories();
+    if (!promotions.length) fetchPromotions();
+    checkAuthStatus();
+    fetchBrandingData();
+    fetchSocialLinks();
+    const hasShownSignupPopup = localStorage.getItem("hasShownSignupPopup");
+    if (isLoggedIn && !hasShownSignupPopup) {
+      setShowSignupPopup(true);
+      localStorage.setItem("hasShownSignupPopup", "true");
     }
-  };
+    const timer = setTimeout(() => {
+      if (checkBannerVisibility()) setShowMobileAppBanner(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [isLoggedIn]);
 
-  const toggleSubMenu = (subItem) => setActiveSubMenu(activeSubMenu === subItem ? null : subItem);
-
-  const downloadFileAtURL = (url) => {
-    const fileName = url.split("/").pop();
-    const aTag = document.createElement("a");
-    aTag.href = url;
-    aTag.setAttribute("download", fileName);
-    document.body.appendChild(aTag);
-    aTag.click();
-    aTag.remove();
-    toast.success(t.apkDownloadStarted);
-  };
-
-  const handleContactClick = (url) => {
-    if (url) window.open(url, '_blank');
-  };
-
-  const getGameImageUrl = (game) => {
-    if (!game) return '';
-    const imagePath = game.portraitImage || game.image || game.thumbnail || '';
-    if (!imagePath) return '';
-    if (imagePath.startsWith('http')) return imagePath;
-    const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
-    return `${API_BASE_URL}/${cleanPath}`;
-  };
-
-  const [isRefreshingCoinBalance, setIsRefreshingCoinBalance] = useState(false);
-
-  const refreshCoinBalance = async () => {
-    if (!isLoggedIn) return;
-    try {
-      setIsRefreshingCoinBalance(true);
-      const token = localStorage.getItem("usertoken");
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      const response = await axios.get(`${API_BASE_URL}/api/user/my-information`);
-      if (response.data.success) {
-        setUserData(response.data.data);
-        localStorage.setItem("user", JSON.stringify(response.data.data));
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
       }
-    } catch (error) {
-      console.error("Error refreshing coin balance:", error);
-      toast.error(t.failedRefreshCoinBalance);
-    } finally {
-      setIsRefreshingCoinBalance(false);
-    }
-  };
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        setShowSignupPopup(false);
+      }
+      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target)) {
+        setLangDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  // Logout confirmation popup component
-const LogoutConfirmPopup = () => {
-  if (!showLogoutConfirm) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100000] p-8">
-      {/* Container: Rounded corners and white background */}
-      <div className="bg-white rounded-lg w-full max-w-[320px] shadow-2xl overflow-hidden">
-        
-        <div className="p-6">
-          {/* Title: Left aligned, bold, Bengali text */}
-          <h3 className="text-gray-900 text-xl font-medium mb-4 text-left">
-            নিশ্চিতি
-          </h3>
-          
-          {/* Message: Left aligned, smaller text */}
-          <p className="text-gray-600 text-[15px] leading-relaxed text-left mb-8">
-            আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?
-          </p>
-          
-          {/* Action Buttons: Right aligned as per Android standards shown in image */}
-          <div className="flex justify-end gap-6">
-            <button
-              onClick={() => setShowLogoutConfirm(false)}
-              className="text-gray-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-gray-50 px-2 py-1 rounded"
-            >
-              বাতিল
-            </button>
-            <button
-              onClick={logout}
-              className="text-blue-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-blue-50 px-2 py-1 rounded"
-            >
-              নিশ্চিত
-            </button>
+  const LogoutConfirmPopup = () => {
+    if (!showLogoutConfirm) return null;
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100000] p-8">
+        <div className="bg-white rounded-lg w-full max-w-[320px] shadow-2xl overflow-hidden">
+          <div className="p-6">
+            <h3 className="text-gray-900 text-xl font-medium mb-4 text-left">
+              {isBangla ? "নিশ্চিতি" : t.logoutConfirmTitle || "Confirm"}
+            </h3>
+            <p className="text-gray-600 text-[15px] leading-relaxed text-left mb-8">
+              {isBangla 
+                ? "আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?" 
+                : t.logoutConfirmMessage || "Are you sure you want to logout?"}
+            </p>
+            <div className="flex justify-end gap-6">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="text-gray-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-gray-50 px-2 py-1 rounded"
+              >
+                {isBangla ? "বাতিল" : t.cancel || "Cancel"}
+              </button>
+              <button
+                onClick={logout}
+                className="text-blue-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-blue-50 px-2 py-1 rounded"
+              >
+                {isBangla ? "নিশ্চিত" : t.confirm || "Confirm"}
+              </button>
+            </div>
           </div>
         </div>
-        
       </div>
-    </div>
-  );
-};
+    );
+  };
+
   return (
     <>
       <Toaster />
@@ -761,7 +693,7 @@ const LogoutConfirmPopup = () => {
             <img src={casino_img} alt="Casino" className="h-5 w-5" />
             <span>{t.casino}</span>
           </NavLink>
-            <NavLink to="/sports" className="md:flex hidden items-center space-x-2 text-gray-400 text-[13px] font-[400] hover:text-yellow-400">
+          <NavLink to="/sports" className="md:flex hidden items-center space-x-2 text-gray-400 text-[13px] font-[400] hover:text-yellow-400">
             <img src={sports_img} alt="Sports" className="h-5 w-5" />
             <span>{t.sports}</span>
           </NavLink>
@@ -806,7 +738,6 @@ const LogoutConfirmPopup = () => {
                       </NavLink>
                     ))}
                   </div>
-                  {/* ── Logout button at the bottom of profile dropdown ── */}
                   <div className="border-t border-[#333] p-3">
                     <button
                       className="flex items-center justify-center gap-2 w-full py-2 text-sm rounded-md border border-[#333] text-gray-300 hover:bg-[#222] hover:text-white transition cursor-pointer"
@@ -815,21 +746,16 @@ const LogoutConfirmPopup = () => {
                       <FiLogOut /> {t.logout}
                     </button>
                   </div>
-                  {/* ────────────────────────────────────────────────────── */}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* ── Right side of header ──────────────────────────────────────────── */}
         <div className="flex items-center space-x-2 md:space-x-3">
-
           {isLoggedIn ? (
             <>
-              {/* Desktop View */}
               <div className="hidden md:flex items-center rounded overflow-hidden gap-2">
-                {/* Main Balance Box */}
                 <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm bg-[#1f1f1f] text-white">
                     <img
@@ -848,7 +774,6 @@ const LogoutConfirmPopup = () => {
                     <FiRefreshCw className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
-
                 <div className="flex justify-center items-center gap-2">
                   <NavLink
                     to="/member/withdraw"
@@ -865,7 +790,6 @@ const LogoutConfirmPopup = () => {
                 </div>
               </div>
 
-              {/* Mobile View */}
               <div className="md:hidden flex pl-[10px] items-center gap-2">
                 <div className="bg-box_bg rounded-[5px] border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm">
@@ -891,19 +815,12 @@ const LogoutConfirmPopup = () => {
                 >
                   {t.deposit}
                 </NavLink>
-                <NavLink
-                  to="/member/withdraw"
-                  className="text-white text-[12px] pl-3 py-2 border-[1px] cursor-pointer border-gray-700 rounded hover:bg-[#333] transition-all duration-200"
-                >
-                  {t.withdrawal}
-                </NavLink>
-                {/* Logout Icon for Mobile */}
                 <button
                   onClick={() => setShowLogoutConfirm(true)}
-                  className="text-white p-2 rounded-full transition-all duration-200"
+                  className="bg-[#ff8080] hover:bg-red-500 text-white p-2 rounded-full transition-all duration-300 flex items-center justify-center shadow-md active:scale-95"
                   aria-label="Logout"
                 >
-                  <FiLogOut size={18} />
+                  <FiPower size={20} strokeWidth={2.5} />
                 </button>
               </div>
             </>
@@ -924,7 +841,6 @@ const LogoutConfirmPopup = () => {
             </>
           )}
 
-          {/* ── Currency & Language Dropdown — always visible on right (desktop only) ── */}
           <div className="hidden md:block">
             <CurrencyLangButton
               isBangla={isBangla}
@@ -935,12 +851,10 @@ const LogoutConfirmPopup = () => {
               dropdownRef={langDropdownRef}
             />
           </div>
-          {/* ────────────────────────────────────────────────────────── */}
-
         </div>
-        {/* ──────────────────────────────────────────────────────────────────── */}
       </header>
 
+      {/* Sidebar */}
       <div
         className={`fixed top-0 left-0 h-full w-full md:w-80 no-scrollbar overflow-y-auto pb-[100px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white z-40 transition-all duration-300 ease-in-out ${
           sidebarOpen ? "shadow-2xl" : "w-0 -translate-x-full"
@@ -967,7 +881,7 @@ const LogoutConfirmPopup = () => {
             </a>
           </div>
 
-          {/* ── Language Toggle in Sidebar ────────────────────────────────── */}
+          {/* Language Toggle in Sidebar */}
           <div className="px-4 py-3 border-b border-[#2a2a2a]">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-400">{t.language || "Language"}</span>
@@ -1007,7 +921,6 @@ const LogoutConfirmPopup = () => {
               </div>
             </div>
           </div>
-          {/* ──────────────────────────────────────────────────────────────── */}
 
           <div className="p-[10px]">
             <img className="w-full" src={banner} alt="" />
@@ -1027,7 +940,7 @@ const LogoutConfirmPopup = () => {
             </button>
           </div>
 
-          {/* Dynamic Categories Section - NO default images, only API images */}
+          {/* Dynamic Categories Section - with translations */}
           <div className="space-y-1 px-2 mt-[15px]">
             {isLoadingCategories && (
               <div className="text-center py-4 text-gray-400 text-sm">{t.loadingCategories}</div>
@@ -1041,23 +954,17 @@ const LogoutConfirmPopup = () => {
                   className="flex items-center p-3 rounded cursor-pointer hover:text-gray-500 text-gray-400 transition-colors duration-200"
                   onClick={() => handleCategoryClick(category)}
                 >
-                  {/* Dynamic category image from API - NO fallback image */}
                   {category.image ? (
                     <img
                       src={getFullImageUrl(category.image, API_BASE_URL)}
                       alt={category.name}
                       className="w-5 h-5 min-w-[20px] object-contain"
-                      onError={(e) => {
-                        // On image error, hide the image instead of showing a default
-                        e.target.style.display = 'none';
-                      }}
                     />
                   ) : (
-                    // No image placeholder - empty div with same dimensions, NO default icon
                     <div className="w-5 h-5 min-w-[20px]"></div>
                   )}
                   <div className="flex items-center ml-3 w-full">
-                    <span className="text-sm flex-grow whitespace-nowrap">{category.name}</span>
+                    <span className="text-sm flex-grow whitespace-nowrap font-semibold text-yellow_theme">{translateCategoryName(category.name)}</span>
                     {activeMenu === category.name ? (
                       <FaChevronDown className="text-xs transition-transform duration-200" />
                     ) : (
@@ -1145,10 +1052,10 @@ const LogoutConfirmPopup = () => {
                     activeMenu === item.title ? "bg-[#222]" : ""
                   }`}
                   onClick={() => {
-                    if (item.isContact) toggleMenu(item.title);
+                    if (item.isContact) setActiveMenu(activeMenu === item.title ? null : item.title);
                     else if (item.onClick) item.onClick();
                     else if (item.path) { navigate(item.path); setSidebarOpen(false); }
-                    else toggleMenu(item.title);
+                    else setActiveMenu(activeMenu === item.title ? null : item.title);
                   }}
                 >
                   {item.icon}
@@ -1157,9 +1064,9 @@ const LogoutConfirmPopup = () => {
                     <div className="flex items-center">
                       {item.isContact && activeMenu === item.title ? (
                         <FaChevronDown className="text-xs text-gray-400 transition-transform duration-200" />
-                      ) : (
+                      ) : item.isContact ? (
                         <FaChevronRight className="text-xs text-gray-400 transition-transform duration-200" />
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1186,7 +1093,7 @@ const LogoutConfirmPopup = () => {
                           return (
                             <div
                               key={contactIndex}
-                              className={`flex p-3 rounded-lg cursor-pointer ${bgColor} border border-opacity-30 hover:scale-105 transition-all duration-200 hover:shadow-lg`}
+                              className={`flex flex-col items-center p-3 rounded-lg cursor-pointer ${bgColor} border border-opacity-30 hover:scale-105 transition-all duration-200 hover:shadow-lg`}
                               onClick={() => handleContactClick(contact.url)}
                             >
                               <div className="mb-2"><span className={`text-2xl ${iconColor}`}>{contact.icon}</span></div>
@@ -1240,33 +1147,25 @@ const LogoutConfirmPopup = () => {
       )}
 
       {/* Mobile App Download Banner */}
-  {showMobileAppBanner && isMobileDevice() && (
+{/* Mobile App Download Banner */}
+{showMobileAppBanner && isMobileDevice() && (
   <div className="fixed bottom-0 left-0 right-0 flex justify-center items-end bg-[rgba(0,0,0,0.7)] border-t border-[#333] z-[10001] shadow-lg">
-    <div className="w-full flex flex-col items-center  p-4 relative">
-      
-      {/* Close Button - Positioned top right of the banner */}
+    <div className="w-full flex flex-col items-center p-4 relative">
       <button 
         onClick={handleCloseBanner} 
         className="absolute top-2 right-2 text-gray-700 bg-white rounded-full p-1 border border-gray-600 shadow-md"
       >
         <IoClose size={18} />
       </button>
-
-      {/* Text Content */}
       <div className="text-center mb-4 pt-2">
         <h3 className="text-white text-[13px] w-[96%] font-bold leading-tight">
-          ২০০ টাকা বোনাস পেতে সর্বশেষ আপডেট APP ডাউনলোড করুন
+          {isBangla ? "২০০ টাকা বোনাস পেতে সর্বশেষ আপডেট APP ডাউনলোড করুন" : "Download latest APP update to get 200 taka bonus"}
         </h3>
       </div>
-
-      {/* Button Row */}
       <div className="flex w-full max-w-md space-x-3 items-end pb-2">
-        
-        {/* Left 3D Button (Silver) */}
         <div className="relative flex-1">
-          {/* Red Floating Badge */}
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#ff0000] text-white text-[10px] px-2 py-0.5 rounded-full z-20 border border-white shadow-sm whitespace-nowrap">
-            অধিক সুবিধা
+            {isBangla ? "অধিক সুবিধা" : "More benefits"}
           </span>
           <button 
             onClick={() => downloadFileAtURL(APK_FILE)}
@@ -1278,31 +1177,37 @@ const LogoutConfirmPopup = () => {
             APP
           </button>
         </div>
-
-        {/* Right 3D Button (Gold) */}
         <button 
-          onClick={() => {/* handle chrome logic */}}
+          onClick={() => {
+            // Close the banner first
+            const hideUntil = Date.now() + (10 * 60 * 1000);
+            localStorage.setItem("mobileAppBannerHiddenUntil", hideUntil.toString());
+            setShowMobileAppBanner(false);
+            // Reload the page after a short delay to ensure state updates
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
+          }}
           className="flex-1 py-2.5 rounded-full font-bold text-[#222] text-sm
             bg-gradient-to-b from-[#ffdb4d] via-[#f7b500] to-[#d99e00]
             shadow-[0_3px_0_rgb(180,130,0),inset_0_1px_0_rgba(255,255,255,0.6)]
             active:translate-y-[1px] active:shadow-[0_2px_0_rgb(180,130,0)] transition-all"
         >
-          Chrome-এ খুলুন
+          {isBangla ? "Chrome-এ খুলুন" : "Open in Chrome"}
         </button>
       </div>
-
-      {/* Footer Link */}
       <button 
         onClick={handleCloseBanner}
         className="mt-2 text-white text-xs underline opacity-80 pb-1"
       >
-        H5 ব্যবহার চালিয়ে যান
+        {isBangla ? "H5 ব্যবহার চালিয়ে যান" : "Continue using H5"}
       </button>
     </div>
   </div>
 )}
+
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 border-t-[2px] border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
+      <div className="md:hidden fixed bottom-0 border-t-[2px] font-semibold border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
            style={showMobileAppBanner ? { bottom: '80px' } : {}}>
         <div className="flex justify-around items-end">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex flex-col items-center cursor-pointer justify-center p-2 text-xs text-gray-400 hover:text-yellow-400 transition-colors">

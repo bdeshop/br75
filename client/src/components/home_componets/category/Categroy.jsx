@@ -128,11 +128,11 @@ const CategoryContent = () => {
   });
 
   // ── Translate category name using translation keys ──
-  const translateCategoryName = (name) => {
-    if (!name) return name;
-    const key = name.toLowerCase();
-    return t[key] || name; // fallback to original name if no translation found
-  };
+const translateCategoryName = (name) => {
+  if (!name) return name;
+  const key = name.toLowerCase();
+  return t[key] || name; // fallback to original name if no translation found
+};
 
   // Fetch branding data for dynamic logo with caching
   const fetchBrandingData = async () => {
@@ -641,7 +641,7 @@ const CategoryContent = () => {
                     />
                     
                     <span
-                      className={`text-[13px] md:text-sm mt-4 font-[500] ${
+                      className={`text-[13px] md:text-sm mt-4 font-semibold ${
                         activeCategory?._id === category._id
                           ? "text-white"
                           : "text-gray-400"

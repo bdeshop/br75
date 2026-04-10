@@ -8,7 +8,7 @@ const translations = {
     home: 'হোম',
     slots: 'স্লটস',
     casino: 'ক্যাসিনো',
-    profile: 'আমার অ্যাকাউন্ট',
+    profile: 'প্রোফাইল',
 
     // ── Auth Buttons ─────────────────────────────────────────────
     login: 'লগইন',
@@ -75,7 +75,13 @@ const translations = {
     instagram: 'ইনস্টাগ্রাম',
     telegram: 'টেলিগ্রাম',
     twitter: 'টুইটার',
-
+// Add inside the bn object
+logoutConfirmTitle: 'নিশ্চিতি',
+logoutConfirmMessage: 'আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?',
+confirm: 'নিশ্চিত',
+cancel: 'বাতিল',
+mainWallet: 'মেইন ওয়ালেট',
+signupDateLabel: 'সাইন আপ এর তারিখ',
     // ── APK Toast ────────────────────────────────────────────────
     apkDownloadStarted: 'এপিকে ডাউনলোড শুরু হয়েছে!',
     failedRefreshBalance: 'ব্যালেন্স রিফ্রেশ ব্যর্থ হয়েছে',
@@ -960,6 +966,13 @@ logoutConfirmMessage: 'Are you sure you want to logout?',
     footerTagline: 'Win Like A King',
     footerShowMore: 'Show more',
     footerShowLess: 'Show less',
+    // Add inside the en object
+logoutConfirmTitle: 'Confirm',
+logoutConfirmMessage: 'Are you sure you want to logout?',
+confirm: 'Confirm',
+cancel: 'Cancel',
+mainWallet: 'Main Wallet',
+signupDateLabel: 'Sign up date',
     footerHeadingTitle:
       'Bir75 - Leading Online Gaming and Betting Platform',
     footerHeadingText:
