@@ -2216,8 +2216,6 @@ const Withdraw = () => {
               </>
             )}
           </div>
-
-          <Footer />
         </div>
       </div>
     </div>

@@ -29,7 +29,7 @@ const translations = {
     loadingCategories: 'ক্যাটাগরি লোড হচ্ছে...',
     loadingContactOptions: 'যোগাযোগের বিকল্প লোড হচ্ছে...',
     viewAll: 'সব দেখুন',
-    promotions: 'প্রচারমূলক অফার',
+    promotions: 'প্রচারমূলক',
     bonuses: 'বোনাস',
     // ── Bottom Menu Items ─────────────────────────────────────────
     vipClub: 'ভিআইপি ক্লাব',
@@ -39,7 +39,7 @@ const translations = {
     appDownload: 'অ্যাপ ডাউনলোড',
     contactUs: 'যোগাযোগ করুন',
     newMemberGuide: 'নতুন সদস্য গাইড',
-    bjForum: 'বিজে ফোরাম',
+    bjForum: 'ফোরাম',
 
     // ── Profile Dropdown ──────────────────────────────────────────
     username: 'ব্যবহারকারীর নাম',
@@ -568,7 +568,7 @@ vipClub: 'ভিআইপি ক্লাব',
     // ── APK Toast ────────────────────────────────────────────────
     apkDownloadStarted: 'APK Download Started!',
     failedRefreshBalance: 'Failed to refresh balance',
-
+     bonuses_text:'Bonus',
     // ── Register / Login Page ─────────────────────────────────────
     tabLogin: 'Log in',
     tabSignup: 'Sign up',

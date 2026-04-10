@@ -300,7 +300,6 @@ const Notification = () => {
               </>
             )}
           </div>
-          <Footer />
         </div>
       </div>
     </div>

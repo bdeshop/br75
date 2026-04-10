@@ -858,8 +858,8 @@ const Profile = () => {
         <div className={`flex-1 overflow-auto transition-all duration-300`}>
           <div className="mx-auto w-full min-h-screen max-w-screen-xl md:px-[50px] px-[10px] pt-[60px] py-4"> 
             <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
-              <div className="w-full lg:w-64 bg-[#161616] h-auto rounded-[5px] border border-gray-800">
-                <h2 className="text-lg font-semibold px-4 py-3 border-b border-gray-800">{t?.profile || "Profile"}</h2>
+              <div className="w-full lg:w-64 bg-[#161616] h-auto rounded-[5px] overflow-hidden border border-gray-800">
+                <h2 className="text-lg font-semibold px-4 py-3 border-b bg-[#F9BC20] border-gray-800">{t?.profile || "Profile"}</h2>
                 <div className="flex flex-col">
                   <button 
                     onClick={() => setActiveTab("personal-info")}
@@ -888,15 +888,16 @@ const Profile = () => {
                 </div>
               </div>
 
-              <div className="flex-1 bg-[#161616] border border-gray-800 rounded-md p-6">
+              <div className="flex-1 bg-[#161616] border border-gray-800 rounded-md overflow-hidden">
                 
                 {/* Personal Info Tab */}
                 {activeTab === "personal-info" && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-6">{t?.personalInfo || "Personal info"}</h2>
+                  <div className="">
+                      <h2 className="text-xl font-semibold mb-6 bg-[#F9BC20] px-[10px]  py-3 ">{t?.personalInfo || "Personal info"}</h2>
 
-                    {/* Username - Read Only */}
-                    <div className="flex justify-between items-center py-4 border-b border-gray-800">
+                   <div className="px-[10px]">
+                     {/* Username - Read Only */}
+                    <div className="flex justify-between items-center py-2 border-b border-gray-800">
                       <div>
                         <p className="text-sm text-gray-400">{t?.username || "Username"}</p>
                         <p className="text-white flex items-center gap-2">
@@ -1074,13 +1075,13 @@ const Profile = () => {
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
                             <div className="flex items-center bg-[#222] border border-gray-700 rounded overflow-hidden flex-1">
-                              <div className="flex items-center px-3 py-2 w-[80px] bg-[#1a1c1d] border-r border-gray-700">
+                              <div className="flex items-center px-3 py-2 w-[100px] md:w-[80px] bg-[#1a1c1d]  border-r border-gray-700">
                                 <img 
                                   src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png" 
                                   alt="BD" 
                                   className="w-5 h-5 rounded-full mr-1"
                                 />
-                                <span className="text-white text-sm">+88</span>
+                                <span className="text-white text-[13px] md:text-sm">+88</span>
                               </div>
                               <input
                                 type="tel"
@@ -1092,7 +1093,7 @@ const Profile = () => {
                                     setPersonalInfoForm(prev => ({ ...prev, phone: value }));
                                   }
                                 }}
-                                className="flex-1 bg-[#222] px-3 py-2 text-white focus:outline-none"
+                                className="flex-1 bg-[#222] text-[13px] px-3 py-2 text-white focus:outline-none"
                                 placeholder="01XXXXXXXXX"
                                 disabled={userData?.isPhoneVerified}
                               />
@@ -1101,7 +1102,7 @@ const Profile = () => {
                               <button
                                 onClick={handleSendMobileOTP}
                                 disabled={mobileVerification.isLoading}
-                                className="bg-theme_color text-white px-4 py-2 rounded text-sm whitespace-nowrap disabled:opacity-50 flex items-center gap-1"
+                                className="bg-theme_color text-white px-4 py-2 rounded text-[13px] md:text-sm whitespace-nowrap disabled:opacity-50 flex items-center gap-1"
                               >
                                 {mobileVerification.isLoading ? (
                                   <span className="flex items-center gap-1">
@@ -1266,15 +1267,16 @@ const Profile = () => {
                         )}
                       </div>
                     </div>
-                  </>
+                   </div>
+                  </div>
                 )}
 
                 {/* Login & Security Tab */}
                 {activeTab === "login-security" && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-6">{t?.loginSecurity || "Login & Security"}</h2>
+                 <div className="">
+<h2 className="text-xl font-semibold mb-6 bg-[#F9BC20] px-[10px]  py-3">{t?.loginSecurity || "Login & Security"}</h2>
 
-                    <div className="mb-8">
+                    <div className="mb-8 p-[10px]">
                       <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                         <FiKey className="text-theme_color" /> {t?.changePassword || "Change Password"}
                       </h3>
@@ -1340,18 +1342,18 @@ const Profile = () => {
                         </button>
                       </form>
                     </div>
-                  </>
+                 </div>
                 )}
 
                 {/* Verification Tab */}
                 {activeTab === "verification" && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-6">{t?.verification || "Verification"}</h2>
-                    <p className="text-gray-400 mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold mb-6 bg-[#F9BC20] px-[10px]  py-3">{t?.verification || "Verification"}</h2>
+                    <p className="text-gray-400 mb-6 px-[10px]">
                       {t?.verificationDescription || "Complete your verification to access all features and increase your limits."}
                     </p>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 px-[10px]">
                       {/* Email Verification */}
                       <div className="bg-[#222] rounded-lg p-4 border border-gray-700">
                         <div className="flex justify-between items-center mb-3">
@@ -1419,12 +1421,11 @@ const Profile = () => {
                         )}
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
           </div>
-
           <Footer />
         </div>
       </div>

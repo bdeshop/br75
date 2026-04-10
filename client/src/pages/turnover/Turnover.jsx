@@ -407,9 +407,6 @@ const Turnover = () => {
               </div>
             )}
           </div>
-
-          {/* Footer */}
-          <Footer />
         </div>
       </div>
     </div>

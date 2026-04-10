@@ -593,11 +593,8 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     { title: t.vipClub, icon: <FaCrown className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/vip-club" },
     { title: t.referralProgram, icon: <FaUserFriends className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/referral-program" },
     { title: t.affiliate, icon: <FaHandshake className="w-5 h-5 min-w-[20px]" />, subItems: [], onClick: () => { window.location.href = "https://m-affiliate.bir75.com" } },
-    { title: t.brandAmbassadors, icon: <MdSupportAgent className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/coming-soon?title=Brand Ambassadors" },
-    { title: t.appDownload, icon: <FaMobileAlt className="w-5 h-5 min-w-[20px]" />, subItems: [], onClick: () => downloadFileAtURL(APK_FILE) },
+     { title: t.appDownload, icon: <FaMobileAlt className="w-5 h-5 min-w-[20px]" />, subItems: [], onClick: () => downloadFileAtURL(APK_FILE) },
     { title: t.contactUs, icon: <FaPhone className="w-5 h-5 min-w-[20px]" />, subItems: [], isContact: true },
-    { title: t.newMemberGuide, icon: <FaBook className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/coming-soon?title=New Member Guide" },
-    { title: t.bjForum, icon: <FaComments className="w-5 h-5 min-w-[20px]" />, subItems: [], path: "/coming-soon?title=BJ Forum" },
   ];
 
   // Effects
@@ -777,13 +774,13 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 <div className="flex justify-center items-center gap-2">
                   <NavLink
                     to="/member/withdraw"
-                    className="text-white text-[12px] md:text-sm px-5 py-2 border-[1px] cursor-pointer border-gray-700 rounded hover:bg-[#333] transition-all duration-200"
+                    className="text-white text-[12px] md:text-sm px-5 py-2 border-[1px] bg-[#FF9700] cursor-pointer border-gray-700 rounded hover:bg-[#333] transition-all duration-200"
                   >
                     {t.withdrawal}
                   </NavLink>
                   <NavLink
                     to="/member/deposit"
-                    className="bg-theme_color text-[12px] md:text-sm px-5 py-2 rounded-[3px] hover:bg-theme_color/80 transition-all duration-200 cursor-pointer font-medium text-white"
+                    className="bg-red-500  text-[12px] md:text-sm px-5 py-2 rounded-[3px] hover:bg-theme_color/80 transition-all duration-200 cursor-pointer font-medium text-white"
                   >
                     {t.deposit}
                   </NavLink>
@@ -811,13 +808,13 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 </div>
                 <NavLink
                   to="/member/deposit"
-                  className="bg-theme_color text-[12px] px-3 py-2 rounded-[3px] hover:bg-theme_color/80 transition-all duration-200 cursor-pointer font-medium text-white"
+                  className="bg-red-500  text-[12px] px-3 py-2 rounded-[3px] hover:bg-theme_color/80 transition-all duration-200 cursor-pointer font-medium text-white"
                 >
                   {t.deposit}
                 </NavLink>
                 <button
                   onClick={() => setShowLogoutConfirm(true)}
-                  className="bg-[#ff8080] hover:bg-red-500 text-white p-2 rounded-full transition-all duration-300 flex items-center justify-center shadow-md active:scale-95"
+                  className="bg-red-500 text-white p-2 rounded-full transition-all duration-300 flex items-center justify-center shadow-md active:scale-95"
                   aria-label="Logout"
                 >
                   <FiPower size={20} strokeWidth={2.5} />
@@ -861,12 +858,14 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
         }`}
         style={{ marginTop: "56px" }}
       >
-        <button
+      <div className="px-[10px] flex justify-end items-center">
+          <button
           onClick={() => setSidebarOpen(false)}
-          className="md:hidden absolute top-3 right-3 cursor-pointer p-2 rounded-[3px] bg-[#303232] hover:bg-[#333] z-50"
+          className="cursor-pointer  p-2 rounded-[3px]  z-50"
         >
-          <IoClose size={18} />
+          <IoClose size={22} />
         </button>
+      </div>
         <div
           className={`w-full md:w-80 transition-opacity duration-300 ${
             sidebarOpen ? "opacity-100" : "opacity-0"
@@ -964,7 +963,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     <div className="w-5 h-5 min-w-[20px]"></div>
                   )}
                   <div className="flex items-center ml-3 w-full">
-                    <span className="text-sm flex-grow whitespace-nowrap font-semibold text-yellow_theme">{translateCategoryName(category.name)}</span>
+                    <span className="text-sm flex-grow whitespace-nowrap font-semibold text-gray-200">{translateCategoryName(category.name)}</span>
                     {activeMenu === category.name ? (
                       <FaChevronDown className="text-xs transition-transform duration-200" />
                     ) : (
@@ -1048,7 +1047,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
             {bottomMenuItems.map((item, index) => (
               <div key={index}>
                 <div
-                  className={`flex items-center p-3 rounded text-gray-500 cursor-pointer hover:text-gray-600 transition-colors duration-200 ${
+                  className={`flex items-center p-3 rounded text-gray-200 cursor-pointer hover:text-gray-300 transition-colors duration-200 ${
                     activeMenu === item.title ? "bg-[#222]" : ""
                   }`}
                   onClick={() => {
@@ -1058,14 +1057,14 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     else setActiveMenu(activeMenu === item.title ? null : item.title);
                   }}
                 >
-                  {item.icon}
+                  <span className="text-yellow_theme">{item.icon}</span>
                   <div className="flex items-center ml-3 w-full">
                     <span className="text-sm flex-grow whitespace-nowrap">{item.title}</span>
                     <div className="flex items-center">
                       {item.isContact && activeMenu === item.title ? (
-                        <FaChevronDown className="text-xs text-gray-400 transition-transform duration-200" />
+                        <FaChevronDown className="text-xs text-gray-200 transition-transform duration-200" />
                       ) : item.isContact ? (
-                        <FaChevronRight className="text-xs text-gray-400 transition-transform duration-200" />
+                        <FaChevronRight className="text-xs text-gray-200 transition-transform duration-200" />
                       ) : null}
                     </div>
                   </div>
@@ -1075,7 +1074,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   <div className="pl-3 mb-2 space-y-2 animate-fadeIn">
                     {loadingSocialLinks ? (
                       <div className="p-2 text-center">
-                        <div className="text-xs text-gray-400">{t.loadingContactOptions}</div>
+                        <div className="text-xs text-gray-200">{t.loadingContactOptions}</div>
                       </div>
                     ) : socialLinks.length > 0 ? (
                       <div className="grid grid-cols-2 gap-3 p-2">
@@ -1219,11 +1218,11 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
             <span>{t.casino}</span>
           </NavLink>
           <div className="relative" style={{ top: '-20px' }}>
-            <NavLink to="/" className="flex flex-col items-center justify-center text-xs transition-colors" onClick={() => setSidebarOpen(false)}>
+            <NavLink to="/" className="flex flex-col items-center justify-center text-white text-xs transition-colors" onClick={() => setSidebarOpen(false)}>
               <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#166E5B', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #1a2344', boxShadow: '0 4px 16px rgba(22,163,74,0.55)' }}>
                 <img src={home_img} alt="Home" className="h-6 w-6" />
               </div>
-              <span style={{ marginTop: '4px', fontWeight: 600, fontSize: '12px' }}>{t.home}</span>
+                <span>{t.home}</span>
             </NavLink>
           </div>
           <NavLink to="/slots" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>

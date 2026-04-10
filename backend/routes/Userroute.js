@@ -32,7 +32,7 @@ function generateOTP() {
 async function sendEmail(to, subject, html) {
     try {
         await emailTransporter.sendMail({
-            from: `"B" <${process.env.EMAIL_USER}>`,
+            from: `Bir75 <${process.env.EMAIL_USER}>`,
             to: to,
             subject: subject,
             html: html

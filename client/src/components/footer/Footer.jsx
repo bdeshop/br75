@@ -172,26 +172,6 @@ const Footer = () => {
               </ul>
             )}
           </div>
-
-          {/* Help Dropdown */}
-          <div className=" py-3">
-            <button
-              className="flex cursor-pointer justify-between items-center w-full text-left font-medium text-gray-200 text-[14px]"
-              onClick={() => toggleSection("help")}
-            >
-              <span>{t.footerHelp}</span>
-              {openSection === "help" ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />}
-            </button>
-            {openSection === "help" && (
-              <ul className="mt-2 space-y-3.5 pl-2">
-                <li>
-                  <a href="#" className="hover:text-white flex justify-start items-center gap-2 text-gray-200 transition-colors duration-200 text-[13px]">
-                    {t.footerBjForum}  <IoOpenOutline />
-                  </a>
-                </li>
-              </ul>
-            )}
-          </div>
         </div>
 
         {/* ── Desktop Grid Layout ── */}

@@ -129,10 +129,10 @@ const Mprofile = () => {
 
           {/* ACTIONS */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <button onClick={() => navigate("/member/withdraw")} className="py-3 rounded-md bg-[#222222] border border-gray-800 text-gray-300 font-semibold text-sm">
+            <button onClick={() => navigate("/member/withdraw")} className="py-3 rounded-md bg-[#FF9700]/80 border border-gray-800 text-white font-bold text-[16px]">
               {t.withdrawal || "উইথড্র"}
             </button>
-            <button onClick={() => navigate("/member/deposit")} className="py-3 rounded-md bg-[#008d5d] text-white font-semibold text-sm">
+            <button onClick={() => navigate("/member/deposit")} className="py-3 rounded-md bg-red-500 text-white font-bold text-[16px]">
               {t.deposit || "ডিপোজিট"}
             </button>
           </div>
@@ -155,47 +155,47 @@ const Mprofile = () => {
           {/* MENU LIST WITH NAVIGATION */}
           <div className="space-y-1">
             <MenuItem 
-              icon={<FiBell className="text-white" />} 
+              icon={<FiBell className="text-yellow_theme" />} 
               label={t.notifications || "নোটিফিকেশন"} 
               onClick={() => navigate("/member/inbox/notification")}
             />
             <MenuItem 
-              icon={<FiGift className="text-emerald-500" />} 
-              label={t.bonuses || "বোনাস"} 
+              icon={<FiGift className="text-yellow_theme" />} 
+              label={t.bonuses_text || "বোনাস"} 
               onClick={() => navigate("/member/bonuses")} 
             />
             <MenuItem 
-              icon={<FiUser className="text-gray-400" />} 
+              icon={<FiUser className="text-yellow_theme" />} 
               label={t.personalInfo || "ব্যক্তিগত তথ্য"} 
               onClick={() => navigate("/member/profile/info")}
             />
             <MenuItem 
-              icon={<FiLock className="text-gray-400" />} 
+              icon={<FiLock className="text-yellow_theme" />} 
               label={t.loginSecurity || "লগইন & সিকিউরিটি"} 
               onClick={() => navigate("/member/profile/account")}
             />
             <MenuItem 
-              icon={<FiShield className="text-gray-400" />} 
+              icon={<FiShield className="text-yellow_theme" />} 
               label={t.verification || "ভেরিফিকেশন"} 
               onClick={() => navigate("/member/profile/verify")}
             />
             <MenuItem 
-              icon={<FiTrendingUp className="text-gray-400" />} 
+              icon={<FiTrendingUp className="text-yellow_theme" />} 
               label={t.turnover || "টার্নওভার"} 
               onClick={() => navigate("/member/turnover/uncomplete")}
             />
             <MenuItem 
-              icon={<FiFileText className="text-gray-400" />} 
+              icon={<FiFileText className="text-yellow_theme" />} 
               label={t.transactions || "ট্রানজেকশন রেকর্ডস"} 
               onClick={() => navigate("/member/transaction-records")}
             />
             <MenuItem 
-              icon={<MdSportsSoccer className="text-gray-400 text-xl" />} 
+              icon={<MdSportsSoccer className="text-yellow_theme text-xl" />} 
               label={t.bettingRecords || "বেটিং রেকর্ডস"} 
               onClick={() => navigate("/member/betting-records/settled")}
             />
             <MenuItem 
-              icon={<FiUsers className="text-gray-400" />} 
+              icon={<FiUsers className="text-yellow_theme" />} 
               label={t.myReferral || "মাই রেফারেল"} 
               onClick={() => navigate("/referral-program/details")}
             />
@@ -223,7 +223,7 @@ const MenuItem = ({ icon, label, badge, onClick }) => (
     className="flex items-center justify-between py-3 border-[1px] border-gray-800/40 cursor-pointer transition-colors px-4"
   >
     <div className="flex items-center gap-4">
-      <span className="text-lg">{icon}</span>
+      <span className="text-lg text-yellow_theme">{icon}</span>
       <span className="text-[14px] text-gray-200 font-medium">{label}</span>
       {badge && (
         <span className="bg-[#ff0000] text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">

@@ -324,9 +324,6 @@ const Bettings = () => {
               </div>
             )}
           </div>
-          
-          {/* Footer */}
-          <Footer />
         </div>
       </div>
     </div>

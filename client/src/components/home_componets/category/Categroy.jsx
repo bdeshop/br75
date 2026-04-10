@@ -673,7 +673,7 @@ const translateCategoryName = (name) => {
                   className="w-[45px] absolute top-[-30%] rounded-full transition-transform duration-300 ease-in-out group-hover:rotate-[360deg]"
                 />
                 <span
-                  className={`text-sm mt-4 font-[500] ${
+                  className={`text-sm mt-4 font-semibold ${
                     activeCategory?._id === category._id
                       ? "text-white"
                       : "text-gray-400"

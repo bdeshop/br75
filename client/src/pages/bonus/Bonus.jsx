@@ -704,7 +704,6 @@ const Bonus = () => {
               </>
             )}
           </div>
-          <Footer />
         </div>
       </div>
     </div>

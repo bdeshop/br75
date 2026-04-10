@@ -372,7 +372,6 @@ const Transaction = () => {
               </>
             )}
           </div>
-          <Footer />
         </div>
       </div>
     </div>
