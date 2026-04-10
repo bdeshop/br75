@@ -47,8 +47,8 @@ const Mprofile = () => {
 
   if (loading) return <div className="bg-[#111111] h-screen" />;
 
-  const signupDate = userData?.createdAt?.$date 
-    ? new Date(userData.createdAt.$date).toISOString().split('T')[0] 
+  const signupDate = userData?.createdAt 
+    ? new Date(userData.createdAt).toISOString().split('T')[0] 
     : "N/A";
 
   // Logout confirmation popup component
