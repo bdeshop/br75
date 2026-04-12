@@ -444,6 +444,178 @@ Authrouter.post("/signup", async (req, res) => {
 });
 
 // ==================== DIRECT LOGIN ROUTE (No OTP) ====================
+// Authrouter.post("/login", async (req, res) => {
+//   try {
+//     const { username, password } = req.body;
+//     const ipAddress = req.ip || req.connection.remoteAddress;
+//     const userAgent = req.get('User-Agent') || 'unknown';
+
+//     if (!username || !password) {
+//       return res.status(400).json({ 
+//         success: false,
+//         message: "Username and password are required" 
+//       });
+//     }
+
+//     const user = await User.findOne({ username }).select("+password");
+//     const { deviceType, browser, os } = getDeviceInfo(userAgent);
+
+//     if (!user) {
+//       const loginLog = new LoginLog({
+//         userId: null,
+//         username,
+//         ipAddress,
+//         userAgent,
+//         deviceType,
+//         browser,
+//         os,
+//         status: 'failed',
+//         failureReason: 'user_not_found'
+//       });
+//       await loginLog.save();
+      
+//       return res.status(401).json({ 
+//         success: false,
+//         message: "Invalid username or password" 
+//       });
+//     }
+
+//     if (user.status !== 'active') {
+//       const loginLog = new LoginLog({
+//         userId: user._id,
+//         username,
+//         ipAddress,
+//         userAgent,
+//         deviceType,
+//         browser,
+//         os,
+//         status: 'failed',
+//         failureReason: `account_${user.status}`
+//       });
+//       await loginLog.save();
+      
+//       return res.status(403).json({ 
+//         success: false,
+//         message: `Your account is ${user.status}. Please contact support.` 
+//       });
+//     }
+
+//     const isPasswordValid = await user.verifyPassword(password);
+    
+//     if (!isPasswordValid) {
+//       const loginLog = new LoginLog({
+//         userId: user._id,
+//         username,
+//         ipAddress,
+//         userAgent,
+//         deviceType,
+//         browser,
+//         os,
+//         status: 'failed',
+//         failureReason: 'invalid_password'
+//       });
+//       await loginLog.save();
+      
+//       return res.status(401).json({ 
+//         success: false,
+//         message: "Invalid username or password" 
+//       });
+//     }
+
+//     user.login_count = (user.login_count || 0) + 1;
+//     user.last_login = new Date();
+//     user.first_login = false;
+    
+//     if (!user.loginHistory) {
+//       user.loginHistory = [];
+//     }
+    
+//     user.loginHistory.push({
+//       ipAddress,
+//       device: deviceType,
+//       userAgent,
+//       location: 'Unknown',
+//       timestamp: new Date()
+//     });
+    
+//     if (user.loginHistory.length > 10) {
+//       user.loginHistory = user.loginHistory.slice(-10);
+//     }
+    
+//     await user.save();
+
+//     const loginLog = new LoginLog({
+//       userId: user._id,
+//       username,
+//       ipAddress,
+//       userAgent,
+//       deviceType,
+//       browser,
+//       os,
+//       status: 'success',
+//       failureReason: null
+//     });
+    
+//     await loginLog.save();
+
+//     const token = jwt.sign(
+//       { 
+//         userId: user._id, 
+//         username: user.username,
+//         role: user.role 
+//       },
+//       JWT_SECRET,
+//       { expiresIn: "30d" }
+//     );
+
+//     res.json({
+//       success: true,
+//       message: "Login successful",
+//       token,
+//       user: {
+//         id: user._id,
+//         player_id: user.player_id,
+//         username: user.username,
+//         email: user.email,
+//         phone: user.phone,
+//         currency: user.currency,
+//         balance: user.balance,
+//         bonusBalance: user.bonusBalance,
+//         total_deposit: user.total_deposit,
+//         total_withdraw: user.total_withdraw,
+//         total_bet: user.total_bet,
+//         total_wins: user.total_wins,
+//         referralCode: user.referralCode,
+//         role: user.role,
+//         status: user.status,
+//         first_login: user.first_login,
+//         login_count: user.login_count,
+//         last_login: user.last_login,
+//         isPhoneVerified: user.isPhoneVerified,
+//         isEmailVerified: user.isEmailVerified,
+//         kycStatus: user.kycStatus,
+//         language: user.language,
+//         themePreference: user.themePreference,
+//         avatar: user.avatar,
+//         accountAgeInDays: user.accountAgeInDays,
+//         isNewUser: user.isNewUser,
+//         availableBalance: user.availableBalance,
+//         withdrawableAmount: user.withdrawableAmount,
+//         wageringStatus: user.wageringStatus,
+//         isAffiliateReferred: user.isAffiliateReferred
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error("Login error:", error);
+//     res.status(500).json({ 
+//       success: false,
+//       message: "Internal server error during login" 
+//     });
+//   }
+// });
+
+
 Authrouter.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -453,17 +625,32 @@ Authrouter.post("/login", async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ 
         success: false,
-        message: "Username and password are required" 
+        message: "Username/Mobile number and password are required" 
       });
     }
 
-    const user = await User.findOne({ username }).select("+password");
+    // Check if input is mobile number (starts with + or digit and contains only numbers, +, -)
+    const isMobileNumber = /^[\+]?[0-9\-]+$/.test(username);
+    
+    let user = null;
+    let loginIdentifier = username;
+
+    if (isMobileNumber) {
+      // Search by phone number
+      user = await User.findOne({ phone: username }).select("+password");
+      loginIdentifier = `phone: ${username}`;
+    } else {
+      // Search by username
+      user = await User.findOne({ username }).select("+password");
+      loginIdentifier = `username: ${username}`;
+    }
+
     const { deviceType, browser, os } = getDeviceInfo(userAgent);
 
     if (!user) {
       const loginLog = new LoginLog({
         userId: null,
-        username,
+        username: loginIdentifier,
         ipAddress,
         userAgent,
         deviceType,
@@ -476,14 +663,14 @@ Authrouter.post("/login", async (req, res) => {
       
       return res.status(401).json({ 
         success: false,
-        message: "Invalid username or password" 
+        message: "Invalid username/mobile number or password" 
       });
     }
 
     if (user.status !== 'active') {
       const loginLog = new LoginLog({
         userId: user._id,
-        username,
+        username: user.username,
         ipAddress,
         userAgent,
         deviceType,
@@ -505,7 +692,7 @@ Authrouter.post("/login", async (req, res) => {
     if (!isPasswordValid) {
       const loginLog = new LoginLog({
         userId: user._id,
-        username,
+        username: user.username,
         ipAddress,
         userAgent,
         deviceType,
@@ -518,7 +705,7 @@ Authrouter.post("/login", async (req, res) => {
       
       return res.status(401).json({ 
         success: false,
-        message: "Invalid username or password" 
+        message: "Invalid username/mobile number or password" 
       });
     }
 
@@ -546,7 +733,7 @@ Authrouter.post("/login", async (req, res) => {
 
     const loginLog = new LoginLog({
       userId: user._id,
-      username,
+      username: user.username,
       ipAddress,
       userAgent,
       deviceType,
@@ -614,7 +801,6 @@ Authrouter.post("/login", async (req, res) => {
     });
   }
 });
-
 // ==================== PASSWORD RESET WITH OTP ====================
 
 // Request OTP for password reset

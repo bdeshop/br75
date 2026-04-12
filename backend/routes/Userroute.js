@@ -1198,31 +1198,6 @@ Userrouter.put("/update-fullname", authenticateToken, async (req, res) => {
     });
   }
 });
-// Set/update transaction password
-Userrouter.post(
-  "/set-transaction-password",
-  authenticateToken,
-  async (req, res) => {
-    try {
-      const { transactionPassword } = req.body;
-      const user = await User.findById(req.user._id);
-
-      user.transactionPassword = transactionPassword;
-      await user.save();
-
-      res.send({
-        success: true,
-        message: "Transaction password set successfully",
-      });
-    } catch (error) {
-      console.error("Set transaction password error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-);
 
 // -------- VERIFICATION ROUTES --------
 
@@ -6128,6 +6103,625 @@ Userrouter.get("/mobile-verification-status", authenticateToken, async (req, res
     }
 });
 
+// ==================== TRANSACTION PASSWORD ROUTES ====================
 
+// 1. SET/UPDATE TRANSACTION PASSWORD (No OTP needed, requires current password for update)
+Userrouter.post("/set-transaction-password", authenticateToken, async (req, res) => {
+    try {
+        const { transactionPassword, confirmTransactionPassword } = req.body;
+        // IMPORTANT: Select the transactionPassword field
+        const user = await User.findById(req.user._id).select("+transactionPassword");
+        
+        // Validate inputs
+        if (!transactionPassword || !confirmTransactionPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password and confirmation are required"
+            });
+        }
+        
+        if (transactionPassword !== confirmTransactionPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction passwords do not match"
+            });
+        }
+        
+        // Validate password length
+        if (transactionPassword.length < 4) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password must be at least 4 characters long"
+            });
+        }
+        
+        if (transactionPassword.length > 20) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password cannot exceed 20 characters"
+            });
+        }
+        
+        // Check if transaction password already exists - FIXED
+        const hasExistingPassword = !!(user.transactionPassword && user.transactionPassword !== "");
+        
+        if (hasExistingPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password already set. Please use update endpoint to change it."
+            });
+        }
+        
+        // Set new transaction password
+        user.transactionPassword = transactionPassword;
+        await user.save();
+        
+        // Add to transaction history
+        user.transactionHistory.push({
+            type: "security",
+            amount: 0,
+            balanceBefore: user.balance,
+            balanceAfter: user.balance,
+            description: "Transaction password set",
+            referenceId: `TXP-SET-${Date.now()}`,
+            createdAt: new Date()
+        });
+        await user.save();
+        
+        res.json({
+            success: true,
+            message: "Transaction password set successfully",
+            data: {
+                isSet: true,
+                changedAt: new Date()
+            }
+        });
+        
+    } catch (error) {
+        console.error("Set transaction password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+// 2. UPDATE TRANSACTION PASSWORD (Requires current password)
+Userrouter.post("/update-transaction-password", authenticateToken, async (req, res) => {
+    try {
+        const { currentPassword, newPassword, confirmNewPassword } = req.body;
+        // IMPORTANT: Select the transactionPassword field
+        const user = await User.findById(req.user._id).select("+transactionPassword");
+        
+        // Validate inputs
+        if (!currentPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Current transaction password is required"
+            });
+        }
+        
+        if (!newPassword || !confirmNewPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "New password and confirmation are required"
+            });
+        }
+        
+        if (newPassword !== confirmNewPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "New passwords do not match"
+            });
+        }
+        
+        // Validate password length
+        if (newPassword.length < 4) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password must be at least 4 characters long"
+            });
+        }
+        
+        if (newPassword.length > 20) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password cannot exceed 20 characters"
+            });
+        }
+        
+        // Check if transaction password exists - FIXED
+        if (!user.transactionPassword || user.transactionPassword === "") {
+            return res.status(400).json({
+                success: false,
+                message: "No transaction password set. Please set one first."
+            });
+        }
+        
+        // Verify current password
+        const isMatch = await bcrypt.compare(currentPassword, user.transactionPassword);
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: "Current transaction password is incorrect"
+            });
+        }
+        
+        // Check if new password is same as current
+        const isSameAsCurrent = await bcrypt.compare(newPassword, user.transactionPassword);
+        if (isSameAsCurrent) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be different from current password"
+            });
+        }
+        
+        // Update transaction password
+        user.transactionPassword = newPassword;
+        await user.save();
+        
+        // Add to transaction history
+        user.transactionHistory.push({
+            type: "security",
+            amount: 0,
+            balanceBefore: user.balance,
+            balanceAfter: user.balance,
+            description: "Transaction password updated",
+            referenceId: `TXP-UPDATE-${Date.now()}`,
+            createdAt: new Date()
+        });
+        await user.save();
+        
+        res.json({
+            success: true,
+            message: "Transaction password updated successfully",
+            data: {
+                isSet: true,
+                changedAt: new Date()
+            }
+        });
+        
+    } catch (error) {
+        console.error("Update transaction password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+// 2. VERIFY TRANSACTION PASSWORD (for withdrawals/sensitive actions)
+Userrouter.post("/verify-transaction-password", authenticateToken, async (req, res) => {
+    try {
+        const { transactionPassword } = req.body;
+        const user = await User.findById(req.user._id).select("+transactionPassword");
+        
+        if (!transactionPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password is required"
+            });
+        }
+        
+        // Check if transaction password is set
+        if (!user.transactionPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password not set. Please set one first."
+            });
+        }
+        
+        // Verify password
+        const isValid = await bcrypt.compare(transactionPassword, user.transactionPassword);
+        
+        if (!isValid) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid transaction password"
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: "Transaction password verified successfully",
+            data: {
+                verified: true
+            }
+        });
+        
+    } catch (error) {
+        console.error("Verify transaction password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+// 3. GET TRANSACTION PASSWORD STATUS
+// 3. GET TRANSACTION PASSWORD STATUS
+Userrouter.get("/transaction-password-status", authenticateToken, async (req, res) => {
+    try {
+        // IMPORTANT: Need to select the transactionPassword field explicitly
+        const user = await User.findById(req.user._id).select("+transactionPassword");
+        
+        // Check if transaction password exists and is not empty
+        const isSet = !!(user.transactionPassword && user.transactionPassword !== "");
+        
+        console.log("Transaction password status check:", {
+            userId: user._id,
+            hasPasswordField: !!user.transactionPassword,
+            isSet: isSet
+        });
+        
+        res.json({
+            success: true,
+            data: {
+                isSet: isSet,
+                lastChanged: user.lastPasswordChange || null
+            }
+        });
+        
+    } catch (error) {
+        console.error("Get transaction password status error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+// 4. FORGOT TRANSACTION PASSWORD (send OTP to email - only for reset)
+Userrouter.post("/forgot-transaction-password", async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required"
+            });
+        }
+        
+        const user = await User.findOne({ email: email.toLowerCase() }).select("+transactionPassword");
+        
+        // Don't reveal if user exists or not (security)
+        if (!user) {
+            return res.json({
+                success: true,
+                message: "If an account exists with this email, you will receive a reset link"
+            });
+        }
+        
+        // Check if user has transaction password set
+        if (!user.transactionPassword) {
+            console.log(`User ${email} has no transaction password set`);
+            return res.json({
+                success: true,
+                message: "If an account exists with this email, you will receive a reset link"
+            });
+        }
+        
+        // Generate reset token and OTP
+        const resetToken = Math.random().toString(36).substr(2, 32);
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        console.log(`Generated OTP for ${email}: ${otpCode}`); // Debug log
+        
+        // Store reset info
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        user.otp = {
+            code: otpCode,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+            purpose: "transaction_password_reset",
+            verified: false,
+            attempts: 0
+        };
+        
+        await user.save();
+        
+        // Send reset email with OTP
+        try {
+            const emailSent = await sendEmail(
+                user.email,
+                "Transaction Password Reset Request",
+                `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2>Transaction Password Reset Request</h2>
+                        <p>Hello ${user.username},</p>
+                        <p>We received a request to reset your transaction password. Please use the following OTP code:</p>
+                        <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 20px 0;">
+                            ${otpCode}
+                        </div>
+                        <p>This OTP will expire in 10 minutes.</p>
+                        <p>If you didn't request this, please ignore this email and ensure your account is secure.</p>
+                        <hr>
+                        <p style="color: #666; font-size: 12px;">This is an automated message, please do not reply.</p>
+                    </div>
+                `
+            );
+            
+            console.log(`Email sent status for ${email}:`, emailSent);
+            
+            if (!emailSent) {
+                console.error(`Failed to send email to ${email}`);
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to send reset email. Please try again later."
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: "Transaction password reset instructions sent to your email",
+                data: {
+                    resetToken,
+                    expiresIn: 60
+                }
+            });
+        } catch (emailError) {
+            console.error("Email sending error:", emailError);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send reset email. Please check your email configuration."
+            });
+        }
+        
+    } catch (error) {
+        console.error("Forgot transaction password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to process request"
+        });
+    }
+});
+
+// 5. VERIFY OTP FOR TRANSACTION PASSWORD RESET
+Userrouter.post("/verify-transaction-otp", async (req, res) => {
+    try {
+        const { resetToken, otp } = req.body;
+        
+        if (!resetToken || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Reset token and OTP are required"
+            });
+        }
+        
+        const user = await User.findOne({
+            resetPasswordToken: resetToken,
+            resetPasswordExpires: { $gt: new Date() }
+        });
+        
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset token"
+            });
+        }
+        
+        if (!user.otp || user.otp.purpose !== "transaction_password_reset") {
+            return res.status(400).json({
+                success: false,
+                message: "No OTP request found. Please request a new reset"
+            });
+        }
+        
+        if (new Date() > user.otp.expiresAt) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP has expired. Please request a new reset"
+            });
+        }
+        
+        if (user.otp.code !== otp) {
+            user.otp.attempts = (user.otp.attempts || 0) + 1;
+            await user.save();
+            
+            const remainingAttempts = Math.max(0, 3 - (user.otp.attempts || 0));
+            return res.status(400).json({
+                success: false,
+                message: `Invalid OTP. ${remainingAttempts} attempts remaining`
+            });
+        }
+        
+        // Mark OTP as verified
+        user.otp.verified = true;
+        await user.save();
+        
+        res.json({
+            success: true,
+            message: "OTP verified successfully. You can now reset your transaction password."
+        });
+        
+    } catch (error) {
+        console.error("Verify transaction OTP error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+// 6. RESET TRANSACTION PASSWORD (after OTP verified)
+Userrouter.post("/reset-transaction-password", async (req, res) => {
+    try {
+        const { resetToken, newPassword, confirmPassword } = req.body;
+        
+        if (!resetToken || !newPassword || !confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Reset token and new password are required"
+            });
+        }
+        
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Passwords do not match"
+            });
+        }
+        
+        if (newPassword.length < 4) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password must be at least 4 characters"
+            });
+        }
+        
+        if (newPassword.length > 20) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password cannot exceed 20 characters"
+            });
+        }
+        
+        const user = await User.findOne({
+            resetPasswordToken: resetToken,
+            resetPasswordExpires: { $gt: new Date() }
+        }).select("+transactionPassword");
+        
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset token"
+            });
+        }
+        
+        // Check if OTP was verified
+        if (!user.otp || !user.otp.verified || user.otp.purpose !== "transaction_password_reset") {
+            return res.status(400).json({
+                success: false,
+                message: "OTP not verified. Please verify OTP first."
+            });
+        }
+        
+        // Update transaction password
+        user.transactionPassword = newPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        user.otp = undefined;
+        await user.save();
+        
+        // Add to transaction history
+        user.transactionHistory.push({
+            type: "security",
+            amount: 0,
+            balanceBefore: user.balance,
+            balanceAfter: user.balance,
+            description: "Transaction password reset via email",
+            referenceId: `TXPRESET-${Date.now()}`,
+            createdAt: new Date()
+        });
+        await user.save();
+        
+        // Send confirmation email
+        await sendEmail(
+            user.email,
+            "Transaction Password Reset Successful",
+            `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2>Transaction Password Reset Successful</h2>
+                    <p>Hello ${user.username},</p>
+                    <p>Your transaction password has been successfully reset.</p>
+                    <p>If you did not make this change, please contact our support immediately.</p>
+                    <hr>
+                    <p style="color: #666; font-size: 12px;">This is an automated message, please do not reply.</p>
+                </div>
+            `
+        );
+        
+        res.json({
+            success: true,
+            message: "Transaction password reset successfully"
+        });
+        
+    } catch (error) {
+        console.error("Reset transaction password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to reset transaction password"
+        });
+    }
+});
+
+// 7. REMOVE TRANSACTION PASSWORD (requires current password)
+Userrouter.post("/remove-transaction-password", authenticateToken, async (req, res) => {
+    try {
+        const { currentTransactionPassword } = req.body;
+        const user = await User.findById(req.user._id).select("+transactionPassword");
+        
+        if (!user.transactionPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "No transaction password set"
+            });
+        }
+        
+        if (!currentTransactionPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Current transaction password is required"
+            });
+        }
+        
+        // Verify current password
+        const isMatch = await bcrypt.compare(currentTransactionPassword, user.transactionPassword);
+        
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: "Current transaction password is incorrect"
+            });
+        }
+        
+        // Remove transaction password
+        user.transactionPassword = undefined;
+        await user.save();
+        
+        // Add to transaction history
+        user.transactionHistory.push({
+            type: "security",
+            amount: 0,
+            balanceBefore: user.balance,
+            balanceAfter: user.balance,
+            description: "Transaction password removed",
+            referenceId: `TXREMOVE-${Date.now()}`,
+            createdAt: new Date()
+        });
+        await user.save();
+        
+        // Send notification email
+        if (user.email && user.isEmailVerified) {
+            await sendEmail(
+                user.email,
+                "Transaction Password Removed",
+                `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2>Transaction Password Removed</h2>
+                        <p>Hello ${user.username},</p>
+                        <p>Your transaction password has been removed from your account.</p>
+                        <p>If you did not make this change, please contact our support immediately.</p>
+                        <hr>
+                        <p style="color: #666; font-size: 12px;">This is an automated message, please do not reply.</p>
+                    </div>
+                `
+            );
+        }
+        
+        res.json({
+            success: true,
+            message: "Transaction password removed successfully"
+        });
+        
+    } catch (error) {
+        console.error("Remove transaction password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
 
 module.exports = Userrouter;

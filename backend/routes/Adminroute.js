@@ -14640,4 +14640,241 @@ Adminrouter.get("/bonus/stats", adminAuth, async (req, res) => {
     });
   }
 });
+
+
+
+// ==================== DAILY BET BONUS ROUTE ====================
+
+// POST route for daily bonus - Simple route that accepts frontend data
+Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
+  try {
+    const {
+      bonusPercentage,  // e.g., 0.5 for 0.5%, or 1 for 1%
+      minBetAmount,     // Minimum bet amount required to qualify
+      maxBonusAmount,   // Maximum bonus amount limit (optional)
+      processedBy,
+      notes
+    } = req.body;
+
+    // Validate required fields
+    if (!bonusPercentage || bonusPercentage <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Bonus percentage is required and must be greater than 0"
+      });
+    }
+
+    // Find all users with dailybetamount > 0
+    const users = await User.find({
+      dailybet: { $gt: 0 }
+    });
+
+    if (users.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No users found with daily bet amount greater than 0"
+      });
+    }
+
+    const results = {
+      totalUsers: users.length,
+      successful: [],
+      failed: [],
+      totalBonusAmount: 0
+    };
+
+    // Process each user
+    for (const user of users) {
+      try {
+        // Apply min bet filter if provided
+        if (minBetAmount && user.dailybet < minBetAmount) {
+          results.failed.push({
+            userId: user._id,
+            username: user.username,
+            betAmount: user.dailybet,
+            reason: `Bet amount (${user.dailybet}) is less than minimum required (${minBetAmount})`
+          });
+          continue;
+        }
+
+        // Calculate bonus amount
+        let bonusAmount = (bonusPercentage / 100) * user.dailybet;
+        
+        // Apply max bonus limit if provided
+        if (maxBonusAmount && bonusAmount > maxBonusAmount) {
+          bonusAmount = maxBonusAmount;
+        }
+
+        // Round to 2 decimal places
+        bonusAmount = parseFloat(bonusAmount.toFixed(2));
+        
+        if (bonusAmount <= 0) {
+          results.failed.push({
+            userId: user._id,
+            username: user.username,
+            betAmount: user.dailybet,
+            reason: "Calculated bonus amount is zero or negative"
+          });
+          continue;
+        }
+
+        const balanceBefore = user.balance;
+        
+        // Add bonus to user balance
+        user.balance += bonusAmount;
+        
+        // Add to bonus history
+        if (!user.bonusHistory) {
+          user.bonusHistory = [];
+        }
+        
+        user.bonusHistory.push({
+          type: 'daily',
+          amount: bonusAmount,
+          totalBet: user.dailybet,
+          bonusRate: `${bonusPercentage}%`,
+          bonusPercentage: `${bonusPercentage}%`,
+          status: 'claimed',
+          createdAt: new Date(),
+          claimedAt: new Date(),
+          processedBy: processedBy || req.user?.username || 'admin',
+          metadata: {
+            minBetAmount: minBetAmount || null,
+            maxBonusAmount: maxBonusAmount || null
+          }
+        });
+        
+        // Add transaction history
+        user.transactionHistory.push({
+          type: 'bonus',
+          amount: bonusAmount,
+          balanceBefore: balanceBefore,
+          balanceAfter: user.balance,
+          description: `Daily bonus (${bonusPercentage}% of ${user.dailybet} bet amount)`,
+          referenceId: `DAILY-BONUS-${Date.now()}-${user._id}`,
+          createdAt: new Date()
+        });
+        
+        // RESET dailybet to 0 after bonus is given
+        user.dailybet = 0;
+        
+        await user.save();
+        
+        results.successful.push({
+          userId: user._id,
+          username: user.username,
+          bonusAmount: bonusAmount,
+          betAmount: user.dailybet,
+          oldBalance: balanceBefore,
+          newBalance: user.balance
+        });
+        
+        results.totalBonusAmount += bonusAmount;
+        
+      } catch (error) {
+        console.error(`Error processing daily bonus for user ${user._id}:`, error);
+        results.failed.push({
+          userId: user._id,
+          username: user.username,
+          reason: error.message
+        });
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: `Daily bonus successfully added to ${results.successful.length} users`,
+      data: {
+        bonusType: 'daily',
+        bonusPercentage: `${bonusPercentage}%`,
+        minBetAmount: minBetAmount || null,
+        maxBonusAmount: maxBonusAmount || null,
+        totalUsers: results.totalUsers,
+        successfulCount: results.successful.length,
+        failedCount: results.failed.length,
+        totalBonusAmount: results.totalBonusAmount,
+        successful: results.successful,
+        failed: results.failed
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error calculating daily bonus:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to calculate daily bonus",
+      error: error.message
+    });
+  }
+});
+
+// GET route to fetch eligible users for daily bonus
+Adminrouter.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
+  try {
+    const { bonusPercentage, minBetAmount, maxBonusAmount } = req.query;
+    
+    // Find users with dailybet > 0
+    const users = await User.find({
+      dailybet: { $gt: 0 }
+    }).select(`_id username email player_id balance dailybet`);
+    
+    const eligibleUsers = [];
+    
+    for (const user of users) {
+      // Apply min bet filter if provided
+      if (minBetAmount && user.dailybet < parseFloat(minBetAmount)) {
+        continue;
+      }
+      
+      // Calculate potential bonus
+      let potentialBonus = 0;
+      if (bonusPercentage) {
+        potentialBonus = (parseFloat(bonusPercentage) / 100) * user.dailybet;
+        
+        // Apply max bonus limit if provided
+        if (maxBonusAmount && potentialBonus > parseFloat(maxBonusAmount)) {
+          potentialBonus = parseFloat(maxBonusAmount);
+        }
+        
+        potentialBonus = parseFloat(potentialBonus.toFixed(2));
+      }
+      
+      eligibleUsers.push({
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        player_id: user.player_id,
+        currentBalance: user.balance,
+        betAmount: user.dailybet,
+        potentialBonus: potentialBonus,
+        newBalance: parseFloat((user.balance + potentialBonus).toFixed(2))
+      });
+    }
+    
+    // Calculate totals
+    const totals = {
+      totalUsers: eligibleUsers.length,
+      totalBetAmount: eligibleUsers.reduce((sum, user) => sum + user.betAmount, 0),
+      totalPotentialBonus: eligibleUsers.reduce((sum, user) => sum + user.potentialBonus, 0),
+      bonusPercentage: bonusPercentage ? `${bonusPercentage}%` : 'Not specified'
+    };
+    
+    res.status(200).json({
+      success: true,
+      bonusType: 'daily',
+      data: {
+        totals: totals,
+        users: eligibleUsers
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error fetching eligible users for daily bonus:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch eligible users",
+      error: error.message
+    });
+  }
+});
 module.exports = Adminrouter;

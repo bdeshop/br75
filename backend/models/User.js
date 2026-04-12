@@ -353,7 +353,7 @@ const UserSchema = new Schema({
     lastWithdrawalDate: {
         type: Date
     },
-
+dailybet: { type: Number, default: 0 },
     // ========== BONUS INFORMATION ==========
     bonusInfo: {
         firstDepositBonusClaimed: {
@@ -810,8 +810,8 @@ UserSchema.virtual('isAffiliateReferred').get(function () {
 
 // ========== PRE-SAVE HOOKS ==========
 UserSchema.pre('save', async function (next) {
-    if (!this.player_id) {
-        this.player_id = 'PL' + Math.random().toString(36).substr(2, 8).toUpperCase();
+  if (!this.player_id) {
+        this.player_id = generatePlayerId(); // Changed from 'PL' + ... to use generatePlayerId()
     }
 
     if (!this.referralCode) {
@@ -1169,7 +1169,10 @@ UserSchema.methods.completeDeposit = async function (orderId, transactionId) {
     await this.save();
     return deposit;
 };
-
+UserSchema.methods.addDailyBet = function(amount) {
+    this.dailybet += amount;
+    return this.save();
+};
 // ========== BONUS WAGERING METHODS ==========
 UserSchema.methods.applyBetToWagering = async function (amount) {
     this.totalWagered += amount;
@@ -1288,9 +1291,8 @@ function generateClickId() {
 
 // Generate player ID helper function
 function generatePlayerId() {
-    return 'PL' + Math.random().toString(36).substr(2, 8).toUpperCase();
+    return 'BIR75' + Math.random().toString(36).substr(2, 8).toUpperCase();
 }
-
 const User = mongoose.model('User', UserSchema);
 const ClickTrack = mongoose.model('ClickTrack', clickTrackSchema);
 

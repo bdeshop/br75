@@ -18,7 +18,7 @@ export default function Register() {
   const [referralCode, setReferralCode] = useState("");
   const [affiliateCode, setAffiliateCode] = useState("");
   
-  const [loginUsername, setLoginUsername] = useState("");
+  const [loginIdentifier, setLoginIdentifier] = useState(""); // Can be username OR phone
   const [loginPassword, setLoginPassword] = useState("");
   
   const [phoneError, setPhoneError] = useState("");
@@ -90,7 +90,6 @@ export default function Register() {
     }
   };
 
-  // ✅ CHANGED: now validates 11 digits starting with 0
   const validatePhone = (value) => {
     if (!value) {
       return "Phone number is required.";
@@ -104,7 +103,6 @@ export default function Register() {
     return "";
   };
 
-  // ✅ CHANGED: maxLength 11, hint updated
   const handlePhoneChange = (e) => {
     const raw = e.target.value.replace(/\D/g, '');
     setPhone(raw);
@@ -271,12 +269,13 @@ export default function Register() {
     }
   };
 
+  // UPDATED: Login handler that supports both username and phone number
   const handleUsernamePasswordLogin = async (e) => {
     e.preventDefault();
     
-    if (!loginUsername) {
-      setLoginError("Username is required.");
-      toast.error("Username is required.");
+    if (!loginIdentifier) {
+      setLoginError("Username or mobile number is required.");
+      toast.error("Username or mobile number is required.");
       return;
     }
     
@@ -290,8 +289,9 @@ export default function Register() {
     setLoginError("");
 
     try {
+      // Send the identifier (can be username OR phone number)
       const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
-        username: loginUsername,
+        username: loginIdentifier, // This can be either username or phone number
         password: loginPassword
       });
 
@@ -386,7 +386,7 @@ export default function Register() {
                 onClick={() => {
                   setIsSignUpActive(false);
                   setLoginError("");
-                  setLoginUsername("");
+                  setLoginIdentifier("");
                   setLoginPassword("");
                 }} 
                 className={`flex-1 py-3 md:py-4  text-center text-sm md:text-base font-medium cursor-pointer transition-colors duration-300 ${!isSignUpActive ? 'border-b-2 bg-blue-500 text-white' : 'text-gray-200 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:text-gray-300'}`}
@@ -429,7 +429,6 @@ export default function Register() {
                         />
                       </div>
 
-                      {/* ✅ CHANGED: counter now shows /11 */}
                       <div className="flex items-center pr-3">
                         <span className={`text-xs font-[300] ${phone.length === 11 ? 'text-green-400' : 'text-gray-500'}`}>
                           {phone.length}/11
@@ -437,7 +436,6 @@ export default function Register() {
                       </div>
                     </div>
                     {phoneError && <p className="text-red-400 text-xs mt-1">{phoneError}</p>}
-                    {/* ✅ CHANGED: hint updated for 11 digits starting with 0 */}
                     {!phoneError && phone.length > 0 && phone.length < 11 && (
                       <p className="text-gray-400 text-xs mt-1">Must start with 0 and be 11 digits (e.g. 01XXXXXXXXX)</p>
                     )}
@@ -558,8 +556,11 @@ export default function Register() {
                 </form>
               ) : (
                 <form onSubmit={handleLoginSubmit}>
+                  {/* UPDATED: Login Identifier Field (Username OR Phone Number) */}
                   <div className="mb-4">
-                    <label htmlFor="loginUsername" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2 font-[300]">{t.usernameLabel}</label>
+                    <label htmlFor="loginIdentifier" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2 font-[300]">
+                      {t.usernameOrPhoneLabel || "Username or Mobile Number"}
+                    </label>
                     <div className="flex items-stretch border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors">
                       <div className="flex items-center px-3 rounded-l border-r border-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -569,17 +570,21 @@ export default function Register() {
                       <div className="flex items-center flex-grow pl-2 md:pl-3">
                         <input
                           type="text"
-                          id="loginUsername"
-                          value={loginUsername}
-                          onChange={(e) => setLoginUsername(e.target.value)}
-                          className="w-full py-2 md:py-3.5  bg-transparent font-[400] text-white font-[300] focus:outline-none placeholder-gray-500 text-sm md:text-base"
-                          placeholder={t.enterYourUsername}
+                          id="loginIdentifier"
+                          value={loginIdentifier}
+                          onChange={(e) => setLoginIdentifier(e.target.value)}
+                          className="w-full py-2 md:py-3.5 bg-transparent font-[400] text-white font-[300] focus:outline-none placeholder-gray-500 text-sm md:text-base"
+                          placeholder={t.enterUsernameOrPhone || "Username or Mobile Number"}
                           disabled={isLoading}
                         />
                       </div>
                     </div>
+                    <p className="text-white text-xs mt-1">
+                      {t.loginHint || "You can login with your username or mobile number"}
+                    </p>
                   </div>
 
+                  {/* Password Input */}
                   <div className="mb-4">
                     <label htmlFor="loginPassword" className="block text-sm md:text-sm text-white drop-shadow-[0_1px_4px_rgba(0,0,0,1)] mb-2 font-[300]">{t.passwordLabel}</label>
                     <div className="flex items-stretch border-[1px] border-blue-500 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors">
@@ -635,7 +640,7 @@ export default function Register() {
                         type="button"
                         onClick={() => {
                           setIsSignUpActive(true);
-                          setLoginUsername("");
+                          setLoginIdentifier("");
                           setLoginPassword("");
                           setLoginError("");
                         }}

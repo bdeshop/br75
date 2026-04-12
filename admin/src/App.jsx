@@ -71,6 +71,7 @@ import KYCList from './pages/kyc/KYCList'
 import NewCashBonus from './pages/cashbonuses/NewCashBonus'
 import CashBonusList from './pages/cashbonuses/CashBonusList'
 import WeeklyMonthlyBonus from './pages/cashbonuses/WeeklyMonthlyBonus'
+import DailybetBonus from './pages/cashbonuses/DailybetBonus'
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -778,6 +779,15 @@ const App = () => {
           element={
             <ProtectedRoute>
               <WeeklyMonthlyBonus/>
+            </ProtectedRoute>
+          }
+        />
+           <Route 
+          exact 
+          path="/bonuses/daily-bonus" 
+          element={
+            <ProtectedRoute>
+              <DailybetBonus/>
             </ProtectedRoute>
           }
         />

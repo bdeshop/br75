@@ -79,7 +79,7 @@ const OtpBoxes = ({ value, onChange, disabled }) => {
   };
 
   return (
-    <div style={{ display: "flex", gap: "10px", justifyContent: "center", margin: "12px 0" }}>
+    <div className="flex gap-2 justify-center my-3">
       {Array.from({ length: 6 }).map((_, i) => (
         <input
           key={i}
@@ -92,23 +92,7 @@ const OtpBoxes = ({ value, onChange, disabled }) => {
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
           disabled={disabled}
-          style={{
-            width: "44px",
-            height: "48px",
-            textAlign: "center",
-            fontSize: "20px",
-            fontWeight: "500",
-            fontFamily: "monospace",
-            background: "#222",
-            border: value[i] ? "1.5px solid #4f8ef7" : "1.5px solid #444",
-            borderRadius: "8px",
-            color: "#fff",
-            outline: "none",
-            caretColor: "transparent",
-            transition: "border-color 0.15s",
-          }}
-          onFocus={(e) => (e.target.style.borderColor = "#4f8ef7")}
-          onBlur={(e) => (e.target.style.borderColor = value[i] ? "#4f8ef7" : "#444")}
+          className="w-10 h-12 text-center text-lg font-mono font-medium bg-[#222] rounded-lg text-white outline-none transition-all duration-150 border border-gray-700 focus:border-theme_color"
         />
       ))}
     </div>
@@ -836,6 +820,21 @@ const Profile = () => {
     return `+880${clean.slice(0, 2)}${'*'.repeat(clean.length - 5)}${clean.slice(-3)}`;
   };
 
+  if (loading) {
+    return (
+      <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
+        <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div className="flex h-[calc(100vh-56px)]">
+          <Sidebar sidebarOpen={sidebarOpen} />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-theme_color"></div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       <ToastContainer
@@ -859,11 +858,13 @@ const Profile = () => {
           <div className="mx-auto w-full min-h-screen max-w-screen-xl md:px-[50px] px-[10px] pt-[60px] py-4"> 
             <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
               <div className="w-full lg:w-64 bg-[#161616] h-auto rounded-[5px] overflow-hidden border border-gray-800">
-                <h2 className="text-lg font-semibold px-4 py-3 border-b bg-[#F9BC20] border-gray-800">{t?.profile || "Profile"}</h2>
+                <h2 className="text-base sm:text-lg font-semibold px-4 py-3 border-b bg-[#F9BC20] border-gray-800 text-gray-900">
+                  {t?.profile || "Profile"}
+                </h2>
                 <div className="flex flex-col">
                   <button 
                     onClick={() => setActiveTab("personal-info")}
-                    className={`px-4 py-3 text-left cursor-pointer transition-colors ${
+                    className={`px-4 py-3 text-left cursor-pointer transition-colors text-sm sm:text-base ${
                       activeTab === "personal-info" ? "bg-[#1f1f1f] font-medium text-white" : "text-gray-300 hover:bg-[#1f1f1f]"
                     }`}
                   >
@@ -871,7 +872,7 @@ const Profile = () => {
                   </button>
                   <button 
                     onClick={() => setActiveTab("login-security")}
-                    className={`px-4 py-3 text-left cursor-pointer transition-colors ${
+                    className={`px-4 py-3 text-left cursor-pointer transition-colors text-sm sm:text-base ${
                       activeTab === "login-security" ? "bg-[#1f1f1f] font-medium text-white" : "text-gray-300 hover:bg-[#1f1f1f]"
                     }`}
                   >
@@ -879,7 +880,7 @@ const Profile = () => {
                   </button>
                   <button 
                     onClick={() => setActiveTab("verification")}
-                    className={`px-4 py-3 text-left cursor-pointer transition-colors ${
+                    className={`px-4 py-3 text-left cursor-pointer transition-colors text-sm sm:text-base ${
                       activeTab === "verification" ? "bg-[#1f1f1f] font-medium text-white" : "text-gray-300 hover:bg-[#1f1f1f]"
                     }`}
                   >
@@ -893,442 +894,446 @@ const Profile = () => {
                 {/* Personal Info Tab */}
                 {activeTab === "personal-info" && (
                   <div className="">
-                      <h2 className="text-xl font-semibold mb-6 bg-[#F9BC20] px-[10px]  py-3 ">{t?.personalInfo || "Personal info"}</h2>
+                    <h2 className="text-base sm:text-xl font-semibold mb-4 sm:mb-6 bg-[#F9BC20] px-4 py-3 text-gray-900">
+                      {t?.personalInfo || "Personal info"}
+                    </h2>
 
-                   <div className="px-[10px]">
-                     {/* Username - Read Only */}
-                    <div className="flex justify-between items-center py-2 border-b border-gray-800">
-                      <div>
-                        <p className="text-sm text-gray-400">{t?.username || "Username"}</p>
-                        <p className="text-white flex items-center gap-2">
-                          {userData?.username || 'N/A'} 
-                          <FiCopy className="text-gray-400 cursor-pointer hover:text-white" onClick={() => copyToClipboard(userData?.username)} />
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Player ID - Read Only */}
-                    <div className="flex justify-between items-center py-4 border-b border-gray-800">
-                      <div>
-                        <p className="text-sm text-gray-400">{t?.playerId || "Player ID"}</p>
-                        <p className="text-white flex items-center gap-2">
-                          {userData?.player_id || 'N/A'}
-                          <FiCopy className="text-gray-400 cursor-pointer hover:text-white" onClick={() => copyToClipboard(userData?.player_id)} />
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Full Legal Name */}
-                    <div className="py-4 border-b border-gray-700">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <FiUser className="text-gray-400" />
-                          <p className="text-sm text-gray-400">{t?.fullLegalName || "Full legal name"}</p>
+                    <div className="px-4 pb-4">
+                      {/* Username - Read Only */}
+                      <div className="flex justify-between items-center py-3 border-b border-gray-800">
+                        <div>
+                          <p className="text-xs sm:text-sm text-gray-400">{t?.username || "Username"}</p>
+                          <p className="text-sm sm:text-base text-white flex items-center gap-2">
+                            {userData?.username || 'N/A'} 
+                            <FiCopy className="text-gray-400 cursor-pointer hover:text-white text-xs sm:text-sm" onClick={() => copyToClipboard(userData?.username)} />
+                          </p>
                         </div>
-                        {!isFullNameUpdated && !editingFields.fullName && (
-                          <button onClick={() => setEditingFields(prev => ({ ...prev, fullName: true }))} className="text-theme_color hover:text-theme_color/80 text-sm flex items-center gap-1">
-                            <FiEdit className="text-sm" /> {t?.update || "Update"}
-                          </button>
-                        )}
-                        {isFullNameUpdated && (
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <FiLock className="text-xs" /> {t?.locked || "Locked"}
-                          </span>
-                        )}
                       </div>
-                      {editingFields.fullName ? (
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            name="fullName"
-                            value={personalInfoForm.fullName}
-                            onChange={handlePersonalInfoChange}
-                            className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-theme_color"
-                            placeholder={t?.enterFullName || "Enter your full name"}
-                            disabled={isUpdating}
-                          />
-                          <div className="flex gap-2">
-                            <button onClick={handleUpdateFullName} disabled={isUpdating} className="bg-theme_color text-white px-3 py-1 rounded text-sm disabled:opacity-50 flex items-center gap-1">
-                              <FiSave className="text-sm" /> {isUpdating ? (t?.saving || 'Saving...') : (t?.save || 'Save')}
-                            </button>
-                            <button onClick={() => handleCancelEdit('fullName')} className="bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
-                              <FiXCircle className="text-sm" /> {t?.cancel || "Cancel"}
-                            </button>
+
+                      {/* Player ID - Read Only */}
+                      <div className="flex justify-between items-center py-4 border-b border-gray-800">
+                        <div>
+                          <p className="text-xs sm:text-sm text-gray-400">{t?.playerId || "Player ID"}</p>
+                          <p className="text-sm sm:text-base text-white flex items-center gap-2">
+                            {userData?.player_id || 'N/A'}
+                            <FiCopy className="text-gray-400 cursor-pointer hover:text-white text-xs sm:text-sm" onClick={() => copyToClipboard(userData?.player_id)} />
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Full Legal Name */}
+                      <div className="py-4 border-b border-gray-700">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
+                          <div className="flex items-center gap-2">
+                            <FiUser className="text-gray-400 text-xs sm:text-sm" />
+                            <p className="text-xs sm:text-sm text-gray-400">{t?.fullLegalName || "Full legal name"}</p>
                           </div>
-                          <p className="text-xs text-yellow-500">{t?.updateOnceWarning || "You can only update this once. Please ensure the name is correct."}</p>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <p className="text-white">{userData?.fullName || (t?.notSet || 'Not set')}</p>
-                          {isFullNameUpdated && <FiLock className="text-gray-500 text-xs" />}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Date of Birth */}
-                    <div className="py-4 border-b border-gray-700">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <FiCalendar className="text-gray-400" />
-                          <p className="text-sm text-gray-400">{t?.dateOfBirth || "Date of birth"}</p>
-                        </div>
-                        {!isDOBUpdated && !editingFields.dateOfBirth && (
-                          <button onClick={() => setEditingFields(prev => ({ ...prev, dateOfBirth: true }))} className="text-theme_color hover:text-theme_color/80 text-sm flex items-center gap-1">
-                            <FiEdit className="text-sm" /> {t?.update || "Update"}
-                          </button>
-                        )}
-                        {isDOBUpdated && (
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <FiLock className="text-xs" /> {t?.locked || "Locked"}
-                          </span>
-                        )}
-                      </div>
-                      {editingFields.dateOfBirth ? (
-                        <div className="space-y-2">
-                          <input
-                            type="date"
-                            name="dateOfBirth"
-                            value={personalInfoForm.dateOfBirth}
-                            onChange={handlePersonalInfoChange}
-                            className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-theme_color"
-                            disabled={isUpdating}
-                          />
-                          <div className="flex gap-2">
-                            <button onClick={handleUpdateDOB} disabled={isUpdating} className="bg-theme_color text-white px-3 py-1 rounded text-sm disabled:opacity-50 flex items-center gap-1">
-                              <FiSave className="text-sm" /> {isUpdating ? (t?.saving || 'Saving...') : (t?.save || 'Save')}
+                          {!isFullNameUpdated && !editingFields.fullName && (
+                            <button onClick={() => setEditingFields(prev => ({ ...prev, fullName: true }))} className="text-theme_color hover:text-theme_color/80 text-xs sm:text-sm flex items-center gap-1">
+                              <FiEdit className="text-xs" /> {t?.update || "Update"}
                             </button>
-                            <button onClick={() => handleCancelEdit('dateOfBirth')} className="bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
-                              <FiXCircle className="text-sm" /> {t?.cancel || "Cancel"}
-                            </button>
-                          </div>
-                          <p className="text-xs text-yellow-500">{t?.updateOnceWarning || "You can only update this once. Please ensure the date is correct."}</p>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <p className="text-white">{userData?.dateOfBirth ? new Date(userData.dateOfBirth).toLocaleDateString() : (t?.notSet || 'Not set')}</p>
-                          {isDOBUpdated && <FiLock className="text-gray-500 text-xs" />}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Phone with OTP Verification */}
-                    <div className="py-4 border-b border-gray-700">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FiPhone className="text-gray-400" />
-                        <p className="text-sm text-gray-400">{t?.phone || "Phone"}</p>
-                      </div>
-                      
-                      {!userData?.isPhoneVerified && mobileVerification.showForm ? (
-                        <div className="space-y-3">
-                          {mobileVerification.step === "verify" && (
-                            <div className="bg-[#1a1c1d] p-5 rounded-lg border border-gray-700">
-                              <p className="text-base font-semibold text-white text-center mb-1">
-                                {t?.otpVerification || "OTP Verification"}
-                              </p>
-                              <p className="text-sm text-gray-400 text-center mb-1">
-                                {t?.otpSentTo || "Enter the OTP you received at"}
-                              </p>
-                              <p className="text-sm font-semibold text-white text-center mb-4">
-                                {maskPhone(personalInfoForm.phone)}
-                              </p>
-
-                              <OtpBoxes
-                                value={mobileVerification.otp}
-                                onChange={(val) => setMobileVerification(prev => ({ ...prev, otp: val }))}
-                                disabled={mobileVerification.isLoading}
-                              />
-
-                              <div className="flex gap-2 justify-center mt-4">
-                                <button
-                                  onClick={handleVerifyMobileOTP}
-                                  disabled={mobileVerification.isLoading || mobileVerification.otp.replace(/\s/g,"").length !== 6}
-                                  className="bg-theme_color text-white px-5 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-1"
-                                >
-                                  {mobileVerification.isLoading ? (
-                                    <span className="flex items-center gap-1">
-                                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                      </svg>
-                                      {t?.verifying || "Verifying..."}
-                                    </span>
-                                  ) : (t?.verify || "Verify")}
-                                </button>
-                                <button
-                                  onClick={handleResendMobileOTP}
-                                  disabled={mobileVerification.isLoading}
-                                  className="bg-gray-600 text-white px-4 py-2 rounded text-sm flex items-center gap-1"
-                                >
-                                  <FiRefreshCw className="text-sm" /> {t?.resendOTP || "Resend"}
-                                </button>
-                                <button
-                                  onClick={handleCancelMobileVerification}
-                                  className="bg-gray-700 text-white px-4 py-2 rounded text-sm flex items-center gap-1"
-                                >
-                                  <FiXCircle className="text-sm" /> {t?.cancel || "Cancel"}
-                                </button>
-                              </div>
-                            </div>
+                          )}
+                          {isFullNameUpdated && (
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <FiLock className="text-xs" /> {t?.locked || "Locked"}
+                            </span>
                           )}
                         </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center bg-[#222] border border-gray-700 rounded overflow-hidden flex-1">
-                              <div className="flex items-center px-3 py-2 w-[100px] md:w-[80px] bg-[#1a1c1d]  border-r border-gray-700">
-                                <img 
-                                  src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png" 
-                                  alt="BD" 
-                                  className="w-5 h-5 rounded-full mr-1"
-                                />
-                                <span className="text-white text-[13px] md:text-sm">+88</span>
-                              </div>
-                              <input
-                                type="tel"
-                                name="phone"
-                                value={personalInfoForm.phone}
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(/\D/g, '');
-                                  if (value.length <= 11) {
-                                    setPersonalInfoForm(prev => ({ ...prev, phone: value }));
-                                  }
-                                }}
-                                className="flex-1 bg-[#222] text-[13px] px-3 py-2 text-white focus:outline-none"
-                                placeholder="01XXXXXXXXX"
-                                disabled={userData?.isPhoneVerified}
-                              />
-                            </div>
-                            {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 11 && (
-                              <button
-                                onClick={handleSendMobileOTP}
-                                disabled={mobileVerification.isLoading}
-                                className="bg-theme_color text-white px-4 py-2 rounded text-[13px] md:text-sm whitespace-nowrap disabled:opacity-50 flex items-center gap-1"
-                              >
-                                {mobileVerification.isLoading ? (
-                                  <span className="flex items-center gap-1">
-                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                    </svg>
-                                    {t?.sending || "Sending..."}
-                                  </span>
-                                ) : (t?.verifyPhone || "Verify Phone")}
-                              </button>
-                            )}
-                          </div>
-                          {userData?.isPhoneVerified && (
-                            <div className="flex items-center justify-between">
-                              <p className="text-white flex items-center gap-2">
-                                +880{userData?.phone?.toString().replace(/^\+880/, '').replace(/^880/, '')}
-                                <span className="text-green-400 text-xs flex items-center gap-1">
-                                  <FiCheck /> {t?.verified || "Verified"}
-                                </span>
-                              </p>
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <FiLock className="text-xs" /> {t?.locked || "Locked"}
-                              </span>
-                            </div>
-                          )}
-                          {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 11 && (
-                            <p className="text-xs text-yellow-500">{t?.verifyPhoneToLock || "Phone number will be locked after verification."}</p>
-                          )}
-                          {!userData?.isPhoneVerified && (!personalInfoForm.phone || personalInfoForm.phone.length !== 11) && (
-                            <p className="text-xs text-gray-500">Enter 11-digit phone number starting with 01 (e.g., 01712345678)</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Email with OTP boxes for verification step */}
-                    <div className="py-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <FiMail className="text-gray-400" />
-                          <p className="text-sm text-gray-400">{t?.email || "Email"}</p>
-                        </div>
-                        {!emailUpdateForm.showForm && !isEmailUpdated ? (
-                          <>
-                            <div className="flex items-center justify-between">
-                              <p className="text-white mb-3 flex items-center gap-2">
-                                {userData?.email || (t?.notSet || 'Not set')}
-                                {userData?.email && userData?.isEmailVerified && (
-                                  <span className="text-green-400 text-xs flex items-center gap-1">
-                                    <FiCheck /> {t?.verified || "Verified"}
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <button 
-                              onClick={() => setEmailUpdateForm(prev => ({ ...prev, showForm: true, newEmail: userData?.email || '' }))}
-                              className="text-theme_color hover:text-theme_color/80 text-sm flex items-center gap-1"
-                            >
-                              <FiEdit className="text-sm" /> {t?.addEmail || "Add Email"}
-                            </button>
-                            <p className="text-xs text-yellow-500 mt-1">{t?.emailOnceWarning || "Email can only be set once. Please ensure it's correct."}</p>
-                          </>
-                        ) : !isEmailUpdated && emailUpdateForm.showForm ? (
-                          <div className="mt-2 space-y-3">
+                        {editingFields.fullName ? (
+                          <div className="space-y-2">
                             <input
-                              type="email"
-                              name="newEmail"
-                              value={emailUpdateForm.newEmail}
-                              onChange={handleEmailUpdateChange}
-                              className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-theme_color"
-                              placeholder={t?.enterEmail || "Enter email address"}
-                              disabled={emailUpdateForm.step === "verify"}
+                              type="text"
+                              name="fullName"
+                              value={personalInfoForm.fullName}
+                              onChange={handlePersonalInfoChange}
+                              className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-theme_color text-sm sm:text-base"
+                              placeholder={t?.enterFullName || "Enter your full name"}
+                              disabled={isUpdating}
                             />
+                            <div className="flex gap-2">
+                              <button onClick={handleUpdateFullName} disabled={isUpdating} className="bg-theme_color text-white px-3 py-1 rounded text-xs sm:text-sm disabled:opacity-50 flex items-center gap-1">
+                                <FiSave className="text-xs" /> {isUpdating ? (t?.saving || 'Saving...') : (t?.save || 'Save')}
+                              </button>
+                              <button onClick={() => handleCancelEdit('fullName')} className="bg-gray-600 text-white px-3 py-1 rounded text-xs sm:text-sm flex items-center gap-1">
+                                <FiXCircle className="text-xs" /> {t?.cancel || "Cancel"}
+                              </button>
+                            </div>
+                            <p className="text-xs text-yellow-500">{t?.updateOnceWarning || "You can only update this once. Please ensure the name is correct."}</p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm sm:text-base text-white">{userData?.fullName || (t?.notSet || 'Not set')}</p>
+                            {isFullNameUpdated && <FiLock className="text-gray-500 text-xs" />}
+                          </div>
+                        )}
+                      </div>
 
-                            {emailUpdateForm.step === "verify" && (
-                              <div className="bg-[#1a1c1d] p-5 rounded-lg border border-gray-700">
-                                <p className="text-base font-semibold text-white text-center mb-1">
+                      {/* Date of Birth */}
+                      <div className="py-4 border-b border-gray-700">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
+                          <div className="flex items-center gap-2">
+                            <FiCalendar className="text-gray-400 text-xs sm:text-sm" />
+                            <p className="text-xs sm:text-sm text-gray-400">{t?.dateOfBirth || "Date of birth"}</p>
+                          </div>
+                          {!isDOBUpdated && !editingFields.dateOfBirth && (
+                            <button onClick={() => setEditingFields(prev => ({ ...prev, dateOfBirth: true }))} className="text-theme_color hover:text-theme_color/80 text-xs sm:text-sm flex items-center gap-1">
+                              <FiEdit className="text-xs" /> {t?.update || "Update"}
+                            </button>
+                          )}
+                          {isDOBUpdated && (
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <FiLock className="text-xs" /> {t?.locked || "Locked"}
+                            </span>
+                          )}
+                        </div>
+                        {editingFields.dateOfBirth ? (
+                          <div className="space-y-2">
+                            <input
+                              type="date"
+                              name="dateOfBirth"
+                              value={personalInfoForm.dateOfBirth}
+                              onChange={handlePersonalInfoChange}
+                              className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-theme_color text-sm sm:text-base"
+                              disabled={isUpdating}
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={handleUpdateDOB} disabled={isUpdating} className="bg-theme_color text-white px-3 py-1 rounded text-xs sm:text-sm disabled:opacity-50 flex items-center gap-1">
+                                <FiSave className="text-xs" /> {isUpdating ? (t?.saving || 'Saving...') : (t?.save || 'Save')}
+                              </button>
+                              <button onClick={() => handleCancelEdit('dateOfBirth')} className="bg-gray-600 text-white px-3 py-1 rounded text-xs sm:text-sm flex items-center gap-1">
+                                <FiXCircle className="text-xs" /> {t?.cancel || "Cancel"}
+                              </button>
+                            </div>
+                            <p className="text-xs text-yellow-500">{t?.updateOnceWarning || "You can only update this once. Please ensure the date is correct."}</p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm sm:text-base text-white">{userData?.dateOfBirth ? new Date(userData.dateOfBirth).toLocaleDateString() : (t?.notSet || 'Not set')}</p>
+                            {isDOBUpdated && <FiLock className="text-gray-500 text-xs" />}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Phone with OTP Verification */}
+                      <div className="py-4 border-b border-gray-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FiPhone className="text-gray-400 text-xs sm:text-sm" />
+                          <p className="text-xs sm:text-sm text-gray-400">{t?.phone || "Phone"}</p>
+                        </div>
+                        
+                        {!userData?.isPhoneVerified && mobileVerification.showForm ? (
+                          <div className="space-y-3">
+                            {mobileVerification.step === "verify" && (
+                              <div className="bg-[#1a1c1d] p-4 rounded-lg border border-gray-700">
+                                <p className="text-sm sm:text-base font-semibold text-white text-center mb-1">
                                   {t?.otpVerification || "OTP Verification"}
                                 </p>
-                                <p className="text-sm text-gray-400 text-center mb-1">
-                                  {t?.otpSentToEmail || "Enter the OTP you received at"}
+                                <p className="text-xs sm:text-sm text-gray-400 text-center mb-1">
+                                  {t?.otpSentTo || "Enter the OTP you received at"}
                                 </p>
-                                <p className="text-sm font-semibold text-white text-center mb-4">
-                                  {emailUpdateForm.newEmail}
+                                <p className="text-xs sm:text-sm font-semibold text-white text-center mb-4">
+                                  {maskPhone(personalInfoForm.phone)}
                                 </p>
 
                                 <OtpBoxes
-                                  value={emailUpdateForm.otp}
-                                  onChange={(val) => setEmailUpdateForm(prev => ({ ...prev, otp: val }))}
-                                  disabled={isVerifyingOTP}
+                                  value={mobileVerification.otp}
+                                  onChange={(val) => setMobileVerification(prev => ({ ...prev, otp: val }))}
+                                  disabled={mobileVerification.isLoading}
                                 />
 
-                                <div className="flex gap-2 justify-center mt-4">
+                                <div className="flex flex-wrap gap-2 justify-center mt-4">
                                   <button
-                                    onClick={handleVerifyEmailOTP}
-                                    disabled={isVerifyingOTP || emailUpdateForm.otp.replace(/\s/g,"").length !== 6}
-                                    className="bg-theme_color text-white px-5 py-2 rounded text-sm disabled:opacity-50"
+                                    onClick={handleVerifyMobileOTP}
+                                    disabled={mobileVerification.isLoading || mobileVerification.otp.replace(/\s/g,"").length !== 6}
+                                    className="bg-theme_color text-white px-4 py-1.5 rounded text-xs sm:text-sm disabled:opacity-50 flex items-center gap-1"
                                   >
-                                    {isVerifyingOTP ? (t?.verifying || "Verifying...") : (t?.verify || "Verify")}
+                                    {mobileVerification.isLoading ? (
+                                      <span className="flex items-center gap-1">
+                                        <svg className="animate-spin h-3 w-3 sm:h-4 sm:w-4" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                        </svg>
+                                        {t?.verifying || "Verifying..."}
+                                      </span>
+                                    ) : (t?.verify || "Verify")}
                                   </button>
                                   <button
-                                    onClick={handleSendEmailOTP}
-                                    disabled={isSendingOTP}
-                                    className="bg-gray-600 text-white px-4 py-2 rounded text-sm flex items-center gap-1"
+                                    onClick={handleResendMobileOTP}
+                                    disabled={mobileVerification.isLoading}
+                                    className="bg-gray-600 text-white px-3 py-1.5 rounded text-xs sm:text-sm flex items-center gap-1"
                                   >
-                                    <FiRefreshCw className="text-sm" /> {t?.resendOTP || "Resend"}
+                                    <FiRefreshCw className="text-xs" /> {t?.resendOTP || "Resend"}
+                                  </button>
+                                  <button
+                                    onClick={handleCancelMobileVerification}
+                                    className="bg-gray-700 text-white px-3 py-1.5 rounded text-xs sm:text-sm flex items-center gap-1"
+                                  >
+                                    <FiXCircle className="text-xs" /> {t?.cancel || "Cancel"}
                                   </button>
                                 </div>
                               </div>
                             )}
-
-                            <div className="flex gap-2">
-                              {emailUpdateForm.step === "request" && (
-                                <button
-                                  onClick={handleSendEmailOTP}
-                                  disabled={isSendingOTP}
-                                  className="bg-theme_color text-white px-4 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-1"
-                                >
-                                  {isSendingOTP ? (t?.sending || "Sending...") : (t?.sendOTP || "Send OTP")}
-                                  <FiSend />
-                                </button>
-                              )}
-                              <button
-                                onClick={() => setEmailUpdateForm({ newEmail: "", otp: "", step: "request", showForm: false })}
-                                className="bg-gray-600 text-white px-4 py-2 rounded text-sm"
-                              >
-                                {t?.cancel || "Cancel"}
-                              </button>
-                            </div>
                           </div>
                         ) : (
-                          // Email already set - locked view
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <p className="text-white flex items-center gap-2">
-                                {userData?.email || (t?.notSet || 'Not set')}
-                                {userData?.email && userData?.isEmailVerified ? (
+                          <div className="space-y-3">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                              <div className="flex items-center bg-[#222] border border-gray-700 rounded overflow-hidden flex-1">
+                                <div className="flex items-center px-3 py-2 w-[80px] bg-[#1a1c1d] border-r border-gray-700">
+                                  <img 
+                                    src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png" 
+                                    alt="BD" 
+                                    className="w-4 h-4 rounded-full mr-1"
+                                  />
+                                  <span className="text-white text-xs sm:text-sm">+88</span>
+                                </div>
+                                <input
+                                  type="tel"
+                                  name="phone"
+                                  value={personalInfoForm.phone}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    if (value.length <= 11) {
+                                      setPersonalInfoForm(prev => ({ ...prev, phone: value }));
+                                    }
+                                  }}
+                                  className="flex-1 bg-[#222] text-xs sm:text-sm px-3 py-2 text-white focus:outline-none"
+                                  placeholder="01XXXXXXXXX"
+                                  disabled={userData?.isPhoneVerified}
+                                />
+                              </div>
+                              {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 11 && (
+                                <button
+                                  onClick={handleSendMobileOTP}
+                                  disabled={mobileVerification.isLoading}
+                                  className="bg-theme_color text-white px-3 py-2 rounded text-xs sm:text-sm whitespace-nowrap disabled:opacity-50 flex items-center gap-1 justify-center"
+                                >
+                                  {mobileVerification.isLoading ? (
+                                    <span className="flex items-center gap-1">
+                                      <svg className="animate-spin h-3 w-3 sm:h-4 sm:w-4" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                      </svg>
+                                      {t?.sending || "Sending..."}
+                                    </span>
+                                  ) : (t?.verifyPhone || "Verify Phone")}
+                                </button>
+                              )}
+                            </div>
+                            {userData?.isPhoneVerified && (
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <p className="text-sm sm:text-base text-white flex items-center gap-2">
+                                  +880{userData?.phone?.toString().replace(/^\+880/, '').replace(/^880/, '')}
                                   <span className="text-green-400 text-xs flex items-center gap-1">
                                     <FiCheck /> {t?.verified || "Verified"}
                                   </span>
-                                ) : userData?.email && !userData?.isEmailVerified && (
-                                  <FiAlertCircle className="text-orange-400" />
-                                )}
-                              </p>
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <FiLock className="text-xs" /> {t?.locked || "Locked"}
-                              </span>
-                            </div>
-                            {userData?.email && !userData?.isEmailVerified && (
-                              <>
-                                <button onClick={handleEmailVerificationRequest} className="mt-2 text-yellow-500 hover:text-yellow-400 text-sm flex items-center gap-1">
-                                  <FiMail /> {t?.verifyEmailNow || "Verify Email Now"}
-                                </button>
-                                <button onClick={handleResendVerificationEmail} className="mt-2 text-blue-500 hover:text-blue-400 text-sm flex items-center gap-1 ml-4">
-                                  <FiRefreshCw /> {t?.resendCode || "Resend Code"}
-                                </button>
-                              </>
+                                </p>
+                                <span className="text-xs text-gray-500 flex items-center gap-1">
+                                  <FiLock className="text-xs" /> {t?.locked || "Locked"}
+                                </span>
+                              </div>
                             )}
-                            <p className="text-xs text-gray-500 mt-1">{t?.emailLockedPermanent || "Email cannot be changed once set."}</p>
+                            {!userData?.isPhoneVerified && personalInfoForm.phone && personalInfoForm.phone.length === 11 && (
+                              <p className="text-xs text-yellow-500">{t?.verifyPhoneToLock || "Phone number will be locked after verification."}</p>
+                            )}
+                            {!userData?.isPhoneVerified && (!personalInfoForm.phone || personalInfoForm.phone.length !== 11) && (
+                              <p className="text-xs text-gray-500">Enter 11-digit phone number starting with 01 (e.g., 01712345678)</p>
+                            )}
                           </div>
                         )}
                       </div>
+
+                      {/* Email with OTP boxes for verification step */}
+                      <div className="py-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <FiMail className="text-gray-400 text-xs sm:text-sm" />
+                            <p className="text-xs sm:text-sm text-gray-400">{t?.email || "Email"}</p>
+                          </div>
+                          {!emailUpdateForm.showForm && !isEmailUpdated ? (
+                            <>
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <p className="text-sm sm:text-base text-white mb-2 sm:mb-0 flex items-center gap-2">
+                                  {userData?.email || (t?.notSet || 'Not set')}
+                                  {userData?.email && userData?.isEmailVerified && (
+                                    <span className="text-green-400 text-xs flex items-center gap-1">
+                                      <FiCheck /> {t?.verified || "Verified"}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              <button 
+                                onClick={() => setEmailUpdateForm(prev => ({ ...prev, showForm: true, newEmail: userData?.email || '' }))}
+                                className="text-theme_color hover:text-theme_color/80 text-xs sm:text-sm flex items-center gap-1 mt-2"
+                              >
+                                <FiEdit className="text-xs" /> {t?.addEmail || "Add Email"}
+                              </button>
+                              <p className="text-xs text-yellow-500 mt-1">{t?.emailOnceWarning || "Email can only be set once. Please ensure it's correct."}</p>
+                            </>
+                          ) : !isEmailUpdated && emailUpdateForm.showForm ? (
+                            <div className="mt-2 space-y-3">
+                              <input
+                                type="email"
+                                name="newEmail"
+                                value={emailUpdateForm.newEmail}
+                                onChange={handleEmailUpdateChange}
+                                className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-theme_color text-sm sm:text-base"
+                                placeholder={t?.enterEmail || "Enter email address"}
+                                disabled={emailUpdateForm.step === "verify"}
+                              />
+
+                              {emailUpdateForm.step === "verify" && (
+                                <div className="bg-[#1a1c1d] p-4 rounded-lg border border-gray-700">
+                                  <p className="text-sm sm:text-base font-semibold text-white text-center mb-1">
+                                    {t?.otpVerification || "OTP Verification"}
+                                  </p>
+                                  <p className="text-xs sm:text-sm text-gray-400 text-center mb-1">
+                                    {t?.otpSentToEmail || "Enter the OTP you received at"}
+                                  </p>
+                                  <p className="text-xs sm:text-sm font-semibold text-white text-center mb-4">
+                                    {emailUpdateForm.newEmail}
+                                  </p>
+
+                                  <OtpBoxes
+                                    value={emailUpdateForm.otp}
+                                    onChange={(val) => setEmailUpdateForm(prev => ({ ...prev, otp: val }))}
+                                    disabled={isVerifyingOTP}
+                                  />
+
+                                  <div className="flex flex-wrap gap-2 justify-center mt-4">
+                                    <button
+                                      onClick={handleVerifyEmailOTP}
+                                      disabled={isVerifyingOTP || emailUpdateForm.otp.replace(/\s/g,"").length !== 6}
+                                      className="bg-theme_color text-white px-4 py-1.5 rounded text-xs sm:text-sm disabled:opacity-50"
+                                    >
+                                      {isVerifyingOTP ? (t?.verifying || "Verifying...") : (t?.verify || "Verify")}
+                                    </button>
+                                    <button
+                                      onClick={handleSendEmailOTP}
+                                      disabled={isSendingOTP}
+                                      className="bg-gray-600 text-white px-3 py-1.5 rounded text-xs sm:text-sm flex items-center gap-1"
+                                    >
+                                      <FiRefreshCw className="text-xs" /> {t?.resendOTP || "Resend"}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex flex-wrap gap-2">
+                                {emailUpdateForm.step === "request" && (
+                                  <button
+                                    onClick={handleSendEmailOTP}
+                                    disabled={isSendingOTP}
+                                    className="bg-theme_color text-white px-4 py-1.5 rounded text-xs sm:text-sm disabled:opacity-50 flex items-center gap-1"
+                                  >
+                                    {isSendingOTP ? (t?.sending || "Sending...") : (t?.sendOTP || "Send OTP")}
+                                    <FiSend />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setEmailUpdateForm({ newEmail: "", otp: "", step: "request", showForm: false })}
+                                  className="bg-gray-600 text-white px-4 py-1.5 rounded text-xs sm:text-sm"
+                                >
+                                  {t?.cancel || "Cancel"}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            // Email already set - locked view
+                            <div>
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <p className="text-sm sm:text-base text-white flex items-center gap-2">
+                                  {userData?.email || (t?.notSet || 'Not set')}
+                                  {userData?.email && userData?.isEmailVerified ? (
+                                    <span className="text-green-400 text-xs flex items-center gap-1">
+                                      <FiCheck /> {t?.verified || "Verified"}
+                                    </span>
+                                  ) : userData?.email && !userData?.isEmailVerified && (
+                                    <FiAlertCircle className="text-orange-400" />
+                                  )}
+                                </p>
+                                <span className="text-xs text-gray-500 flex items-center gap-1">
+                                  <FiLock className="text-xs" /> {t?.locked || "Locked"}
+                                </span>
+                              </div>
+                              {userData?.email && !userData?.isEmailVerified && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  <button onClick={handleEmailVerificationRequest} className="text-yellow-500 hover:text-yellow-400 text-xs sm:text-sm flex items-center gap-1">
+                                    <FiMail /> {t?.verifyEmailNow || "Verify Email Now"}
+                                  </button>
+                                  <button onClick={handleResendVerificationEmail} className="text-blue-500 hover:text-blue-400 text-xs sm:text-sm flex items-center gap-1">
+                                    <FiRefreshCw /> {t?.resendCode || "Resend Code"}
+                                  </button>
+                                </div>
+                              )}
+                              <p className="text-xs text-gray-500 mt-1">{t?.emailLockedPermanent || "Email cannot be changed once set."}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                   </div>
                   </div>
                 )}
 
                 {/* Login & Security Tab */}
                 {activeTab === "login-security" && (
-                 <div className="">
-<h2 className="text-xl font-semibold mb-6 bg-[#F9BC20] px-[10px]  py-3">{t?.loginSecurity || "Login & Security"}</h2>
+                  <div className="">
+                    <h2 className="text-base sm:text-xl font-semibold mb-4 sm:mb-6 bg-[#F9BC20] px-4 py-3 text-gray-900">
+                      {t?.loginSecurity || "Login & Security"}
+                    </h2>
 
-                    <div className="mb-8 p-[10px]">
-                      <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <div className="mb-8 p-4">
+                      <h3 className="text-base sm:text-lg font-medium mb-4 flex items-center gap-2">
                         <FiKey className="text-theme_color" /> {t?.changePassword || "Change Password"}
                       </h3>
                       <form onSubmit={handlePasswordSubmit} className="space-y-4">
                         <div className="relative">
-                          <label className="block text-sm text-gray-400 mb-2">{t?.currentPassword || "Current Password"}</label>
+                          <label className="block text-xs sm:text-sm text-gray-400 mb-2">{t?.currentPassword || "Current Password"}</label>
                           <div className="relative">
                             <input
                               type={showCurrentPassword ? "text" : "password"}
                               name="currentPassword"
                               value={passwordForm.currentPassword}
                               onChange={handlePasswordChange}
-                              className="w-full bg-[#222] border border-gray-700 rounded px-4 py-3 text-white focus:outline-none focus:border-theme_color"
+                              className="w-full bg-[#222] border border-gray-700 rounded px-4 py-2.5 sm:py-3 text-white focus:outline-none focus:border-theme_color text-sm sm:text-base"
                               required
                             />
-                            <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-white">
-                              {showCurrentPassword ? <FiEyeOff /> : <FiEye />}
+                            <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-2.5 sm:top-3 text-gray-400 hover:text-white">
+                              {showCurrentPassword ? <FiEyeOff className="text-sm sm:text-base" /> : <FiEye className="text-sm sm:text-base" />}
                             </button>
                           </div>
                         </div>
 
                         <div className="relative">
-                          <label className="block text-sm text-gray-400 mb-2">{t?.newPassword || "New Password"}</label>
+                          <label className="block text-xs sm:text-sm text-gray-400 mb-2">{t?.newPassword || "New Password"}</label>
                           <div className="relative">
                             <input
                               type={showNewPassword ? "text" : "password"}
                               name="newPassword"
                               value={passwordForm.newPassword}
                               onChange={handlePasswordChange}
-                              className="w-full bg-[#222] border border-gray-700 rounded px-4 py-3 text-white focus:outline-none focus:border-theme_color"
+                              className="w-full bg-[#222] border border-gray-700 rounded px-4 py-2.5 sm:py-3 text-white focus:outline-none focus:border-theme_color text-sm sm:text-base"
                               required
                               minLength={6}
                             />
-                            <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-white">
-                              {showNewPassword ? <FiEyeOff /> : <FiEye />}
+                            <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-2.5 sm:top-3 text-gray-400 hover:text-white">
+                              {showNewPassword ? <FiEyeOff className="text-sm sm:text-base" /> : <FiEye className="text-sm sm:text-base" />}
                             </button>
                           </div>
                         </div>
 
                         <div className="relative">
-                          <label className="block text-sm text-gray-400 mb-2">{t?.confirmNewPassword || "Confirm New Password"}</label>
+                          <label className="block text-xs sm:text-sm text-gray-400 mb-2">{t?.confirmNewPassword || "Confirm New Password"}</label>
                           <div className="relative">
                             <input
                               type={showConfirmPassword ? "text" : "password"}
                               name="confirmPassword"
                               value={passwordForm.confirmPassword}
                               onChange={handlePasswordChange}
-                              className="w-full bg-[#222] border border-gray-700 rounded px-4 py-3 text-white focus:outline-none focus:border-theme_color"
+                              className="w-full bg-[#222] border border-gray-700 rounded px-4 py-2.5 sm:py-3 text-white focus:outline-none focus:border-theme_color text-sm sm:text-base"
                               required
                             />
-                            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-white">
-                              {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-2.5 sm:top-3 text-gray-400 hover:text-white">
+                              {showConfirmPassword ? <FiEyeOff className="text-sm sm:text-base" /> : <FiEye className="text-sm sm:text-base" />}
                             </button>
                           </div>
                         </div>
@@ -1336,89 +1341,74 @@ const Profile = () => {
                         <button
                           type="submit"
                           disabled={isUpdating}
-                          className="bg-theme_color text-white px-6 py-3 rounded hover:bg-theme_color/80 transition-colors disabled:opacity-50"
+                          className="bg-theme_color text-white px-6 py-2.5 sm:py-3 rounded hover:bg-theme_color/80 transition-colors disabled:opacity-50 text-sm sm:text-base"
                         >
                           {isUpdating ? (t?.updating || "Updating...") : (t?.changePassword || "Change Password")}
                         </button>
                       </form>
                     </div>
-                 </div>
+                  </div>
                 )}
 
                 {/* Verification Tab */}
                 {activeTab === "verification" && (
                   <div>
-                    <h2 className="text-xl font-semibold mb-6 bg-[#F9BC20] px-[10px]  py-3">{t?.verification || "Verification"}</h2>
-                    <p className="text-gray-400 mb-6 px-[10px]">
+                    <h2 className="text-base sm:text-xl font-semibold mb-4 sm:mb-6 bg-[#F9BC20] px-4 py-3 text-gray-900">
+                      {t?.verification || "Verification"}
+                    </h2>
+                    <p className="text-gray-400 mb-6 px-4 text-xs sm:text-sm">
                       {t?.verificationDescription || "Complete your verification to access all features and increase your limits."}
                     </p>
 
-                    <div className="space-y-4 px-[10px]">
+                    <div className="space-y-4 px-4 pb-4">
                       {/* Email Verification */}
                       <div className="bg-[#222] rounded-lg p-4 border border-gray-700">
-                        <div className="flex justify-between items-center mb-3">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
                           <div className="flex items-center gap-3">
-                            <FiMail className="text-gray-400 text-lg" />
-                            <span className="text-white">{t?.emailVerification || "Email Verification"}</span>
+                            <FiMail className="text-gray-400 text-base sm:text-lg" />
+                            <span className="text-white text-sm sm:text-base">{t?.emailVerification || "Email Verification"}</span>
                           </div>
                           {getStatusBadge(verificationStatus.email)}
                         </div>
-                        <p className="text-sm text-gray-400 mb-3">
+                        <p className="text-xs sm:text-sm text-gray-400 mb-3">
                           {t?.emailVerificationDesc || "Verify your email address to receive important notifications and updates."}
                         </p>
                         {verificationStatus.email === "not_started" && userData?.email && (
-                          <button onClick={handleEmailVerificationRequest} className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80">
+                          <button onClick={handleEmailVerificationRequest} className="bg-theme_color text-white px-4 py-1.5 rounded text-xs sm:text-sm hover:bg-theme_color/80">
                             {t?.verifyEmail || "Verify Email"}
                           </button>
                         )}
                         {verificationStatus.email === "pending" && (
                           <div>
-                            <p className="text-yellow-400 text-sm mb-2">{t?.verificationEmailSent || "Verification email sent. Please check your inbox."}</p>
-                            <button onClick={handleResendVerificationEmail} className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80">
+                            <p className="text-yellow-400 text-xs sm:text-sm mb-2">{t?.verificationEmailSent || "Verification email sent. Please check your inbox."}</p>
+                            <button onClick={handleResendVerificationEmail} className="bg-theme_color text-white px-4 py-1.5 rounded text-xs sm:text-sm hover:bg-theme_color/80">
                               {t?.resendCode || "Resend Code"}
                             </button>
                           </div>
                         )}
                         {verificationStatus.email === "verified" && (
-                          <p className="text-green-400 text-sm flex items-center gap-1">
+                          <p className="text-green-400 text-xs sm:text-sm flex items-center gap-1">
                             <FiCheck /> {t?.emailVerified || "Your email has been verified!"}
                           </p>
                         )}
                         {!userData?.email && (
-                          <p className="text-orange-400 text-sm">{t?.addEmailFirst || "Please add your email address in Personal Info first."}</p>
+                          <p className="text-orange-400 text-xs sm:text-sm">{t?.addEmailFirst || "Please add your email address in Personal Info first."}</p>
                         )}
                       </div>
 
                       {/* Phone Verification */}
                       <div className="bg-[#222] rounded-lg p-4 border border-gray-700">
-                        <div className="flex justify-between items-center mb-3">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
                           <div className="flex items-center gap-3">
-                            <FiPhone className="text-gray-400 text-lg" />
-                            <span className="text-white">{t?.phoneVerification || "Phone Verification"}</span>
+                            <FiPhone className="text-gray-400 text-base sm:text-lg" />
+                            <span className="text-white text-sm sm:text-base">{t?.phoneVerification || "Phone Verification"}</span>
                           </div>
                           {getStatusBadge(verificationStatus.phone)}
                         </div>
-                        <p className="text-sm text-gray-400 mb-3">
+                        <p className="text-xs sm:text-sm text-gray-400 mb-3">
                           {t?.phoneVerificationDesc || "Verify your phone number for additional security and faster withdrawals."}
                         </p>
-                        {!userData?.phone ? (
-                          <p className="text-orange-400 text-sm mb-2">{t?.addPhoneFirst || "Please add your phone number in Personal Info first."}</p>
-                        ) : verificationStatus.phone === "not_started" ? (
-                          <button onClick={() => setMobileVerification(prev => ({ ...prev, showForm: true }))} className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80">
-                            {t?.verifyPhone || "Verify Phone"}
-                          </button>
-                        ) : verificationStatus.phone === "pending" ? (
-                          <div>
-                            <p className="text-yellow-400 text-sm mb-2">{t?.verificationSmsSent || "Verification SMS sent. Please check your phone."}</p>
-                            <button onClick={handlePhoneVerificationRequest} className="bg-theme_color text-white px-4 py-2 rounded text-sm hover:bg-theme_color/80">
-                              {t?.resendCode || "Resend Code"}
-                            </button>
-                          </div>
-                        ) : (
-                          <p className="text-green-400 text-sm flex items-center gap-1">
-                            <FiCheck /> {t?.phoneVerified || "Your phone number has been verified!"}
-                          </p>
-                        )}
+                   
                       </div>
                     </div>
                   </div>

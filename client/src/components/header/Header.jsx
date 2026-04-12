@@ -18,7 +18,9 @@ import {
   FaInstagram,
   FaTwitter,
   FaCoins,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaEye,
+  FaEyeSlash
 } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
 import { MdSupportAgent } from "react-icons/md";
@@ -34,6 +36,8 @@ import {
   FiLogOut,
   FiRefreshCw,
   FiGlobe,
+  FiKey,
+  FiCreditCard
 } from "react-icons/fi";
 import { MdSportsSoccer } from "react-icons/md";
 import axios from "axios";
@@ -51,6 +55,7 @@ import whatsapp_icon from "../../assets/social_icon/whatsapp.png";
 import home_img from "../../assets/home.png";
 import menu_img from "../../assets/menu.png";
 import sports_img from "../../assets/sports.png";
+import offers_img from "../../assets/offers.png";
 
 const APK_FILE = "https://bir75.com/Bir75.apk";
 import BD_FLAG from "../../assets/flag/Flag-Bangladesh.webp";
@@ -215,7 +220,7 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
               <div className="border-t border-[#2d2d2d] pt-3 pb-2">
                 <button
                   onClick={() => setShowLogoutConfirm(true)}
-                  className="w-full flex items-center justify-center gap-2 py-[10px] rounded-[2px] border border-[#3d3d3d] bg-[#2d2d2d] text-[#e0e0e0] font-medium text-[14px] transition-all duration-200 hover:bg-[#d32f2f] hover:border-[#d32f2f] hover:text-white cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-[10px] rounded-[2px] border border-[#3d3d3d] bg-red-500 text-[#e0e0e0] font-medium text-[14px] transition-all duration-200 hover:bg-[#d32f2f] hover:border-[#d32f2f] hover:text-white cursor-pointer"
                 >
                   <FiLogOut size={16} />
                   <span>{t.logout || "Logout"}</span>
@@ -263,6 +268,13 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const langDropdownRef = useRef(null);
   const [isRefreshingCoinBalance, setIsRefreshingCoinBalance] = useState(false);
+  
+  // Balance hide/show state - HIDDEN BY DEFAULT (true means hidden)
+  const [isBalanceHidden, setIsBalanceHidden] = useState(() => {
+    // Get saved preference from localStorage, default to true (hide balance)
+    const saved = localStorage.getItem("isBalanceHidden");
+    return saved !== null ? saved === "true" : true; // Default: hidden
+  });
 
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
@@ -560,6 +572,13 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     setShowMobileAppBanner(false);
   };
 
+  // Toggle balance visibility - added this function
+  const toggleBalanceVisibility = () => {
+    const newState = !isBalanceHidden;
+    setIsBalanceHidden(newState);
+    localStorage.setItem("isBalanceHidden", newState);
+  };
+
   const getGameImageUrl = (game) => {
     if (!game) return '';
     const imagePath = game.portraitImage || game.image || game.thumbnail || '';
@@ -576,11 +595,13 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     return t[key] || name;
   };
 
-  // Menu items with translations
+  // Menu items with translations - UPDATED with new password menus
   const menuItems = [
     { id: "notifications", label: t.notifications, icon: <FiBell />, path: "/member/inbox/notification" },
     { id: "personal-info", label: t.personalInfo, icon: <FiUser />, path: "/member/profile/info" },
     { id: "login-security", label: t.loginSecurity, icon: <FiLock />, path: "/member/profile/account" },
+    { id: "transaction-password", label: t.transactionPassword || "Transaction Password", icon: <FiLock />, path: "/member/transaction-password" },
+    { id: "reset-transaction-password", label: t.resetTransactionPassword || "Reset Transaction Password", icon: <FiCreditCard />, path: "/member/profile/reset-trx-password" },
     { id: "verification", label: t.verification, icon: <FiCheckCircle />, path: "/member/profile/verify" },
     { id: "transactions", label: t.transactions, icon: <FiFileText />, path: "/member/transaction-records" },
     { id: "betting-records", label: t.bettingRecords, icon: <MdSportsSoccer />, path: "/member/betting-records/settled" },
@@ -671,7 +692,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     <>
       <Toaster />
       <LogoutConfirmPopup />
-      <header className="flex justify-between items-center px-1 py-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white border-b border-[#333] relative z-[10000]">
+      <header className="flex justify-between items-center px-1 py-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white border-b border-[#333] relative z-[1000]">
         <div className="flex items-center space-x-4 md:space-x-7">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -760,15 +781,16 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                       className="w-4 h-4"
                       alt="BDT"
                     />
-                    <span className="min-w-[60px]">{parseFloat(userData?.balance || 0).toFixed(2)}</span>
+                    <span className="min-w-[60px]">
+                      {isBalanceHidden ? "******" : parseFloat(userData?.balance || 0).toFixed(2)}
+                    </span>
                   </div>
                   <button
-                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={refreshBalance}
-                    disabled={isRefreshingBalance}
-                    aria-label={t.refreshBalance}
+                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800"
+                    onClick={toggleBalanceVisibility}
+                    aria-label={isBalanceHidden ? t.showBalance : t.hideBalance}
                   >
-                    <FiRefreshCw className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`} />
+                    {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
                   </button>
                 </div>
                 <div className="flex justify-center items-center gap-2">
@@ -795,15 +817,16 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                       className="w-4 h-4"
                       alt="BDT"
                     />
-                    <span className="text-white min-w-[40px]">{parseFloat(userData?.balance || 0).toFixed(2)}</span>
+                    <span className="text-white min-w-[40px]">
+                      {isBalanceHidden ? "******" : parseFloat(userData?.balance || 0).toFixed(2)}
+                    </span>
                   </div>
                   <button
-                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={refreshBalance}
-                    disabled={isRefreshingBalance}
-                    aria-label={t.refreshBalance}
+                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800"
+                    onClick={toggleBalanceVisibility}
+                    aria-label={isBalanceHidden ? t.showBalance : t.hideBalance}
                   >
-                    <FiRefreshCw className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`} />
+                    {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
                   </button>
                 </div>
                 <NavLink
@@ -1206,42 +1229,74 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
 )}
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 border-t-[2px] font-semibold border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
-           style={showMobileAppBanner ? { bottom: '80px' } : {}}>
-        <div className="flex justify-around items-end">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex flex-col items-center cursor-pointer justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors">
-            <img src={menu_img} alt="Menu" className="h-6 w-6 mb-1" />
-            <span>{t.menu}</span>
-          </button>
-          <NavLink to="/casino" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
-            <img src={casino_img} alt="Casino" className="h-6 w-6 mb-1" />
-            <span>{t.casino}</span>
-          </NavLink>
-          <div className="relative" style={{ top: '-20px' }}>
-            <NavLink to="/" className="flex flex-col items-center justify-center text-white text-xs transition-colors" onClick={() => setSidebarOpen(false)}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#166E5B', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #1a2344', boxShadow: '0 4px 16px rgba(22,163,74,0.55)' }}>
-                <img src={home_img} alt="Home" className="h-6 w-6" />
-              </div>
-                <span>{t.home}</span>
-            </NavLink>
-          </div>
-          <NavLink to="/slots" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
-            <img src={slot_img} alt="Slots" className="h-6 w-6 mb-1" />
-            <span>{t.slots}</span>
-          </NavLink>
-          {isLoggedIn ? (
-            <NavLink to="/my-profile" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
-              <img src={profile_img} alt="Profile" className="h-6 w-6 mb-1" />
-              <span>{t.profile}</span>
-            </NavLink>
-          ) : (
-            <NavLink to="/promotions" className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors" onClick={() => setSidebarOpen(false)}>
-              <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/favorite.png?v=1757670016214&source=drccdnsrc" alt="Promotions" className="h-6 w-6 mb-1" />
-              <span>{t.promotions}</span>
-            </NavLink>
-          )}
+  <div className="md:hidden fixed bottom-0 border-t-[2px] font-semibold border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
+     style={showMobileAppBanner ? { bottom: '80px' } : {}}>
+  <div className="flex justify-around items-end px-1">
+    {/* Menu Button */}
+    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex flex-col items-center cursor-pointer justify-center p-2 text-sm text-white hover:text-yellow-400 transition-colors min-w-[60px]">
+      <img src={menu_img} alt="Menu" className="h-6 w-6 mb-1" />
+      <span className="text-[11px] whitespace-nowrap">{t.menu}</span>
+    </button>
+    
+    {/* Bonus */}
+    <div 
+      onClick={() => {
+        if (isLoggedIn) {
+          navigate("/member/bonuses");
+          setSidebarOpen(false);
+        } else {
+          navigate("/login");
+        }
+      }} 
+      className="flex flex-col items-center justify-center p-2 text-sm text-white hover:text-yellow-400 transition-colors cursor-pointer min-w-[60px]"
+    >
+      <img src={offers_img} alt="Bonus" className="h-6 w-6 mb-1" />
+      <span className="text-[10px] whitespace-nowrap">{t.bonuses_text || "Bonus"}</span>
+    </div>
+    
+    {/* Home - Fixed position, no wrapping */}
+    <div className="relative shrink-0" style={{ top: '-20px' }}>
+      <NavLink to="/" className="flex flex-col items-center justify-center text-white text-sm transition-colors" onClick={() => setSidebarOpen(false)}>
+        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#166E5B', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #1a2344', boxShadow: '0 4px 16px rgba(22,163,74,0.55)' }}>
+          <img src={home_img} alt="Home" className="h-6 w-6" />
         </div>
+        <span className="text-[11px] mt-0.5 whitespace-nowrap">{t.home}</span>
+      </NavLink>
+    </div>
+    
+    {/* Promotions */}
+    <div 
+      onClick={() => {
+        if (isLoggedIn) {
+          navigate("/promotions");
+          setSidebarOpen(false);
+        } else {
+          navigate("/login");
+        }
+      }} 
+      className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors cursor-pointer min-w-[60px]"
+    >
+      <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/favorite.png?v=1757670016214&source=drccdnsrc" alt="Promotions" className="h-6 w-6 mb-1" />
+      <span className="text-[11px] whitespace-nowrap">{t.promotions}</span>
+    </div>
+    
+    {/* Profile */}
+    {isLoggedIn ? (
+      <NavLink to="/my-profile" className="flex flex-col items-center justify-center p-2 text-sm text-white hover:text-yellow-400 transition-colors min-w-[60px]" onClick={() => setSidebarOpen(false)}>
+        <img src={profile_img} alt="Profile" className="h-6 w-6 mb-1" />
+        <span className="text-[11px] whitespace-nowrap">{t.profile}</span>
+      </NavLink>
+    ) : (
+      <div 
+        onClick={() => navigate("/login")} 
+        className="flex flex-col items-center justify-center p-2 text-sm text-white hover:text-yellow-400 transition-colors cursor-pointer min-w-[60px]"
+      >
+        <img src={profile_img} alt="Profile" className="h-6 w-6 mb-1" />
+        <span className="text-[11px] whitespace-nowrap">{t.profile}</span>
       </div>
+    )}
+  </div>
+</div>
 
       {/* WhatsApp & Telegram Floating Buttons */}
       <div className="fixed bottom-32 md:bottom-20 right-4 z-[1000] flex flex-col gap-2">

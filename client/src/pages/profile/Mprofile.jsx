@@ -4,7 +4,8 @@ import axios from "axios";
 import { 
   FiBell, FiUser, FiLock, FiCheckCircle, 
   FiFileText, FiChevronRight, FiEye, 
-  FiRefreshCw, FiShield, FiCopy, FiGift, FiTrendingUp, FiUsers, FiLogOut
+  FiRefreshCw, FiShield, FiCopy, FiGift, FiTrendingUp, FiUsers, FiLogOut,
+  FiKey, FiCreditCard, FiLock as FiLockPassword
 } from "react-icons/fi";
 import { MdSportsSoccer } from "react-icons/md";
 import { Header } from "../../components/header/Header";
@@ -41,7 +42,6 @@ const Mprofile = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("usertoken");
-    // Add any other logout logic here (clearing state, redirecting to login, etc.)
     navigate("/login");
   };
 
@@ -57,21 +57,14 @@ const Mprofile = () => {
 
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100000] p-8">
-        {/* Container: Rounded corners and white background */}
         <div className="bg-white rounded-lg w-full max-w-[320px] shadow-2xl overflow-hidden">
-          
           <div className="p-6">
-            {/* Title: Left aligned, bold, Bengali/English text */}
             <h3 className="text-gray-900 text-xl font-medium mb-4 text-left">
               {t.logoutConfirmTitle || "নিশ্চিতি"}
             </h3>
-            
-            {/* Message: Left aligned, smaller text */}
             <p className="text-gray-600 text-[15px] leading-relaxed text-left mb-8">
               {t.logoutConfirmMessage || "আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?"}
             </p>
-            
-            {/* Action Buttons: Right aligned */}
             <div className="flex justify-end gap-6">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
@@ -87,7 +80,6 @@ const Mprofile = () => {
               </button>
             </div>
           </div>
-          
         </div>
       </div>
     );
@@ -152,58 +144,94 @@ const Mprofile = () => {
             </div>
           </div>
 
-          {/* MENU LIST WITH NAVIGATION */}
-          <div className="space-y-1">
+          {/* MENU LIST WITH DIFFERENT BACKGROUND COLORS */}
+          <div className="space-y-3">
             <MenuItem 
               icon={<FiBell className="text-yellow_theme" />} 
               label={t.notifications || "নোটিফিকেশন"} 
               onClick={() => navigate("/member/inbox/notification")}
+              bgColor="bg-gradient-to-r from-purple-900/20 to-transparent"
             />
             <MenuItem 
               icon={<FiGift className="text-yellow_theme" />} 
               label={t.bonuses_text || "বোনাস"} 
-              onClick={() => navigate("/member/bonuses")} 
+              onClick={() => navigate("/member/bonuses")}
+              bgColor="bg-gradient-to-r from-pink-900/20 to-transparent"
             />
             <MenuItem 
               icon={<FiUser className="text-yellow_theme" />} 
               label={t.personalInfo || "ব্যক্তিগত তথ্য"} 
               onClick={() => navigate("/member/profile/info")}
+              bgColor="bg-gradient-to-r from-blue-900/20 to-transparent"
             />
             <MenuItem 
               icon={<FiLock className="text-yellow_theme" />} 
               label={t.loginSecurity || "লগইন & সিকিউরিটি"} 
               onClick={() => navigate("/member/profile/account")}
+              bgColor="bg-gradient-to-r from-green-900/20 to-transparent"
             />
+    
+            
             <MenuItem 
               icon={<FiShield className="text-yellow_theme" />} 
               label={t.verification || "ভেরিফিকেশন"} 
               onClick={() => navigate("/member/profile/verify")}
+              bgColor="bg-gradient-to-r from-cyan-900/20 to-transparent"
             />
             <MenuItem 
               icon={<FiTrendingUp className="text-yellow_theme" />} 
               label={t.turnover || "টার্নওভার"} 
               onClick={() => navigate("/member/turnover/uncomplete")}
+              bgColor="bg-gradient-to-r from-orange-900/20 to-transparent"
             />
             <MenuItem 
               icon={<FiFileText className="text-yellow_theme" />} 
               label={t.transactions || "ট্রানজেকশন রেকর্ডস"} 
               onClick={() => navigate("/member/transaction-records")}
+              bgColor="bg-gradient-to-r from-red-900/20 to-transparent"
             />
             <MenuItem 
               icon={<MdSportsSoccer className="text-yellow_theme text-xl" />} 
               label={t.bettingRecords || "বেটিং রেকর্ডস"} 
               onClick={() => navigate("/member/betting-records/settled")}
+              bgColor="bg-gradient-to-r from-emerald-900/20 to-transparent"
             />
             <MenuItem 
               icon={<FiUsers className="text-yellow_theme" />} 
               label={t.myReferral || "মাই রেফারেল"} 
               onClick={() => navigate("/referral-program/details")}
+              bgColor="bg-gradient-to-r from-indigo-900/20 to-transparent"
             />
+                    
+            {/* Transaction Password Menu */}
+            <MenuItem 
+              icon={<FiLockPassword className="text-yellow_theme" />} 
+              label={t.transactionPassword || "ট্রানজেকশন পাসওয়ার্ড"} 
+              onClick={() => navigate("/member/transaction-password")}
+              bgColor="bg-gradient-to-r from-teal-900/20 to-transparent"
+            />
+            {/* NEW: Reset Transaction Password */}
+            <MenuItem 
+              icon={<FiCreditCard className="text-yellow_theme" />} 
+              label={t.resetTransactionPassword || "রিসেট ট্রানজেকশন পাসওয়ার্ড"} 
+              onClick={() => navigate("/member/profile/reset-trx-password")}
+              bgColor="bg-gradient-to-r from-amber-900/20 to-transparent"
+            />
+            
+            {/* NEW: Reset Login Password */}
+            {/* <MenuItem 
+              icon={<FiKey className="text-yellow_theme" />} 
+              label={t.resetLoginPassword || " লগইন পাসওয়ার্ড"} 
+              onClick={() => navigate("/member/update-login-password")}
+              bgColor="bg-gradient-to-r from-rose-900/20 to-transparent"
+            /> */}
+            
             {/* LOGOUT MENU ITEM */}
             <MenuItem 
               icon={<FiLogOut />} 
               label={t.logout || "লগআউট"} 
               onClick={() => setShowLogoutConfirm(true)}
+              bgColor="bg-gradient-to-r from-gray-900/20 to-transparent"
             />
           </div>
 
@@ -216,11 +244,11 @@ const Mprofile = () => {
   );
 };
 
-// Reusable Menu Component with onClick handler
-const MenuItem = ({ icon, label, badge, onClick }) => (
+// Reusable Menu Component with onClick handler and custom background
+const MenuItem = ({ icon, label, badge, onClick, bgColor = "" }) => (
   <div 
     onClick={onClick}
-    className="flex items-center justify-between py-3 border-[1px] border-gray-800/40 cursor-pointer transition-colors px-4"
+    className={`flex items-center justify-between py-3 border-[1px] border-gray-800/40 cursor-pointer transition-colors px-4 rounded-lg ${bgColor} hover:brightness-110`}
   >
     <div className="flex items-center gap-4">
       <span className="text-lg text-yellow_theme">{icon}</span>

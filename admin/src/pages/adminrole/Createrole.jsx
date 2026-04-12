@@ -110,7 +110,8 @@ const permissionCategories = [
       { id: 'manage_bonuses', label: 'Manage Bonuses Menu' },
       { id: 'create_bonus', label: 'Create New Cash Bonus' },
       { id: 'view_bonuses', label: 'View Cash Bonus List' },
-      { id: 'manage_recurring_bonuses', label: 'Manage Weekly & Monthly Bonus' }
+      { id: 'manage_recurring_bonuses', label: 'Manage Weekly & Monthly Bonus' },
+           { id: 'manage_daily_bonus', label: 'Manage Daily Bet Bonus' }
     ]
   },
    {

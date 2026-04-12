@@ -34,6 +34,9 @@ import Security from "./pages/profile/Security";
 import Verification from "./pages/profile/Verification";
 import Bonus from "./pages/bonus/Bonus";
 import Sports from "./pages/sports/Sports";
+import ResetTransactionPassword from "./pages/password/ResetTransactionPassword";
+import TransactionPassword from "./pages/password/TransactionPassword";
+import UpdatePassword from "./pages/password/UpdatePassword";
 
 const AuthContext = createContext();
 
@@ -403,6 +406,30 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Verification />
+                </ProtectedRoute>
+              }
+            />
+               <Route
+              path="/member/profile/reset-trx-password"
+              element={
+                <ProtectedRoute>
+                  <ResetTransactionPassword />
+                </ProtectedRoute>
+              }
+            />
+                       <Route
+              path="/member/transaction-password"
+              element={
+                <ProtectedRoute>
+                  <TransactionPassword />
+                </ProtectedRoute>
+              }
+            />
+                              <Route
+              path="/member/update-login-password"
+              element={
+                <ProtectedRoute>
+                  <UpdatePassword />
                 </ProtectedRoute>
               }
             />

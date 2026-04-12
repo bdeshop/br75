@@ -301,6 +301,7 @@ const Sidebar = ({ isOpen }) => {
             { to: '/bonuses/new-cash-bonus', text: 'New Cash Bonus', requiredPermission: 'create_bonus' },
             { to: '/bonuses/cash-bonus-list', text: 'Cash Bonus List', requiredPermission: 'view_bonuses' },
             { to: '/bonuses/weekly-monthly-bonus', text: 'Weekly and Monthly Bonus', requiredPermission: 'manage_recurring_bonuses' },
+            { to: '/bonuses/daily-bonus', text: 'Daily Bonus', requiredPermission: 'manage_daily_bonus' },
           ],
         },
         
