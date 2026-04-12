@@ -2032,6 +2032,158 @@ const validateWithdrawalDetails = (method, body) => {
 };
 
 // Create withdrawal request
+// Userrouter.post("/withdraw", authenticateToken, async (req, res) => {
+//   try {
+//     const { 
+//       method, 
+//       amount,
+//       phoneNumber,
+//       accountType,
+//       bankName,
+//       accountHolderName,
+//       accountNumber,
+//       branchName,
+//       district,
+//       routingNumber
+//     } = req.body;
+    
+//     const userId = req.user._id;
+    
+//     console.log("Withdrawal request:", req.body);
+    
+//     // Validate method
+//     const validMethods = ["bkash", "rocket", "nagad", "bank"];
+//     if (!validMethods.includes(method)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid withdrawal method. Supported methods: bKash, Rocket, Nagad, Bank"
+//       });
+//     }
+    
+//     // Validate withdrawal details
+//     const validationErrors = validateWithdrawalDetails(method, req.body);
+//     if (validationErrors.length > 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Validation failed",
+//         errors: validationErrors
+//       });
+//     }
+    
+//     // Check minimum withdrawal amount
+//     const minWithdrawal = 100;
+//     if (amount < minWithdrawal) {
+//       return res.status(400).json({
+//         success: false,
+//         message: `Minimum withdrawal amount is ${minWithdrawal} Taka`
+//       });
+//     }
+    
+//     // Get user and check balance
+//     const user = await User.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "User not found"
+//       });
+//     }
+    
+//     // Check user balance
+//     if (amount > user.balance) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Insufficient balance",
+//         balance: user.balance,
+//         requested: amount
+//       });
+//     }
+    
+//     // Prepare withdrawal data based on method
+//     let withdrawalData = {
+//       userId,
+//       method,
+//       amount,
+//       status: "pending"
+//     };
+    
+//     // Add method-specific details
+//     if (method === "bkash") {
+//       withdrawalData.mobileBankingDetails = {
+//         phoneNumber,
+//         accountType: accountType || "personal"
+//       };
+//     } else if (method === "rocket" || method === "nagad") {
+//       withdrawalData.mobileBankingDetails = {
+//         phoneNumber,
+//         accountType: null
+//       };
+//     } else if (method === "bank") {
+//       withdrawalData.bankDetails = {
+//         bankName,
+//         accountHolderName,
+//         accountNumber,
+//         branchName,
+//         district,
+//         routingNumber
+//       };
+//     }
+    
+//     // Create withdrawal record
+//     const withdrawal = new Withdrawal(withdrawalData);
+//     await withdrawal.save();
+    
+//     // Update user balance
+//     await User.findByIdAndUpdate(userId, {
+//       $inc: { balance: -amount }
+//     });
+    
+//     // Add to withdrawal history array in user document (if you have this field)
+//     await User.findByIdAndUpdate(userId, {
+//       $push: {
+//         withdrawalHistory: {
+//           withdrawalId: withdrawal._id,
+//           method,
+//           amount,
+//           date: new Date(),
+//           status: "pending",
+//           ...(phoneNumber && { phoneNumber }),
+//           ...(bankName && { bankName, accountNumber })
+//         }
+//       }
+//     });
+    
+//     // Format response based on method
+//     let responseDetails = { method, amount, withdrawalId: withdrawal._id };
+//     if (method === "bkash") {
+//       responseDetails.phoneNumber = phoneNumber;
+//       responseDetails.accountType = accountType;
+//     } else if (method === "rocket" || method === "nagad") {
+//       responseDetails.phoneNumber = phoneNumber;
+//     } else if (method === "bank") {
+//       responseDetails.bankName = bankName;
+//       responseDetails.accountNumber = accountNumber;
+//     }
+    
+//     res.status(200).json({
+//       success: true,
+//       message: "Withdrawal request submitted successfully",
+//       data: responseDetails
+//     });
+    
+//   } catch (error) {
+//     console.error("Withdrawal error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//       error: error.message
+//     });
+//   }
+// });
+
+
+// ==================== WITHDRAWAL WITH TRANSACTION PASSWORD VERIFICATION ====================
+
+// Create withdrawal request with transaction password verification
 Userrouter.post("/withdraw", authenticateToken, async (req, res) => {
   try {
     const { 
@@ -2044,12 +2196,51 @@ Userrouter.post("/withdraw", authenticateToken, async (req, res) => {
       accountNumber,
       branchName,
       district,
-      routingNumber
+      routingNumber,
+      transactionPassword  // Add transaction password to request body
     } = req.body;
     
     const userId = req.user._id;
     
-    console.log("Withdrawal request:", req.body);
+    console.log("Withdrawal request:", { method, amount, userId });
+    
+    // Validate transaction password
+    if (!transactionPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction password is required for withdrawal"
+      });
+    }
+    
+    // Get user with transaction password field
+    const user = await User.findById(userId).select("+transactionPassword");
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    
+    // Check if transaction password is set
+    if (!user.transactionPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction password not set. Please set a transaction password first.",
+        needSetup: true
+      });
+    }
+    
+    // Verify transaction password
+    const isTransactionPasswordValid = await bcrypt.compare(transactionPassword, user.transactionPassword);
+    
+    if (!isTransactionPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid transaction password",
+        remainingAttempts: 3 // You can track attempts if needed
+      });
+    }
     
     // Validate method
     const validMethods = ["bkash", "rocket", "nagad", "bank"];
@@ -2079,12 +2270,55 @@ Userrouter.post("/withdraw", authenticateToken, async (req, res) => {
       });
     }
     
-    // Get user and check balance
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
+    // Check maximum withdrawal amount
+    const maxWithdrawal = 50000;
+    if (amount > maxWithdrawal) {
+      return res.status(400).json({
         success: false,
-        message: "User not found"
+        message: `Maximum withdrawal amount is ${maxWithdrawal} Taka per request`
+      });
+    }
+    
+    // Check daily withdrawal limit
+    const today = new Date().toDateString();
+    const lastWithdrawalDate = user.lastWithdrawalDate ? new Date(user.lastWithdrawalDate).toDateString() : null;
+    
+    if (lastWithdrawalDate !== today) {
+      // Reset daily count for new day
+      user.withdrawalCountToday = 0;
+    }
+    
+    const maxWithdrawalsPerDay = 3;
+    if (user.withdrawalCountToday >= maxWithdrawalsPerDay) {
+      return res.status(400).json({
+        success: false,
+        message: `Daily withdrawal limit reached. Maximum ${maxWithdrawalsPerDay} withdrawals per day.`
+      });
+    }
+    
+    const dailyLimit = user.dailyWithdrawalLimit || 50000;
+    const todayWithdrawals = await Withdrawal.aggregate([
+      {
+        $match: {
+          userId: user._id,
+          createdAt: { $gte: new Date().setHours(0, 0, 0, 0) },
+          status: { $in: ["pending", "processing", "completed"] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" }
+        }
+      }
+    ]);
+    
+    const totalWithdrawnToday = todayWithdrawals[0]?.total || 0;
+    
+    if (totalWithdrawnToday + amount > dailyLimit) {
+      return res.status(400).json({
+        success: false,
+        message: `Daily withdrawal limit exceeded. Remaining limit: ${dailyLimit - totalWithdrawnToday} Taka`
       });
     }
     
@@ -2098,12 +2332,47 @@ Userrouter.post("/withdraw", authenticateToken, async (req, res) => {
       });
     }
     
+    // Check if user has active bonus balance
+    if (user.bonusBalance > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Active bonus balance found. Please complete wagering requirements before withdrawal.",
+        bonusBalance: user.bonusBalance
+      });
+    }
+    
+    // Check wagering requirements
+    const totalDeposit = user.total_deposit || 0;
+    const totalBet = user.total_bet || 0;
+    const requiredTurnover = totalDeposit * 3;
+    
+    if (totalBet < requiredTurnover) {
+      const remainingTurnover = requiredTurnover - totalBet;
+      const commissionRate = 0.2;
+      const commissionAmount = amount * commissionRate;
+      const netAmount = amount - commissionAmount;
+      
+      return res.status(400).json({
+        success: false,
+        message: `Wagering requirement not met. Required turnover: ${requiredTurnover} Taka, Current: ${totalBet} Taka, Remaining: ${remainingTurnover} Taka. Withdrawal would incur ${commissionRate * 100}% commission.`,
+        data: {
+          requiredTurnover,
+          currentTurnover: totalBet,
+          remainingTurnover,
+          wouldBeCommission: commissionAmount,
+          wouldBeNetAmount: netAmount
+        }
+      });
+    }
+    
     // Prepare withdrawal data based on method
     let withdrawalData = {
       userId,
       method,
       amount,
-      status: "pending"
+      status: "pending",
+      transactionPasswordVerified: true,
+      verifiedAt: new Date()
     };
     
     // Add method-specific details
@@ -2134,11 +2403,11 @@ Userrouter.post("/withdraw", authenticateToken, async (req, res) => {
     
     // Update user balance
     await User.findByIdAndUpdate(userId, {
-      $inc: { balance: -amount }
-    });
-    
-    // Add to withdrawal history array in user document (if you have this field)
-    await User.findByIdAndUpdate(userId, {
+      $inc: { balance: -amount },
+      $set: { 
+        lastWithdrawalDate: new Date(),
+        withdrawalCountToday: (user.withdrawalCountToday || 0) + 1
+      },
       $push: {
         withdrawalHistory: {
           withdrawalId: withdrawal._id,
@@ -2146,14 +2415,37 @@ Userrouter.post("/withdraw", authenticateToken, async (req, res) => {
           amount,
           date: new Date(),
           status: "pending",
+          transactionPasswordVerified: true,
           ...(phoneNumber && { phoneNumber }),
           ...(bankName && { bankName, accountNumber })
         }
       }
     });
     
+    // Add to transaction history
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        transactionHistory: {
+          type: "withdrawal_request",
+          amount: amount,
+          balanceBefore: user.balance,
+          balanceAfter: user.balance - amount,
+          description: `Withdrawal request via ${method}`,
+          referenceId: withdrawal._id.toString(),
+          createdAt: new Date()
+        }
+      }
+    });
+    
     // Format response based on method
-    let responseDetails = { method, amount, withdrawalId: withdrawal._id };
+    let responseDetails = { 
+      method, 
+      amount, 
+      withdrawalId: withdrawal._id,
+      status: "pending",
+      transactionPasswordVerified: true
+    };
+    
     if (method === "bkash") {
       responseDetails.phoneNumber = phoneNumber;
       responseDetails.accountType = accountType;
@@ -2180,6 +2472,178 @@ Userrouter.post("/withdraw", authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== VERIFY TRANSACTION PASSWORD FOR WITHDRAWAL ====================
+// Separate endpoint to verify transaction password before withdrawal
+Userrouter.post("/verify-withdrawal-password", authenticateToken, async (req, res) => {
+  try {
+    const { transactionPassword } = req.body;
+    const user = await User.findById(req.user._id).select("+transactionPassword");
+    
+    if (!transactionPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction password is required"
+      });
+    }
+    
+    // Check if transaction password is set
+    if (!user.transactionPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction password not set. Please set a transaction password first.",
+        needSetup: true
+      });
+    }
+    
+    // Verify password
+    const isValid = await bcrypt.compare(transactionPassword, user.transactionPassword);
+    
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid transaction password"
+      });
+    }
+    
+    // Generate temporary verification token valid for 5 minutes
+    const verificationToken = jwt.sign(
+      { 
+        userId: user._id, 
+        purpose: "withdrawal_verification",
+        timestamp: Date.now()
+      },
+      JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+    
+    res.json({
+      success: true,
+      message: "Transaction password verified successfully",
+      data: {
+        verified: true,
+        verificationToken: verificationToken,
+        expiresIn: 300 // 5 minutes in seconds
+      }
+    });
+    
+  } catch (error) {
+    console.error("Verify withdrawal password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+});
+
+// ==================== CHECK WITHDRAWAL ELIGIBILITY ====================
+Userrouter.get("/withdrawal-eligibility", authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+    
+    // Check transaction password status
+    const hasTransactionPassword = !!(user.transactionPassword);
+    
+    // Check balance
+    const hasSufficientBalance = user.balance >= 100;
+    
+    // Check bonus balance
+    const hasNoBonusBalance = user.bonusBalance === 0;
+    
+    // Check wagering requirements
+    const totalDeposit = user.total_deposit || 0;
+    const totalBet = user.total_bet || 0;
+    const requiredTurnover = totalDeposit * 3;
+    const wageringCompleted = totalBet >= requiredTurnover;
+    const remainingWagering = Math.max(0, requiredTurnover - totalBet);
+    
+    // Check daily limits
+    const today = new Date().toDateString();
+    const lastWithdrawalDate = user.lastWithdrawalDate ? new Date(user.lastWithdrawalDate).toDateString() : null;
+    let withdrawalsToday = user.withdrawalCountToday || 0;
+    
+    if (lastWithdrawalDate !== today) {
+      withdrawalsToday = 0;
+    }
+    
+    const dailyLimitReached = withdrawalsToday >= 3;
+    const remainingWithdrawalsToday = Math.max(0, 3 - withdrawalsToday);
+    
+    // Check daily amount limit
+    const dailyAmountLimit = user.dailyWithdrawalLimit || 50000;
+    const todayWithdrawals = await Withdrawal.aggregate([
+      {
+        $match: {
+          userId: user._id,
+          createdAt: { $gte: new Date().setHours(0, 0, 0, 0) },
+          status: { $in: ["pending", "processing", "completed"] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" }
+        }
+      }
+    ]);
+    
+    const totalWithdrawnToday = todayWithdrawals[0]?.total || 0;
+    const remainingDailyAmount = dailyAmountLimit - totalWithdrawnToday;
+    const dailyAmountLimitReached = remainingDailyAmount <= 0;
+    
+    // Determine if user can withdraw
+    const canWithdraw = hasTransactionPassword && 
+                       hasSufficientBalance && 
+                       hasNoBonusBalance && 
+                       wageringCompleted &&
+                       !dailyLimitReached &&
+                       !dailyAmountLimitReached;
+    
+    // Get reasons if cannot withdraw
+    const reasons = [];
+    if (!hasTransactionPassword) reasons.push("Transaction password not set");
+    if (!hasSufficientBalance) reasons.push("Insufficient balance (minimum 100 Taka)");
+    if (!hasNoBonusBalance) reasons.push(`Active bonus balance: ${user.bonusBalance} Taka`);
+    if (!wageringCompleted) reasons.push(`Wagering requirement not met. Remaining: ${remainingWagering} Taka`);
+    if (dailyLimitReached) reasons.push(`Daily withdrawal limit reached (${withdrawalsToday}/3)`);
+    if (dailyAmountLimitReached) reasons.push(`Daily amount limit reached. Remaining: ${remainingDailyAmount} Taka`);
+    
+    res.json({
+      success: true,
+      data: {
+        canWithdraw,
+        reasons: reasons,
+        details: {
+          hasTransactionPassword,
+          currentBalance: user.balance,
+          minimumRequired: 100,
+          bonusBalance: user.bonusBalance,
+          wagering: {
+            required: requiredTurnover,
+            completed: totalBet,
+            remaining: remainingWagering,
+            isCompleted: wageringCompleted
+          },
+          dailyLimits: {
+            withdrawalsToday,
+            maxWithdrawalsPerDay: 3,
+            remainingWithdrawals: remainingWithdrawalsToday,
+            amountWithdrawnToday: totalWithdrawnToday,
+            dailyAmountLimit,
+            remainingDailyAmount,
+            isLimitReached: dailyLimitReached || dailyAmountLimitReached
+          }
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error("Withdrawal eligibility error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+});
 // Get withdrawal history
 Userrouter.get("/withdraw/history/:userId", authenticateToken, async (req, res) => {
   try {
@@ -2823,7 +3287,7 @@ Userrouter.post("/callback-data-game", async (req, res) => {
     const status = isWin ? 'won' : 'lost';
     matchedUser.weeklybetamount+=betAmount;
     matchedUser.monthlybetamount+=betAmount;
-
+    matchedUser.dailybet+=betAmount;
     matchedUser.save();
     // Balance validation
     const balanceBefore = matchedUser.balance || 0;

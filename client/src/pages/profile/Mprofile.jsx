@@ -97,23 +97,25 @@ const Mprofile = () => {
         <div className="max-w-md mx-auto px-4 pt-4">
           
           {/* USER INFO */}
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <img src={user_img} alt="Profile" className="w-12 h-12 rounded-full object-cover bg-emerald-900/30" />
-              <div>
-                <p className="text-gray-500 text-[11px] mb-0.5">{t.fullLegalName || "সম্পূর্ণ লিগ্যাল নাম"}</p>
-                <h2 className="text-sm font-medium flex items-center gap-1.5">
-                  {userData?.fullName} <FiCopy className="text-gray-500 text-[10px]" />
-                </h2>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-gray-500 text-[11px] mb-0.5">{t.username || "ব্যবহারকারীর নাম"}</p>
-              <p className="text-sm font-medium flex items-center justify-end gap-1.5">
-                {userData?.username} <FiCopy className="text-gray-500 text-[10px]" />
-              </p>
-            </div>
-          </div>
+       <div className="flex items-start justify-start gap-[30px] mb-2">
+  <div className="flex items-center gap-3">
+    <img src={user_img} alt="Profile" className="w-12 h-12 rounded-full object-cover bg-emerald-900/30" />
+    {userData?.fullName && (
+      <div>
+        <p className="text-gray-500 text-[11px] mb-0.5">{t.fullLegalName || "সম্পূর্ণ লিগ্যাল নাম"}</p>
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          {userData?.fullName} <FiCopy className="text-gray-500 text-[10px]" />
+        </h2>
+      </div>
+    )}
+  </div>
+  <div className="">
+    <p className="text-gray-500 text-[11px] mb-0.5">{t.username || "ব্যবহারকারীর নাম"}</p>
+    <p className="text-sm font-medium flex items-center justify-end gap-1.5">
+      {userData?.username} <FiCopy className="text-gray-500 text-[10px]" />
+    </p>
+  </div>
+</div>
 
           <p className="text-gray-500 text-[11px] mb-6">
             {t.signupDateLabel || "সাইন আপ এর তারিখ"} : {signupDate}

@@ -199,7 +199,18 @@ const Withdraw = () => {
     remaining: 0,
     isCompleted: true
   });
- console.log("userData",userData)
+
+  // ==================== TRANSACTION PASSWORD STATES ====================
+  const [transactionPassword, setTransactionPassword] = useState("");
+  const [showTransactionPasswordModal, setShowTransactionPasswordModal] = useState(false);
+  const [isTransactionPasswordSet, setIsTransactionPasswordSet] = useState(false);
+  const [checkingTransactionPassword, setCheckingTransactionPassword] = useState(false);
+  const [showTransactionPasswordError, setShowTransactionPasswordError] = useState(false);
+  const [tempWithdrawalData, setTempWithdrawalData] = useState(null);
+  const [showTransactionPassword, setShowTransactionPassword] = useState(false);
+
+  console.log("userData",userData)
+
   // KYC Related States
   const [kycStatus, setKycStatus] = useState(null);
   const [kycData, setKycData] = useState(null);
@@ -244,6 +255,143 @@ const Withdraw = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_KEY_Base_URL;
   const quickAmounts = [100, 500, 1000, 2000, 5000];
+
+  // ==================== CHECK TRANSACTION PASSWORD STATUS ====================
+  const checkTransactionPasswordStatus = async () => {
+    try {
+      const token = localStorage.getItem("usertoken");
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE_URL}/api/user/transaction-password-status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        setIsTransactionPasswordSet(response.data.data.isSet);
+      }
+    } catch (err) {
+      console.error("Error checking transaction password status:", err);
+    }
+  };
+
+  // ==================== OPEN TRANSACTION PASSWORD MODAL ====================
+  const openTransactionPasswordModal = (withdrawalPayload) => {
+    setTempWithdrawalData(withdrawalPayload);
+    setTransactionPassword("");
+    setShowTransactionPasswordError(false);
+    setShowTransactionPasswordModal(true);
+  };
+
+  // ==================== VERIFY AND PROCESS WITHDRAWAL ====================
+  const verifyTransactionPasswordAndWithdraw = async () => {
+    if (!transactionPassword) {
+      setShowTransactionPasswordError(true);
+      return;
+    }
+
+    setCheckingTransactionPassword(true);
+    setShowTransactionPasswordError(false);
+
+    try {
+      const token = localStorage.getItem("usertoken");
+      
+      // First verify the transaction password
+      const verifyResponse = await axios.post(
+        `${API_BASE_URL}/api/user/verify-withdrawal-password`,
+        { transactionPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!verifyResponse.data.success) {
+        setShowTransactionPasswordError(true);
+        toast.error(verifyResponse.data.message || "Invalid transaction password");
+        setCheckingTransactionPassword(false);
+        return;
+      }
+
+      // If verified, proceed with withdrawal
+      const response = await axios.post(
+        `${API_BASE_URL}/api/user/withdraw`,
+        { ...tempWithdrawalData, transactionPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        setTransactionStatus({
+          success: true,
+          message: response.data.message || (language.code === 'bn'
+            ? "উত্তোলন অনুরোধ সফলভাবে জমা দেওয়া হয়েছে! শীঘ্রই প্রক্রিয়া করা হবে।"
+            : "Withdrawal request submitted successfully! It will be processed shortly."),
+        });
+
+        setUserData({
+          ...userData,
+          balance: userData.balance - parseFloat(tempWithdrawalData.amount),
+        });
+
+        setAmount("");
+        const methodName = tempWithdrawalData.method;
+        if (methodName === "bkash") {
+          handleInputChange("bkashPhoneNumber", "");
+          handleInputChange("bkashAccountType", "personal");
+        } else if (methodName === "rocket") {
+          handleInputChange("rocketPhoneNumber", "");
+        } else if (methodName === "nagad") {
+          handleInputChange("nagadPhoneNumber", "");
+        } else if (methodName === "bank") {
+          handleInputChange("bankName", "");
+          handleInputChange("accountHolderName", "");
+          handleInputChange("accountNumber", "");
+          handleInputChange("branchName", "");
+          handleInputChange("district", "");
+          handleInputChange("routingNumber", "");
+        }
+
+        const user = JSON.parse(localStorage.getItem("user"));
+        const historyResponse = await axios.get(
+          `${API_BASE_URL}/api/user/withdraw/history/${user.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (historyResponse.data.success) {
+          setWithdrawalHistory(historyResponse.data.data);
+        }
+
+        // Close modal
+        setShowTransactionPasswordModal(false);
+        setTransactionPassword("");
+        setTempWithdrawalData(null);
+      } else {
+        setTransactionStatus({
+          success: false,
+          message: response.data.message || (language.code === 'bn'
+            ? "উত্তোলন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।"
+            : "Withdrawal failed. Please try again."),
+        });
+        setShowTransactionPasswordModal(false);
+      }
+    } catch (err) {
+      console.error("Withdrawal error:", err);
+      let errorMessage = language.code === 'bn'
+        ? "উত্তোলন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।"
+        : "Withdrawal failed. Please try again.";
+
+      if (err.response?.status === 401) {
+        errorMessage = language.code === 'bn'
+          ? "অনুগ্রহ করে পুনরায় লগইন করুন।"
+          : "Please login again.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      setTransactionStatus({
+        success: false,
+        message: errorMessage,
+      });
+      setShowTransactionPasswordModal(false);
+    } finally {
+      setCheckingTransactionPassword(false);
+    }
+  };
 
   // Check if KYC is required (assignkyc is "assigned" and kycStatus is "pending" or "rejected" or "processing")
   const isKycRequired = () => {
@@ -501,6 +649,7 @@ const Withdraw = () => {
     };
 
     fetchWithdrawMethods();
+    checkTransactionPasswordStatus(); // Check transaction password status on load
   }, [API_BASE_URL, t]);
 
   // Calculate wagering requirements
@@ -857,59 +1006,23 @@ const Withdraw = () => {
         payload.routingNumber = currentData.routingNumber;
       }
 
-      const response = await axios.post(
-        `${API_BASE_URL}/api/user/withdraw`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.data.success) {
-        setTransactionStatus({
-          success: true,
-          message: response.data.message || (language.code === 'bn'
-            ? "উত্তোলন অনুরোধ সফলভাবে জমা দেওয়া হয়েছে! শীঘ্রই প্রক্রিয়া করা হবে।"
-            : "Withdrawal request submitted successfully! It will be processed shortly."),
-        });
-
-        setUserData({
-          ...userData,
-          balance: userData.balance - parseFloat(amount),
-        });
-
-        setAmount("");
-        if (methodName === "bkash") {
-          handleInputChange("bkashPhoneNumber", "");
-          handleInputChange("bkashAccountType", "personal");
-        } else if (methodName === "rocket") {
-          handleInputChange("rocketPhoneNumber", "");
-        } else if (methodName === "nagad") {
-          handleInputChange("nagadPhoneNumber", "");
-        } else if (methodName === "bank") {
-          handleInputChange("bankName", "");
-          handleInputChange("accountHolderName", "");
-          handleInputChange("accountNumber", "");
-          handleInputChange("branchName", "");
-          handleInputChange("district", "");
-          handleInputChange("routingNumber", "");
-        }
-
-        const historyResponse = await axios.get(
-          `${API_BASE_URL}/api/user/withdraw/history/${user.id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (historyResponse.data.success) {
-          setWithdrawalHistory(historyResponse.data.data);
-        }
-      } else {
+      // Check if transaction password is set
+      if (!isTransactionPasswordSet) {
+        // Show message and button to set transaction password
         setTransactionStatus({
           success: false,
-          message: response.data.message || (language.code === 'bn'
-            ? "উত্তোলন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।"
-            : "Withdrawal failed. Please try again."),
+          message: language.code === 'bn'
+            ? "উত্তোলনের জন্য ট্রানজেকশন পাসওয়ার্ড সেট করুন।"
+            : "Please set a transaction password to withdraw.",
+          needSetup: true
         });
+        setIsProcessing(false);
+        return;
       }
+
+      // Open transaction password modal instead of directly submitting
+      openTransactionPasswordModal(payload);
+      
     } catch (err) {
       console.error("Withdrawal error:", err);
       let errorMessage = language.code === 'bn'
@@ -922,8 +1035,6 @@ const Withdraw = () => {
           : "Please login again.";
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
       }
 
       setTransactionStatus({
@@ -1475,6 +1586,130 @@ const Withdraw = () => {
     </button>
   );
 
+  // ==================== TRANSACTION PASSWORD MODAL ====================
+  const renderTransactionPasswordModal = () => {
+    if (!showTransactionPasswordModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div className="bg-[#1a1f1f] rounded-lg max-w-md w-full border border-[#2a2f2f] shadow-xl">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-white">
+                {language.code === 'bn' ? "ট্রানজেকশন পাসওয়ার্ড প্রয়োজন" : "Transaction Password Required"}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowTransactionPasswordModal(false);
+                  setTransactionPassword("");
+                  setShowTransactionPasswordError(false);
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <p className="text-[#8a9ba8] text-sm mb-6">
+              {language.code === 'bn'
+                ? "আপনার উত্তোলন নিশ্চিত করতে অনুগ্রহ করে আপনার ট্রানজেকশন পাসওয়ার্ড লিখুন।"
+                : "Please enter your transaction password to confirm your withdrawal."}
+            </p>
+
+            <div className="mb-6">
+              <label className="block text-[#8a9ba8] text-sm mb-2">
+                {language.code === 'bn' ? "ট্রানজেকশন পাসওয়ার্ড" : "Transaction Password"}
+              </label>
+              <div className="relative">
+                <input
+                  type={showTransactionPassword ? "text" : "password"}
+                  value={transactionPassword}
+                  onChange={(e) => {
+                    setTransactionPassword(e.target.value);
+                    setShowTransactionPasswordError(false);
+                  }}
+                  className={`w-full bg-[#1f2525] border rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-[#3a8a6f] ${
+                    showTransactionPasswordError ? "border-[#ff6b6b]" : "border-[#2a2f2f]"
+                  }`}
+                  placeholder={language.code === 'bn' ? "পাসওয়ার্ড লিখুন" : "Enter password"}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowTransactionPassword(!showTransactionPassword)}
+                  className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                >
+                  {showTransactionPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {showTransactionPasswordError && (
+                <p className="text-[#ff6b6b] text-xs mt-1">
+                  {language.code === 'bn' ? "সঠিক পাসওয়ার্ড দিন" : "Please enter the correct password"}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowTransactionPasswordModal(false);
+                  setTransactionPassword("");
+                  setShowTransactionPasswordError(false);
+                }}
+                className="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                {language.code === 'bn' ? "বাতিল" : "Cancel"}
+              </button>
+              <button
+                onClick={verifyTransactionPasswordAndWithdraw}
+                disabled={checkingTransactionPassword || !transactionPassword}
+                className="flex-1 bg-[#2a5c45] text-white py-2 rounded-lg hover:bg-[#3a6c55] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {checkingTransactionPassword ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {language.code === 'bn' ? "যাচাই করা হচ্ছে..." : "Verifying..."}
+                  </>
+                ) : (
+                  language.code === 'bn' ? "নিশ্চিত করুন" : "Confirm"
+                )}
+              </button>
+            </div>
+
+            {/* Set Transaction Password Link */}
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => {
+                  setShowTransactionPasswordModal(false);
+                  navigate('/member/transaction-password');
+                }}
+                className="text-[#3a8a6f] hover:text-[#4a9a7f] text-sm"
+              >
+                {language.code === 'bn' 
+                  ? "ট্রানজেকশন পাসওয়ার্ড সেট করুন" 
+                  : "Set Transaction Password"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (error && !userData) {
     return (
       <div className="flex justify-center items-center h-screen bg-[#0a0f0f]">
@@ -1514,7 +1749,7 @@ const Withdraw = () => {
         <Sidebar isOpen={sidebarOpen} />
 
         <div
-          className={`flex-1 overflow-y-auto transition-all duration-300 ${
+          className={`flex-1 pb-[100px] overflow-y-auto transition-all duration-300 ${
             sidebarOpen ? "ml-64" : "ml-0"
           }`}
         >
@@ -1536,6 +1771,49 @@ const Withdraw = () => {
             {/* Only show withdrawal content if KYC is NOT required or KYC is verified */}
             {!isKycRequired() && (
               <>
+                {/* Transaction Password Not Set Alert */}
+                {!isTransactionPasswordSet && (
+                  <div className="bg-gradient-to-r from-[#2a1f2a] to-[#3a2f3a] rounded-[2px] p-4 md:p-6 mb-6 md:mb-8 border border-[#3a2f3a] shadow-lg">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div className="flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-8 w-8 md:h-10 md:w-10 text-[#e6db74] mr-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                        <div>
+                          <h3 className="text-base md:text-lg font-semibold text-[#e6db74]">
+                            {language.code === 'bn' ? "ট্রানজেকশন পাসওয়ার্ড প্রয়োজন" : "Transaction Password Required"}
+                          </h3>
+                          <p className="text-xs md:text-sm text-[#a8b9c6] mt-1">
+                            {language.code === 'bn'
+                              ? "উত্তোলনের জন্য আপনাকে একটি ট্রানজেকশন পাসওয়ার্ড সেট করতে হবে।"
+                              : "You need to set a transaction password to make withdrawals."}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => navigate('/member/transaction-password')}
+                        className="bg-[#2a5c45] hover:bg-[#3a6c55] px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        {language.code === 'bn' ? "পাসওয়ার্ড সেট করুন" : "Set Password"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Wagering Requirement Alert */}
                 {(userData?.depositamount && userData?.depositamount > 0 && !wageringInfo.isCompleted) && (
                   <div className="bg-gradient-to-r from-[#2a1f1f] to-[#3a2f2f] rounded-[2px] p-4 md:p-6 mb-6 md:mb-8 border border-[#3a2f2f] shadow-lg">
@@ -1863,7 +2141,7 @@ const Withdraw = () => {
                                 min={activeMethod.minAmount}
                                 max={Math.min(activeMethod.maxAmount, userData?.balance || 0)}
                                 required
-                                disabled={!wageringInfo.isCompleted}
+                                disabled={!wageringInfo.isCompleted || !isTransactionPasswordSet}
                               />
                               {formErrors.amount && (
                                 <p className="text-[#ff6b6b] text-xs md:text-sm mt-1">
@@ -1904,6 +2182,7 @@ const Withdraw = () => {
                                     onClick={() => setAmount(quickAmount.toString())}
                                     disabled={
                                       !wageringInfo.isCompleted ||
+                                      !isTransactionPasswordSet ||
                                       quickAmount > (userData?.balance || 0) || 
                                       quickAmount > activeMethod.maxAmount || 
                                       quickAmount < activeMethod.minAmount
@@ -1920,6 +2199,7 @@ const Withdraw = () => {
                               type="submit"
                               disabled={
                                 !wageringInfo.isCompleted ||
+                                !isTransactionPasswordSet ||
                                 isProcessing ||
                                 !amount ||
                                 parseFloat(amount) > (userData?.balance || 0) ||
@@ -1927,7 +2207,9 @@ const Withdraw = () => {
                                 parseFloat(amount) > parseFloat(activeMethod?.maxAmount || 30000)
                               }
                             >
-                              {!wageringInfo.isCompleted ? (
+                              {!isTransactionPasswordSet ? (
+                                language.code === 'bn' ? "প্রথমে ট্রানজেকশন পাসওয়ার্ড সেট করুন" : "Set Transaction Password First"
+                              ) : !wageringInfo.isCompleted ? (
                                 wageringInfo.isSpecialCase 
                                   ? (language.code === 'bn' ? "প্রথমে ১.১x ওয়েজারিং সম্পন্ন করুন" : "Complete 1.1x Wagering Requirements First")
                                   : (language.code === 'bn' ? "প্রথমে ওয়েজারিং প্রয়োজনীয়তা সম্পন্ন করুন" : "Complete Wagering Requirements First")
@@ -1966,38 +2248,65 @@ const Withdraw = () => {
                               className={`mt-3 md:mt-4 p-3 md:p-4 rounded-lg text-xs md:text-sm ${
                                 transactionStatus.success
                                   ? "bg-[#1a2525] text-[#4ecdc4] border border-[#2a3535]"
+                                  : transactionStatus.needSetup
+                                  ? "bg-[#2a1f2a] text-[#e6db74] border border-[#3a2f3a]"
                                   : "bg-[#2a1f1f] text-[#ff6b6b] border border-[#3a2f2f]"
                               }`}
                             >
-                              <div className="flex items-center">
-                                {transactionStatus.success ? (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4 md:h-5 md:w-5 mr-2"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  {transactionStatus.success ? (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4 md:h-5 md:w-5 mr-2"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  ) : transactionStatus.needSetup ? (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4 md:h-5 md:w-5 mr-2"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                      />
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4 md:h-5 md:w-5 mr-2"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  )}
+                                  {transactionStatus.message}
+                                </div>
+                                {transactionStatus.needSetup && (
+                                  <button
+                                    onClick={() => navigate('/member/transaction-password')}
+                                    className="bg-[#2a5c45] hover:bg-[#3a6c55] px-3 py-1 rounded text-sm transition-colors"
                                   >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4 md:h-5 md:w-5 mr-2"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
+                                    {language.code === 'bn' ? "সেট করুন" : "Set Now"}
+                                  </button>
                                 )}
-                                {transactionStatus.message}
                               </div>
                             </div>
                           )}
@@ -2218,6 +2527,9 @@ const Withdraw = () => {
           </div>
         </div>
       </div>
+
+      {/* Transaction Password Modal */}
+      {renderTransactionPasswordModal()}
     </div>
   );
 };
