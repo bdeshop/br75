@@ -56,7 +56,7 @@ import home_img from "../../assets/home.png";
 import menu_img from "../../assets/menu.png";
 import sports_img from "../../assets/sports.png";
 import offers_img from "../../assets/offers.png";
-
+import refer_img from "../../assets/refer.png";
 const APK_FILE = "https://bir75.com/Bir75.apk";
 import BD_FLAG from "../../assets/flag/Flag-Bangladesh.webp";
 import US_FLAG from "../../assets/flag/us.webp";
@@ -75,6 +75,7 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [localIsLoggedIn, setLocalIsLoggedIn] = useState(false);
   const [localUserBalance, setLocalUserBalance] = useState(null);
+  const [isLogoutHovered, setIsLogoutHovered] = useState(false); // Track hover state
   const { t } = useContext(LanguageContext);
   
   useEffect(() => {
@@ -131,7 +132,10 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
             </p>
             <div className="flex justify-end gap-6">
               <button
-                onClick={() => setShowLogoutConfirm(false)}
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  setIsLogoutHovered(false); // Reset hover state when cancel is clicked
+                }}
                 className="text-gray-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-gray-50 px-2 py-1 rounded"
               >
                 {isBangla ? "বাতিল" : t.cancel || "Cancel"}
@@ -219,8 +223,22 @@ const CurrencyLangButton = ({ isBangla, onSelectEnglish, onSelectBangla, dropdow
             {finalIsLoggedIn && (
               <div className="border-t border-[#2d2d2d] pt-3 pb-2">
                 <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="w-full flex items-center justify-center gap-2 py-[10px] rounded-[2px] border border-[#3d3d3d] bg-red-500 text-[#e0e0e0] font-medium text-[14px] transition-all duration-200 hover:bg-[#d32f2f] hover:border-[#d32f2f] hover:text-white cursor-pointer"
+                  onClick={() => {
+                    setShowLogoutConfirm(true);
+                    setIsLogoutHovered(true); // Set hover state when clicked
+                  }}
+                  onMouseEnter={() => setIsLogoutHovered(true)}
+                  onMouseLeave={() => {
+                    // Only reset if not in confirmation state
+                    if (!showLogoutConfirm) {
+                      setIsLogoutHovered(false);
+                    }
+                  }}
+                  className={`w-full flex items-center justify-center gap-2 py-[10px] rounded-[2px] border transition-all duration-200 cursor-pointer ${
+                    isLogoutHovered || showLogoutConfirm
+                      ? "bg-[#d32f2f] border-[#d32f2f] text-white"
+                      : "border-[#3d3d3d] bg-[#353535] text-[#e0e0e0] hover:bg-[#d32f2f] hover:border-[#d32f2f] hover:text-white"
+                  }`}
                 >
                   <FiLogOut size={16} />
                   <span>{t.logout || "Logout"}</span>
@@ -1229,7 +1247,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
 )}
 
       {/* Mobile Bottom Navigation */}
-  <div className="md:hidden fixed bottom-0 border-t-[2px] font-semibold border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
+<div className="md:hidden fixed bottom-0 border-t-[2px] font-semibold border-blue-500 left-0 right-0 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] z-50"
      style={showMobileAppBanner ? { bottom: '80px' } : {}}>
   <div className="flex justify-around items-end px-1">
     {/* Menu Button */}
@@ -1237,33 +1255,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       <img src={menu_img} alt="Menu" className="h-6 w-6 mb-1" />
       <span className="text-[11px] whitespace-nowrap">{t.menu}</span>
     </button>
-    
-    {/* Bonus */}
-    <div 
-      onClick={() => {
-        if (isLoggedIn) {
-          navigate("/member/bonuses");
-          setSidebarOpen(false);
-        } else {
-          navigate("/login");
-        }
-      }} 
-      className="flex flex-col items-center justify-center p-2 text-sm text-white hover:text-yellow-400 transition-colors cursor-pointer min-w-[60px]"
-    >
-      <img src={offers_img} alt="Bonus" className="h-6 w-6 mb-1" />
-      <span className="text-[10px] whitespace-nowrap">{t.bonuses_text || "Bonus"}</span>
-    </div>
-    
-    {/* Home - Fixed position, no wrapping */}
-    <div className="relative shrink-0" style={{ top: '-20px' }}>
-      <NavLink to="/" className="flex flex-col items-center justify-center text-white text-sm transition-colors" onClick={() => setSidebarOpen(false)}>
-        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#166E5B', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #1a2344', boxShadow: '0 4px 16px rgba(22,163,74,0.55)' }}>
-          <img src={home_img} alt="Home" className="h-6 w-6" />
-        </div>
-        <span className="text-[11px] mt-0.5 whitespace-nowrap">{t.home}</span>
-      </NavLink>
-    </div>
-    
+        
     {/* Promotions */}
     <div 
       onClick={() => {
@@ -1278,6 +1270,32 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     >
       <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/favorite.png?v=1757670016214&source=drccdnsrc" alt="Promotions" className="h-6 w-6 mb-1" />
       <span className="text-[11px] whitespace-nowrap">{t.promotions}</span>
+    </div>
+    
+    {/* Home - Fixed position, no wrapping */}
+    <div className="relative shrink-0" style={{ top: '-20px' }}>
+      <NavLink to="/" className="flex flex-col items-center justify-center text-white text-sm transition-colors" onClick={() => setSidebarOpen(false)}>
+        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#166E5B', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #1a2344', boxShadow: '0 4px 16px rgba(22,163,74,0.55)' }}>
+          <img src={home_img} alt="Home" className="h-6 w-6" />
+        </div>
+        <span className="text-[11px] mt-0.5 whitespace-nowrap">{t.home}</span>
+      </NavLink>
+    </div>
+
+    {/* Refer - NEW BUTTON AFTER HOME */}
+    <div 
+      onClick={() => {
+        if (isLoggedIn) {
+          navigate("referral-program/details");
+          setSidebarOpen(false);
+        } else {
+          navigate("/login");
+        }
+      }} 
+      className="flex flex-col items-center justify-center p-2 text-xs text-white hover:text-yellow-400 transition-colors cursor-pointer min-w-[60px]"
+    >
+      <img src={refer_img} alt="Refer" className="h-6 w-6 mb-1" />
+      <span className="text-[11px] whitespace-nowrap">{t.refer || "Refer"}</span>
     </div>
     
     {/* Profile */}

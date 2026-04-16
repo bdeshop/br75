@@ -371,7 +371,7 @@ const Footer = () => {
             <p className="text-[10px] text-gray-200 text-left leading-5">{t.footerLegalText}</p>
           </div>
           <div className="flex flex-col items-center md:items-center">
-            <p className="text-gray-200 font-semibold mb-2 text-center ">© 2026 {t.footerCopyright}</p>
+            <p className="text-gray-200 font-semibold mb-2 text-center ">{t.footerCopyright}</p>
             <div className="flex gap-3 justify-center items-center opacity-40">
               <img src="https://img.b112j.com/bj/h5/assets/images/footer/gaming_license.png" className="h-4" />
               <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/trivial-type/age-limit.svg" className="h-4" />

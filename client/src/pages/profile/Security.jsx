@@ -301,8 +301,8 @@ const Security = () => {
         <Sidebar sidebarOpen={sidebarOpen} />
 
         {/* Profile Content */}
-           <div className={`flex-1 overflow-auto transition-all duration-300`}>
-          <div className="mx-auto w-full min-h-screen max-w-screen-xl md:px-[50px] px-[10px] pt-[60px] py-4"> 
+           <div className={`flex-1 overflow-auto transition-all duration-300 `}>
+          <div className="mx-auto w-full min-h-screen max-w-screen-xl md:px-[50px] px-[10px] pt-[60px] py-4 pb-[100px]"> 
             <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
               {/* Left Navigation */}
               <div className="w-full lg:w-64 bg-[#161616] h-auto rounded-[5px] border border-gray-800">
@@ -747,7 +747,6 @@ const Security = () => {
             </div>
           </div>
 
-          <Footer />
         </div>
       </div>
     </div>

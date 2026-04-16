@@ -826,9 +826,7 @@ const Profile = () => {
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex h-[calc(100vh-56px)]">
           <Sidebar sidebarOpen={sidebarOpen} />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-theme_color"></div>
-          </div>
+         
         </div>
         <Footer />
       </div>
@@ -854,7 +852,7 @@ const Profile = () => {
       <div className="flex h-[calc(100vh-56px)]">
         <Sidebar sidebarOpen={sidebarOpen} />
 
-        <div className={`flex-1 overflow-auto transition-all duration-300`}>
+        <div className={`flex-1 overflow-auto transition-all duration-300 pb-[100px]`}>
           <div className="mx-auto w-full min-h-screen max-w-screen-xl md:px-[50px] px-[10px] pt-[60px] py-4"> 
             <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
               <div className="w-full lg:w-64 bg-[#161616] h-auto rounded-[5px] overflow-hidden border border-gray-800">
@@ -1416,7 +1414,6 @@ const Profile = () => {
               </div>
             </div>
           </div>
-          <Footer />
         </div>
       </div>
     </div>

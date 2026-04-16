@@ -1,25 +1,37 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { NavLink, useNavigate } from 'react-router-dom';
 import videoBackgroundUrl from "../../assets/mainvideo.mp4";
 import logo from "../../assets/logo.png";
+import { LanguageContext } from '../../context/LanguageContext';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+  const { t } = useContext(LanguageContext);
+  
+  // Reset method selection: 'mobile' or 'email'
+  const [resetMethod, setResetMethod] = useState('mobile'); // 'mobile' or 'email'
   
   // Step management
-  const [step, setStep] = useState(1); // 1: Phone input, 2: OTP verification, 3: New password
+  const [step, setStep] = useState(1); // 1: Input, 2: OTP verification, 3: New password
   
-  // Form data
+  // Mobile form data
   const [phone, setPhone] = useState("");
+  
+  // Email form data
+  const [email, setEmail] = useState("");
+  
+  // OTP digits
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  
+  // Password fields
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   
   // State management
   const [isLoading, setIsLoading] = useState(false);
-  const [phoneError, setPhoneError] = useState("");
+  const [inputError, setInputError] = useState("");
   const [otpError, setOtpError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [resetToken, setResetToken] = useState("");
@@ -62,7 +74,7 @@ export default function ForgotPassword() {
         if (diff <= 0) {
           setOtpExpiry(null);
           setCanResend(true);
-          setOtpError("OTP has expired. Please request a new one.");
+          setOtpError(t.otpExpired || "OTP has expired. Please request a new one.");
         }
       };
       
@@ -73,7 +85,7 @@ export default function ForgotPassword() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [otpExpiry, step]);
+  }, [otpExpiry, step, t]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -193,23 +205,23 @@ export default function ForgotPassword() {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // Step 1: Request OTP
-  const handleRequestOTP = async (e) => {
+  // Step 1: Request OTP (Mobile)
+  const handleMobileRequestOTP = async (e) => {
     e.preventDefault();
     
     // Validate phone
     if (!phone) {
-      setPhoneError("Phone number is required.");
+      setInputError(t.phoneNumber + " " + (t.isRequired || "is required"));
       return;
     }
 
     if (!/^1[0-9]{9}$/.test(phone)) {
-      setPhoneError("Please enter a valid Bangladeshi phone number, starting with 1.");
+      setInputError(t.invalidPhoneNumber || "Please enter a valid Bangladeshi phone number, starting with 1.");
       return;
     }
 
     setIsLoading(true);
-    setPhoneError("");
+    setInputError("");
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/forgot-password/request-otp`, {
@@ -228,7 +240,7 @@ export default function ForgotPassword() {
           otpRefs[0].current?.focus();
         }, 100);
         
-        toast.success('OTP sent to your phone!', {
+        toast.success(t.toastOtpSent || 'OTP sent to your phone!', {
           position: "top-right",
           autoClose: 3000,
         });
@@ -242,26 +254,80 @@ export default function ForgotPassword() {
           });
         }
       } else {
-        toast.success('If this number is registered, OTP will be sent');
+        toast.success(t.ifNumberRegistered || 'If this number is registered, OTP will be sent');
       }
     } catch (error) {
       console.error('OTP request error:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to send OTP. Please try again.';
-      setPhoneError(errorMessage);
+      const errorMessage = error.response?.data?.message || t.failedToSendOtp || 'Failed to send OTP. Please try again.';
+      setInputError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Step 2: Verify OTP
-  const handleVerifyOTP = async (e) => {
+  // Step 1: Request OTP via Email
+  const handleEmailRequestOTP = async (e) => {
+    e.preventDefault();
+    
+    // Validate email
+    if (!email) {
+      setInputError(t.email + " " + (t.isRequired || "is required"));
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setInputError(t.invalidEmail || "Please enter a valid email address.");
+      return;
+    }
+
+    setIsLoading(true);
+    setInputError("");
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/forgot-password-email`, {
+        email
+      });
+
+      if (response.data.success) {
+        setStep(2);
+        setOtpExpiry(new Date(Date.now() + 10 * 60 * 1000)); // 10 minutes expiry
+        setCanResend(false);
+        setResendCooldown(60);
+        setOtpDigits(["", "", "", "", "", ""]);
+        setResetToken(response.data.data.resetToken);
+        
+        // Focus first OTP input
+        setTimeout(() => {
+          otpRefs[0].current?.focus();
+        }, 100);
+        
+        toast.success(t.toastOtpSent || 'OTP sent to your email!', {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      } else {
+        toast.success(t.ifEmailRegistered || 'If this email is registered, you will receive an OTP');
+      }
+    } catch (error) {
+      console.error('Email OTP request error:', error);
+      const errorMessage = error.response?.data?.message || t.failedToSendOtp || 'Failed to send OTP. Please try again.';
+      setInputError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP (Mobile)
+  const handleMobileVerifyOTP = async (e) => {
     e.preventDefault();
     
     const fullOtp = getFullOtp();
     
     if (fullOtp.length !== 6) {
-      setOtpError("Please enter all 6 digits");
+      setOtpError(t.pleaseEnterAllDigits || "Please enter all 6 digits");
       return;
     }
 
@@ -277,16 +343,16 @@ export default function ForgotPassword() {
       if (response.data.success) {
         setResetToken(response.data.data.resetToken);
         setStep(3);
-        toast.success('OTP verified successfully! Please set your new password.', {
+        toast.success(t.otpVerifiedSuccess || 'OTP verified successfully! Please set your new password.', {
           position: "top-right",
           autoClose: 3000,
         });
       } else {
-        toast.error(response.data.message || 'OTP verification failed');
+        toast.error(response.data.message || t.otpVerificationFailed || 'OTP verification failed');
       }
     } catch (error) {
       console.error('OTP verification error:', error);
-      const errorMessage = error.response?.data?.message || 'OTP verification failed. Please try again.';
+      const errorMessage = error.response?.data?.message || t.otpVerificationFailed || 'OTP verification failed. Please try again.';
       setOtpError(errorMessage);
       
       // If too many attempts, go back to step 1
@@ -303,8 +369,55 @@ export default function ForgotPassword() {
     }
   };
 
-  // Resend OTP
-  const handleResendOTP = async () => {
+  // Step 2: Verify OTP (Email)
+  const handleEmailVerifyOTP = async (e) => {
+    e.preventDefault();
+    
+    const fullOtp = getFullOtp();
+    
+    if (fullOtp.length !== 6) {
+      setOtpError(t.pleaseEnterAllDigits || "Please enter all 6 digits");
+      return;
+    }
+
+    setIsLoading(true);
+    setOtpError("");
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/verify-reset-otp`, {
+        resetToken,
+        otp: fullOtp
+      });
+
+      if (response.data.success) {
+        setStep(3);
+        toast.success(t.otpVerifiedSuccess || 'OTP verified successfully! Please set your new password.', {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      } else {
+        toast.error(response.data.message || t.otpVerificationFailed || 'OTP verification failed');
+      }
+    } catch (error) {
+      console.error('Email OTP verification error:', error);
+      const errorMessage = error.response?.data?.message || t.otpVerificationFailed || 'OTP verification failed. Please try again.';
+      setOtpError(errorMessage);
+      
+      if (errorMessage.includes('Too many failed attempts')) {
+        setTimeout(() => {
+          setStep(1);
+          setOtpDigits(["", "", "", "", "", ""]);
+        }, 2000);
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Resend OTP (Mobile)
+  const handleMobileResendOTP = async () => {
     if (!canResend) return;
 
     setIsLoading(true);
@@ -321,7 +434,7 @@ export default function ForgotPassword() {
         setResendCooldown(60);
         setOtpDigits(["", "", "", "", "", ""]);
         
-        toast.success('OTP resent successfully!', {
+        toast.success(t.toastOtpResent || 'OTP resent successfully!', {
           position: "top-right",
           autoClose: 3000,
         });
@@ -333,39 +446,75 @@ export default function ForgotPassword() {
           });
         }
 
-        // Focus first OTP input
         setTimeout(() => {
           otpRefs[0].current?.focus();
         }, 100);
       } else {
-        toast.error(response.data.message || 'Failed to resend OTP');
+        toast.error(response.data.message || t.failedToResendOtp || 'Failed to resend OTP');
       }
     } catch (error) {
       console.error('OTP resend error:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to resend OTP';
+      const errorMessage = error.response?.data?.message || t.failedToResendOtp || 'Failed to resend OTP';
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Step 3: Reset Password
-  const handleResetPassword = async (e) => {
+  // Resend OTP (Email)
+  const handleEmailResendOTP = async () => {
+    if (!canResend) return;
+
+    setIsLoading(true);
+    setOtpError("");
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/resend-reset-otp`, {
+        resetToken
+      });
+
+      if (response.data.success) {
+        setOtpExpiry(new Date(Date.now() + 10 * 60 * 1000));
+        setCanResend(false);
+        setResendCooldown(60);
+        setOtpDigits(["", "", "", "", "", ""]);
+        
+        toast.success(t.toastOtpResent || 'OTP resent successfully!', {
+          position: "top-right",
+          autoClose: 3000,
+        });
+
+        setTimeout(() => {
+          otpRefs[0].current?.focus();
+        }, 100);
+      } else {
+        toast.error(response.data.message || t.failedToResendOtp || 'Failed to resend OTP');
+      }
+    } catch (error) {
+      console.error('Email OTP resend error:', error);
+      const errorMessage = error.response?.data?.message || t.failedToResendOtp || 'Failed to resend OTP';
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 3: Reset Password (Mobile)
+  const handleMobileResetPassword = async (e) => {
     e.preventDefault();
     
-    // Validate passwords
     if (!newPassword) {
-      setPasswordError("New password is required.");
+      setPasswordError(t.newPassword + " " + (t.isRequired || "is required"));
       return;
     }
     
     if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters long.");
+      setPasswordError(t.passwordMinLength || "Password must be at least 6 characters long.");
       return;
     }
     
     if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match.");
+      setPasswordError(t.passwordsDontMatch || "Passwords do not match.");
       return;
     }
 
@@ -380,21 +529,71 @@ export default function ForgotPassword() {
       });
 
       if (response.data.success) {
-        toast.success('Password reset successfully! Redirecting to login...', {
+        toast.success(t.passwordResetSuccess || 'Password reset successfully! Redirecting to login...', {
           position: "top-right",
           autoClose: 3000,
         });
         
-        // Redirect to login page after 2 seconds
         setTimeout(() => {
           navigate('/register');
         }, 2000);
       } else {
-        toast.error(response.data.message || 'Password reset failed');
+        toast.error(response.data.message || t.passwordResetFailed || 'Password reset failed');
       }
     } catch (error) {
       console.error('Password reset error:', error);
-      const errorMessage = error.response?.data?.message || 'Password reset failed. Please try again.';
+      const errorMessage = error.response?.data?.message || t.passwordResetFailed || 'Password reset failed. Please try again.';
+      setPasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 3: Reset Password (Email)
+  const handleEmailResetPassword = async (e) => {
+    e.preventDefault();
+    
+    if (!newPassword) {
+      setPasswordError(t.newPassword + " " + (t.isRequired || "is required"));
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setPasswordError(t.passwordMinLength || "Password must be at least 6 characters long.");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError(t.passwordsDontMatch || "Passwords do not match.");
+      return;
+    }
+
+    setIsLoading(true);
+    setPasswordError("");
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password-email`, {
+        resetToken,
+        newPassword,
+        confirmPassword
+      });
+
+      if (response.data.success) {
+        toast.success(t.passwordResetSuccess || 'Password reset successfully! Redirecting to login...', {
+          position: "top-right",
+          autoClose: 3000,
+        });
+        
+        setTimeout(() => {
+          navigate('/register');
+        }, 2000);
+      } else {
+        toast.error(response.data.message || t.passwordResetFailed || 'Password reset failed');
+      }
+    } catch (error) {
+      console.error('Email password reset error:', error);
+      const errorMessage = error.response?.data?.message || t.passwordResetFailed || 'Password reset failed. Please try again.';
       setPasswordError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -408,6 +607,7 @@ export default function ForgotPassword() {
       setStep(1);
       setOtpDigits(["", "", "", "", "", ""]);
       setOtpError("");
+      setResetToken("");
     } else if (step === 3) {
       setStep(2);
       setNewPassword("");
@@ -419,6 +619,19 @@ export default function ForgotPassword() {
   // Cancel and go to login
   const cancel = () => {
     navigate('/register');
+  };
+
+  // Get the appropriate verify handler based on method
+  const handleVerifyOTP = resetMethod === 'mobile' ? handleMobileVerifyOTP : handleEmailVerifyOTP;
+  const handleResendOTP = resetMethod === 'mobile' ? handleMobileResendOTP : handleEmailResendOTP;
+  const handleResetPassword = resetMethod === 'mobile' ? handleMobileResetPassword : handleEmailResetPassword;
+
+  // Get the identifier (phone or email) for display
+  const getIdentifier = () => {
+    if (resetMethod === 'mobile') {
+      return `+880${phone}`;
+    }
+    return email;
   };
 
   return (
@@ -436,7 +649,7 @@ export default function ForgotPassword() {
           <img 
             src={dynamicLogo} 
             alt="Logo" 
-            className="w-[100px] md:w-[150px] cursor-pointer" 
+            className="w-[70px] md:w-[100px]  cursor-pointer" 
           />
         </NavLink>
         
@@ -460,43 +673,98 @@ export default function ForgotPassword() {
           {/* Password Reset Box */}
           <div className="overflow-hidden bg-opacity-90 bg-[#141515] rounded-lg shadow-2xl">
             {/* Header with step indicator */}
-            <div className=" p-4 text-center">
-              <h2 className="text-xl md:text-2xl font-medium text-white">Reset Password</h2>
+            <div className="p-4 text-center">
+              <h2 className="text-xl md:text-2xl font-medium text-white">{t.resetLoginPassword || "Reset Password"}</h2>
               <p className="text-sm text-gray-200 mt-1">
-                Step {step} of 3: {
-                  step === 1 ? 'Enter Phone Number' : 
-                  step === 2 ? 'Verify OTP' : 
-                  'Set New Password'
-                }
+                {step === 1 ? (resetMethod === 'mobile' ? t.enterPhoneNumberStep || "Enter Phone Number" : t.enterEmailStep || "Enter Email Address") : 
+                 step === 2 ? (t.verifyOtpStep || "Verify OTP") : 
+                 (t.setNewPasswordStep || "Set New Password")}
               </p>
             </div>
 
+            {/* Method Selection Tabs (Only on Step 1) */}
+            {step === 1 && (
+              <div className="flex border-b border-gray-700 mx-6">
+                <button
+                  onClick={() => setResetMethod('mobile')}
+                  className={`flex-1 py-3 text-center font-medium transition-all duration-200 ${
+                    resetMethod === 'mobile'
+                      ? 'text-green-400 border-b-2 border-green-400'
+                      : 'text-gray-400 hover:text-gray-300'
+                  }`}
+                >
+                  <svg className="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  {t.mobile || "Mobile"}
+                </button>
+                <button
+                  onClick={() => setResetMethod('email')}
+                  className={`flex-1 py-3 text-center font-medium transition-all duration-200 ${
+                    resetMethod === 'email'
+                      ? 'text-green-400 border-b-2 border-green-400'
+                      : 'text-gray-400 hover:text-gray-300'
+                  }`}
+                >
+                  <svg className="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  {t.email || "Email"}
+                </button>
+              </div>
+            )}
+
             <div className="p-6 md:p-8">
-              {/* Step 1: Phone Input */}
+              {/* Step 1: Input (Phone or Email) */}
               {step === 1 && (
-                <form onSubmit={handleRequestOTP}>
-                  <div className="mb-6">
-                    <label htmlFor="phone" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">Phone Number</label>
-                    <div className="flex items-stretch bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors rounded">
-                      <div className="flex items-center px-2 md:px-3 rounded-l border-r border-gray-700">
-                        <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png?v=1754999737902&source=drccdnsrc" alt="Bangladesh Flag" className="w-5 h-5 md:w-6 md:h-6 mr-1 md:mr-2 rounded-full" />
-                        <span className="text-white text-sm md:text-base font-[300]">+880</span>
+                <form onSubmit={resetMethod === 'mobile' ? handleMobileRequestOTP : handleEmailRequestOTP}>
+                  {resetMethod === 'mobile' ? (
+                    <div className="mb-6">
+                      <label htmlFor="phone" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">{t.phoneNumber || "Phone Number"}</label>
+                      <div className="flex  border-[1px] border-blue-500 items-stretch bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors rounded">
+                        <div className="flex items-center px-2 md:px-3 rounded-l border-r border-gray-700">
+                          <img src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/flag-type/BD.png?v=1754999737902&source=drccdnsrc" alt="Bangladesh Flag" className="w-5 h-5 md:w-6 md:h-6 mr-1 md:mr-2 rounded-full" />
+                          <span className="text-white text-sm md:text-base font-[300]">+880</span>
+                        </div>
+                        
+                        <div className="flex items-center flex-grow pl-2 md:pl-3">
+                          <input
+                            type="tel"
+                            id="phone"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                            className="w-full py-2 md:py-3.5 bg-transparent font-[400] text-white font-[300] focus:outline-none placeholder-gray-500 text-sm md:text-base"
+                            placeholder={t.enterPhoneNumber || "Enter your phone number"}
+                            disabled={isLoading}
+                          />
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center flex-grow pl-2 md:pl-3">
-                        <input
-                          type="tel"
-                          id="phone"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                          className="w-full py-2 md:py-3.5 bg-transparent font-[400] text-white font-[300] focus:outline-none placeholder-gray-500 text-sm md:text-base"
-                          placeholder="Enter your phone number"
-                          disabled={isLoading}
-                        />
-                      </div>
+                      {inputError && <p className="text-red-400 text-xs mt-1">{inputError}</p>}
                     </div>
-                    {phoneError && <p className="text-red-400 text-xs mt-1">{phoneError}</p>}
-                  </div>
+                  ) : (
+                    <div className="mb-6">
+                      <label htmlFor="email" className="block text-sm md:text-sm text-gray-200 mb-2 font-[300]">{t.email || "Email Address"}</label>
+                      <div className="flex items-stretch bg-gradient-to-br from-[#121212]  border-[1px] border-blue-500 via-[#1a2344] to-[#1e2b5e] overflow-hidden hover:border-gray-600 transition-colors rounded">
+                        <div className="flex items-center px-3 border-r border-gray-700">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div className="flex items-center flex-grow pl-2 md:pl-3 ">
+                          <input
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value.toLowerCase())}
+                            className="w-full py-2 md:py-3.5 bg-transparent font-[400] text-white font-[300] focus:outline-none placeholder-gray-500 text-sm md:text-base"
+                            placeholder={t.enterEmailAddress || "Enter your email address"}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+                      {inputError && <p className="text-red-400 text-xs mt-1">{inputError}</p>}
+                    </div>
+                  )}
 
                   <button
                     type="submit"
@@ -509,9 +777,9 @@ export default function ForgotPassword() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Sending OTP...
+                        {t.sendingOtpBtn || "Sending OTP..."}
                       </span>
-                    ) : 'Send OTP'}
+                    ) : (t.sendOtpBtn || "Send OTP")}
                   </button>
 
                   <div className="mt-4 text-center">
@@ -520,7 +788,7 @@ export default function ForgotPassword() {
                       onClick={cancel}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
-                      Cancel and go back to login
+                      {t.cancelAndGoBack || "Cancel and go back to login"}
                     </button>
                   </div>
                 </form>
@@ -531,7 +799,7 @@ export default function ForgotPassword() {
                 <form onSubmit={handleVerifyOTP}>
                   <div className="mb-6">
                     <p className="text-sm text-gray-300 mb-4 text-center">
-                      Enter the 6-digit OTP sent to <span className="font-bold text-green-400">+880{phone}</span>
+                      {t.otpSentTo || "Enter 6-digit OTP sent to"} <span className="font-bold text-green-400">{getIdentifier()}</span>
                     </p>
                     
                     {/* 6-digit OTP Input Fields */}
@@ -557,9 +825,9 @@ export default function ForgotPassword() {
                     <div className="flex justify-between items-center mb-4">
                       <div className="text-sm text-gray-400">
                         {timeLeft > 0 ? (
-                          <span>Expires in: <span className="text-yellow-400 font-mono">{formatTimeLeft(timeLeft)}</span></span>
+                          <span>{t.otpExpiresIn || "Expires in:"} <span className="text-yellow-400 font-mono">{formatTimeLeft(timeLeft)}</span></span>
                         ) : (
-                          <span className="text-red-400">OTP expired</span>
+                          <span className="text-red-400">{t.otpExpired || "OTP expired"}</span>
                         )}
                       </div>
                       
@@ -573,7 +841,7 @@ export default function ForgotPassword() {
                             : 'text-gray-600 border border-gray-700 cursor-not-allowed'
                         }`}
                       >
-                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                        {resendCooldown > 0 ? `${t.resendIn || "Resend in"} ${resendCooldown}s` : (t.resendOtp || "Resend OTP")}
                       </button>
                     </div>
                   </div>
@@ -589,9 +857,9 @@ export default function ForgotPassword() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Verifying...
+                        {t.verifyingOtpBtn || "Verifying..."}
                       </span>
-                    ) : 'Verify OTP'}
+                    ) : (t.verifyOtpBtn || "Verify OTP")}
                   </button>
 
                   <div className="mt-4 flex justify-between">
@@ -600,7 +868,7 @@ export default function ForgotPassword() {
                       onClick={goBack}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
-                      ← Back
+                      ← {t.backBtn || "Back"}
                     </button>
                     
                     <button
@@ -608,7 +876,7 @@ export default function ForgotPassword() {
                       onClick={cancel}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
-                      Cancel
+                      {t.cancel || "Cancel"}
                     </button>
                   </div>
                 </form>
@@ -618,27 +886,27 @@ export default function ForgotPassword() {
               {step === 3 && (
                 <form onSubmit={handleResetPassword}>
                   <div className="mb-4">
-                    <label htmlFor="newPassword" className="block text-sm md:text-sm text-gray-200 mb-2">New Password</label>
+                    <label htmlFor="newPassword" className="block text-sm md:text-sm text-gray-200 mb-2">{t.newPassword || "New Password"}</label>
                     <input
                       type="password"
                       id="newPassword"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full p-3 md:p-4 text-sm bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] font-[300] text-white focus:outline-none focus:border-green-500 hover:border-gray-600 transition-colors rounded"
-                      placeholder="Enter new password (min. 6 characters)"
+                      placeholder={t.enterNewPassword || "Enter new password (min. 6 characters)"}
                       disabled={isLoading}
                     />
                   </div>
 
                   <div className="mb-6">
-                    <label htmlFor="confirmPassword" className="block text-sm md:text-sm text-gray-200 mb-2">Confirm New Password</label>
+                    <label htmlFor="confirmPassword" className="block text-sm md:text-sm text-gray-200 mb-2">{t.confirmNewPassword || "Confirm New Password"}</label>
                     <input
                       type="password"
                       id="confirmPassword"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full p-3 md:p-4 text-sm bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] font-[300] text-white focus:outline-none focus:border-green-500 hover:border-gray-600 transition-colors rounded"
-                      placeholder="Confirm your new password"
+                      placeholder={t.confirmNewPassword || "Confirm your new password"}
                       disabled={isLoading}
                     />
                   </div>
@@ -656,9 +924,9 @@ export default function ForgotPassword() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Resetting Password...
+                        {t.resettingPassword || "Resetting Password..."}
                       </span>
-                    ) : 'Reset Password'}
+                    ) : (t.resetPassword || "Reset Password")}
                   </button>
 
                   <div className="mt-4 flex justify-between">
@@ -667,7 +935,7 @@ export default function ForgotPassword() {
                       onClick={goBack}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
-                      ← Back
+                      ← {t.backBtn || "Back"}
                     </button>
                     
                     <button
@@ -675,7 +943,7 @@ export default function ForgotPassword() {
                       onClick={cancel}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
-                      Cancel
+                      {t.cancel || "Cancel"}
                     </button>
                   </div>
                 </form>

@@ -6,10 +6,37 @@ const { User } = require("../models/User");
 const Affiliate = require("../models/Affiliate");
 const mongoose = require("mongoose");
 const axios = require("axios");
+const nodemailer = require("nodemailer");
 
 // JWT Secret Keys
 const JWT_SECRET = process.env.JWT_SECRET || "fsdfsdfsd43534";
 const AFFILIATE_JWT_SECRET = process.env.AFFILIATE_JWT_SECRET || "dfsdfsdf535345";
+
+// ==================== EMAIL CONFIGURATION ====================
+// Configure nodemailer transporter
+const emailTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+    }
+});
+
+// Helper function to send email
+async function sendEmail(to, subject, html) {
+    try {
+        await emailTransporter.sendMail({
+            from: `Bir75 <${process.env.EMAIL_USER}>`,
+            to: to,
+            subject: subject,
+            html: html
+        });
+        return true;
+    } catch (error) {
+        console.error("Email sending error:", error);
+        return false;
+    }
+}
 
 // Helper function to get device info
 const getDeviceInfo = (userAgent) => {
@@ -88,7 +115,7 @@ const validatePaymentDetails = (paymentMethod, paymentData) => {
   return { isValid: true };
 };
 
-// ==================== OTP CONFIGURATION (Only for Password Reset) ====================
+// ==================== OTP CONFIGURATION (For SMS Password Reset) ====================
 const OTP_CONFIG = {
     EXPIRY_MINUTES: 5,
     CODE_LENGTH: 6,
@@ -444,178 +471,6 @@ Authrouter.post("/signup", async (req, res) => {
 });
 
 // ==================== DIRECT LOGIN ROUTE (No OTP) ====================
-// Authrouter.post("/login", async (req, res) => {
-//   try {
-//     const { username, password } = req.body;
-//     const ipAddress = req.ip || req.connection.remoteAddress;
-//     const userAgent = req.get('User-Agent') || 'unknown';
-
-//     if (!username || !password) {
-//       return res.status(400).json({ 
-//         success: false,
-//         message: "Username and password are required" 
-//       });
-//     }
-
-//     const user = await User.findOne({ username }).select("+password");
-//     const { deviceType, browser, os } = getDeviceInfo(userAgent);
-
-//     if (!user) {
-//       const loginLog = new LoginLog({
-//         userId: null,
-//         username,
-//         ipAddress,
-//         userAgent,
-//         deviceType,
-//         browser,
-//         os,
-//         status: 'failed',
-//         failureReason: 'user_not_found'
-//       });
-//       await loginLog.save();
-      
-//       return res.status(401).json({ 
-//         success: false,
-//         message: "Invalid username or password" 
-//       });
-//     }
-
-//     if (user.status !== 'active') {
-//       const loginLog = new LoginLog({
-//         userId: user._id,
-//         username,
-//         ipAddress,
-//         userAgent,
-//         deviceType,
-//         browser,
-//         os,
-//         status: 'failed',
-//         failureReason: `account_${user.status}`
-//       });
-//       await loginLog.save();
-      
-//       return res.status(403).json({ 
-//         success: false,
-//         message: `Your account is ${user.status}. Please contact support.` 
-//       });
-//     }
-
-//     const isPasswordValid = await user.verifyPassword(password);
-    
-//     if (!isPasswordValid) {
-//       const loginLog = new LoginLog({
-//         userId: user._id,
-//         username,
-//         ipAddress,
-//         userAgent,
-//         deviceType,
-//         browser,
-//         os,
-//         status: 'failed',
-//         failureReason: 'invalid_password'
-//       });
-//       await loginLog.save();
-      
-//       return res.status(401).json({ 
-//         success: false,
-//         message: "Invalid username or password" 
-//       });
-//     }
-
-//     user.login_count = (user.login_count || 0) + 1;
-//     user.last_login = new Date();
-//     user.first_login = false;
-    
-//     if (!user.loginHistory) {
-//       user.loginHistory = [];
-//     }
-    
-//     user.loginHistory.push({
-//       ipAddress,
-//       device: deviceType,
-//       userAgent,
-//       location: 'Unknown',
-//       timestamp: new Date()
-//     });
-    
-//     if (user.loginHistory.length > 10) {
-//       user.loginHistory = user.loginHistory.slice(-10);
-//     }
-    
-//     await user.save();
-
-//     const loginLog = new LoginLog({
-//       userId: user._id,
-//       username,
-//       ipAddress,
-//       userAgent,
-//       deviceType,
-//       browser,
-//       os,
-//       status: 'success',
-//       failureReason: null
-//     });
-    
-//     await loginLog.save();
-
-//     const token = jwt.sign(
-//       { 
-//         userId: user._id, 
-//         username: user.username,
-//         role: user.role 
-//       },
-//       JWT_SECRET,
-//       { expiresIn: "30d" }
-//     );
-
-//     res.json({
-//       success: true,
-//       message: "Login successful",
-//       token,
-//       user: {
-//         id: user._id,
-//         player_id: user.player_id,
-//         username: user.username,
-//         email: user.email,
-//         phone: user.phone,
-//         currency: user.currency,
-//         balance: user.balance,
-//         bonusBalance: user.bonusBalance,
-//         total_deposit: user.total_deposit,
-//         total_withdraw: user.total_withdraw,
-//         total_bet: user.total_bet,
-//         total_wins: user.total_wins,
-//         referralCode: user.referralCode,
-//         role: user.role,
-//         status: user.status,
-//         first_login: user.first_login,
-//         login_count: user.login_count,
-//         last_login: user.last_login,
-//         isPhoneVerified: user.isPhoneVerified,
-//         isEmailVerified: user.isEmailVerified,
-//         kycStatus: user.kycStatus,
-//         language: user.language,
-//         themePreference: user.themePreference,
-//         avatar: user.avatar,
-//         accountAgeInDays: user.accountAgeInDays,
-//         isNewUser: user.isNewUser,
-//         availableBalance: user.availableBalance,
-//         withdrawableAmount: user.withdrawableAmount,
-//         wageringStatus: user.wageringStatus,
-//         isAffiliateReferred: user.isAffiliateReferred
-//       }
-//     });
-
-//   } catch (error) {
-//     console.error("Login error:", error);
-//     res.status(500).json({ 
-//       success: false,
-//       message: "Internal server error during login" 
-//     });
-//   }
-// });
-
-
 Authrouter.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -801,9 +656,349 @@ Authrouter.post("/login", async (req, res) => {
     });
   }
 });
-// ==================== PASSWORD RESET WITH OTP ====================
 
-// Request OTP for password reset
+// ==================== EMAIL-BASED PASSWORD RESET (NEW) ====================
+
+// Request password reset via email (forgot password)
+Authrouter.post("/forgot-password-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required"
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    // Don't reveal if user exists or not (security)
+    if (!user) {
+      return res.json({
+        success: true,
+        message: "If an account exists with this email, you will receive a password reset link"
+      });
+    }
+
+    // Check if user has email
+    if (!user.email) {
+      return res.json({
+        success: true,
+        message: "If an account exists with this email, you will receive a password reset link"
+      });
+    }
+
+    // Generate reset token and OTP
+    const resetToken = Math.random().toString(36).substr(2, 32);
+    const otp = generateOTP();
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    user.passwordResetOTP = {
+      code: otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      attempts: 0
+    };
+
+    await user.save();
+
+    // Send password reset email
+    const emailSent = await sendEmail(
+      user.email,
+      "Password Reset Request",
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Password Reset Request</h2>
+          <p>Hello ${user.username},</p>
+          <p>We received a request to reset your password. Please use the following OTP code to reset your password:</p>
+          <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p>This OTP will expire in 10 minutes.</p>
+          <p>If you didn't request this, please ignore this email and ensure your account is secure.</p>
+          <p>You can also use this link: ${process.env.FRONTEND_URL}/reset-password?token=${resetToken}</p>
+          <hr>
+          <p style="color: #666; font-size: 12px;">This is an automated message, please do not reply.</p>
+        </div>
+      `
+    );
+
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send password reset email"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Password reset instructions sent to your email",
+      data: {
+        resetToken,
+        expiresIn: 60
+      }
+    });
+  } catch (error) {
+    console.error("Forgot password email error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to process password reset request"
+    });
+  }
+});
+
+// Verify OTP for email password reset
+Authrouter.post("/verify-reset-otp", async (req, res) => {
+  try {
+    const { resetToken, otp } = req.body;
+
+    if (!resetToken || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token and OTP are required"
+      });
+    }
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: resetToken,
+      resetPasswordExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token"
+      });
+    }
+
+    // Check OTP
+    if (!user.passwordResetOTP || !user.passwordResetOTP.code) {
+      return res.status(400).json({
+        success: false,
+        message: "No OTP request found. Please request a new password reset"
+      });
+    }
+
+    if (new Date() > user.passwordResetOTP.expiresAt) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new password reset"
+      });
+    }
+
+    if (user.passwordResetOTP.code !== otp) {
+      user.passwordResetOTP.attempts = (user.passwordResetOTP.attempts || 0) + 1;
+      await user.save();
+      
+      return res.status(400).json({
+        success: false,
+        message: `Invalid OTP. ${3 - (user.passwordResetOTP.attempts || 0)} attempts remaining`
+      });
+    }
+
+    // Mark OTP as verified
+    user.passwordResetOTP.verified = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "OTP verified successfully. You can now reset your password."
+    });
+
+  } catch (error) {
+    console.error("Verify reset OTP error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+});
+
+// Reset password after OTP verification (email-based)
+Authrouter.post("/reset-password-email", async (req, res) => {
+  try {
+    const { resetToken, newPassword, confirmPassword } = req.body;
+
+    if (!resetToken || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token, new password, and confirm password are required"
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match"
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long"
+      });
+    }
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: resetToken,
+      resetPasswordExpires: { $gt: new Date() }
+    }).select("+password");
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token"
+      });
+    }
+
+    // Check if OTP was verified
+    if (!user.passwordResetOTP || !user.passwordResetOTP.verified) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not verified. Please verify OTP first."
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    user.passwordResetOTP = undefined;
+    user.passwordChangedAt = new Date();
+
+    await user.save();
+
+    // Send confirmation email
+    await sendEmail(
+      user.email,
+      "Password Changed Successfully",
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Password Changed Successfully</h2>
+          <p>Hello ${user.username},</p>
+          <p>Your password has been successfully changed.</p>
+          <p>If you did not make this change, please contact our support immediately.</p>
+          <hr>
+          <p style="color: #666; font-size: 12px;">This is an automated message, please do not reply.</p>
+        </div>
+      `
+    );
+
+    res.json({
+      success: true,
+      message: "Password reset successfully. You can now login with your new password."
+    });
+
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reset password"
+    });
+  }
+});
+
+// Resend OTP for email password reset
+Authrouter.post("/resend-reset-otp", async (req, res) => {
+  try {
+    const { resetToken } = req.body;
+
+    if (!resetToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token is required"
+      });
+    }
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: resetToken,
+      resetPasswordExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token"
+      });
+    }
+
+    // Check cooldown
+    const lastAttempt = user.passwordResetOTP?.lastAttemptAt;
+    if (lastAttempt) {
+      const timeSinceLastAttempt = Date.now() - new Date(lastAttempt);
+      if (timeSinceLastAttempt < 30 * 1000) {
+        const secondsLeft = Math.ceil((30 * 1000 - timeSinceLastAttempt) / 1000);
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${secondsLeft} seconds before requesting another code`
+        });
+      }
+    }
+
+    // Generate new OTP
+    const otp = generateOTP();
+
+    user.passwordResetOTP = {
+      code: otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      attempts: 0,
+      lastAttemptAt: new Date(),
+      verified: false
+    };
+
+    await user.save();
+
+    // Send new OTP email
+    const emailSent = await sendEmail(
+      user.email,
+      "Password Reset - New OTP",
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Password Reset - New OTP</h2>
+          <p>Hello ${user.username},</p>
+          <p>Your new password reset OTP code is:</p>
+          <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p>This OTP will expire in 10 minutes.</p>
+          <hr>
+          <p style="color: #666; font-size: 12px;">This is an automated message, please do not reply.</p>
+        </div>
+      `
+    );
+
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP email"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "New OTP sent to your email",
+      data: {
+        expiresIn: 10
+      }
+    });
+
+  } catch (error) {
+    console.error("Resend reset OTP error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+});
+
+// ==================== SMS-BASED PASSWORD RESET (Existing) ====================
+
+// Request OTP for password reset (SMS)
 Authrouter.post("/forgot-password/request-otp", async (req, res) => {
   try {
     const { phone } = req.body;
@@ -893,7 +1088,7 @@ Authrouter.post("/forgot-password/request-otp", async (req, res) => {
   }
 });
 
-// Verify OTP for password reset
+// Verify OTP for password reset (SMS)
 Authrouter.post("/forgot-password/verify-otp", async (req, res) => {
   try {
     const { phone, otp } = req.body;
@@ -994,7 +1189,7 @@ Authrouter.post("/forgot-password/verify-otp", async (req, res) => {
   }
 });
 
-// Reset password after OTP verification
+// Reset password after OTP verification (SMS)
 Authrouter.post("/forgot-password/reset", async (req, res) => {
   try {
     const { resetToken, newPassword, confirmPassword } = req.body;
@@ -1084,7 +1279,7 @@ Authrouter.post("/forgot-password/reset", async (req, res) => {
   }
 });
 
-// Resend OTP for password reset
+// Resend OTP for password reset (SMS)
 Authrouter.post("/forgot-password/resend-otp", async (req, res) => {
   try {
     const { phone } = req.body;

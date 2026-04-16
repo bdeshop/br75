@@ -349,9 +349,7 @@ const ResetTransactionPassword = () => {
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex h-[calc(100vh-56px)]">
           <Sidebar sidebarOpen={sidebarOpen} />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-theme_color"></div>
-          </div>
+         
         </div>
         <Footer />
       </div>
@@ -377,8 +375,8 @@ const ResetTransactionPassword = () => {
       <div className="flex h-[calc(100vh-56px)]">
         <Sidebar sidebarOpen={sidebarOpen} />
 
-        <div className="flex-1 overflow-auto transition-all duration-300">
-          <div className="mx-auto w-full min-h-screen max-w-md px-3 sm:px-4 pt-[60px] sm:pt-[80px] pb-6 sm:pb-8">
+        <div className="flex-1 overflow-auto transition-all duration-300 ">
+          <div className="mx-auto w-full min-h-screen max-w-md px-3 sm:px-4 pt-[60px] sm:pt-[80px] pb-6 sm:pb-8 pb-[100px]">
             <div className="bg-[#161616] border border-gray-800 rounded-lg overflow-hidden">
               
               {/* Header with responsive styling */}
@@ -639,7 +637,6 @@ const ResetTransactionPassword = () => {
               </p>
             </div>
           </div>
-          <Footer />
         </div>
       </div>
     </div>

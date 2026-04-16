@@ -31,7 +31,7 @@ const Deposit = () => {
   // Get translation function from context
   const { t } = useContext(LanguageContext);
 
-  const quickAmounts = [300, 500, 1000, 2000, 5000];
+  const quickAmounts = [50,100,300,500, 1000,25000];
 
   // Fetch deposit methods
   useEffect(() => {

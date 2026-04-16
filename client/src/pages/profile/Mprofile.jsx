@@ -40,9 +40,25 @@ const Mprofile = () => {
     fetchData();
   }, [token, base_url]);
 
+  // Logout function - clears token and redirects to login
   const handleLogout = () => {
     localStorage.removeItem("usertoken");
+    // Remove authorization header
+    delete axios.defaults.headers.common["Authorization"];
     navigate("/login");
+  };
+
+  // Function to show logout confirmation
+  const [redcolorconfired, setRedColorConfired] = useState(false);
+  const confirmLogout = () => {
+    setShowLogoutConfirm(true);
+    setRedColorConfired(true);
+  };
+
+  // Function to cancel logout - restores original background
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
+    setRedColorConfired(false); // Reset the red background state
   };
 
   if (loading) return <div className="bg-[#111111] h-screen" />;
@@ -67,7 +83,7 @@ const Mprofile = () => {
             </p>
             <div className="flex justify-end gap-6">
               <button
-                onClick={() => setShowLogoutConfirm(false)}
+                onClick={cancelLogout}
                 className="text-gray-500 font-semibold text-[14px] uppercase tracking-wide hover:bg-gray-50 px-2 py-1 rounded"
               >
                 {t.cancel || "বাতিল"}
@@ -97,25 +113,25 @@ const Mprofile = () => {
         <div className="max-w-md mx-auto px-4 pt-4">
           
           {/* USER INFO */}
-       <div className="flex items-start justify-start gap-[30px] mb-2">
-  <div className="flex items-center gap-3">
-    <img src={user_img} alt="Profile" className="w-12 h-12 rounded-full object-cover bg-emerald-900/30" />
-    {userData?.fullName && (
-      <div>
-        <p className="text-gray-500 text-[11px] mb-0.5">{t.fullLegalName || "সম্পূর্ণ লিগ্যাল নাম"}</p>
-        <h2 className="text-sm font-medium flex items-center gap-1.5">
-          {userData?.fullName} <FiCopy className="text-gray-500 text-[10px]" />
-        </h2>
-      </div>
-    )}
-  </div>
-  <div className="">
-    <p className="text-gray-500 text-[11px] mb-0.5">{t.username || "ব্যবহারকারীর নাম"}</p>
-    <p className="text-sm font-medium flex items-center justify-end gap-1.5">
-      {userData?.username} <FiCopy className="text-gray-500 text-[10px]" />
-    </p>
-  </div>
-</div>
+          <div className="flex items-start justify-start gap-[30px] mb-2">
+            <div className="flex items-center gap-3">
+              <img src={user_img} alt="Profile" className="w-12 h-12 rounded-full object-cover bg-emerald-900/30" />
+              {userData?.fullName && (
+                <div>
+                  <p className="text-gray-500 text-[11px] mb-0.5">{t.fullLegalName || "সম্পূর্ণ লিগ্যাল নাম"}</p>
+                  <h2 className="text-sm font-medium flex items-center gap-1.5">
+                    {userData?.fullName} <FiCopy className="text-gray-500 text-[10px]" />
+                  </h2>
+                </div>
+              )}
+            </div>
+            <div className="">
+              <p className="text-gray-500 text-[11px] mb-0.5">{t.username || "ব্যবহারকারীর নাম"}</p>
+              <p className="text-sm font-medium flex items-center justify-end gap-1.5">
+                {userData?.username} <FiCopy className="text-gray-500 text-[10px]" />
+              </p>
+            </div>
+          </div>
 
           <p className="text-gray-500 text-[11px] mb-6">
             {t.signupDateLabel || "সাইন আপ এর তারিখ"} : {signupDate}
@@ -172,7 +188,7 @@ const Mprofile = () => {
               onClick={() => navigate("/member/profile/account")}
               bgColor="bg-gradient-to-r from-green-900/20 to-transparent"
             />
-    
+        
             
             <MenuItem 
               icon={<FiShield className="text-yellow_theme" />} 
@@ -220,20 +236,12 @@ const Mprofile = () => {
               bgColor="bg-gradient-to-r from-amber-900/20 to-transparent"
             />
             
-            {/* NEW: Reset Login Password */}
-            {/* <MenuItem 
-              icon={<FiKey className="text-yellow_theme" />} 
-              label={t.resetLoginPassword || " লগইন পাসওয়ার্ড"} 
-              onClick={() => navigate("/member/update-login-password")}
-              bgColor="bg-gradient-to-r from-rose-900/20 to-transparent"
-            /> */}
-            
-            {/* LOGOUT MENU ITEM */}
+            {/* LOGOUT MENU ITEM - Now calls confirmLogout function */}
             <MenuItem 
               icon={<FiLogOut />} 
               label={t.logout || "লগআউট"} 
-              onClick={() => setShowLogoutConfirm(true)}
-              bgColor="bg-gradient-to-r from-gray-900/20 to-transparent"
+              onClick={confirmLogout}
+              bgColor={redcolorconfired ? "bg-red-500" : "bg-gradient-to-r from-gray-900/20 to-transparent"}
             />
           </div>
 

@@ -144,7 +144,7 @@ const Myreferel = () => {
           <Slider/>
 
           {/* Content */}
-          <div className="mx-auto overflow-y-auto w-full max-w-screen-xl px-4 md:px-[50px] py-6">
+          <div className="mx-auto overflow-y-auto w-full max-w-screen-xl px-4 pb-[100px] md:px-[50px] py-6">
             {/* Tabs */}
             <div className="flex space-x-6 mb-6 border-b-[1px] border-gray-600">
               <button
