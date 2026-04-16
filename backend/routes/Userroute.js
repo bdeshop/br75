@@ -7187,5 +7187,484 @@ Userrouter.post("/remove-transaction-password", authenticateToken, async (req, r
         });
     }
 });
+// ==================== TRANSACTION PASSWORD RESET VIA MOBILE OTP ====================
 
+// 8. REQUEST TRANSACTION PASSWORD RESET VIA MOBILE (Send OTP to phone)
+Userrouter.post("/forgot-transaction-password-mobile", async (req, res) => {
+    try {
+        const { phone } = req.body;
+        
+        if (!phone) {
+            return res.status(400).json({
+                success: false,
+                message: "Phone number is required"
+            });
+        }
+        
+        // Format phone number
+        const formattedPhone = formatBangladeshPhone(phone);
+        
+        if (!formattedPhone) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Bangladeshi phone number. Please use a valid 11-digit number starting with 01"
+            });
+        }
+        
+        // Find user by phone number
+        const user = await User.findOne({ phone: formattedPhone }).select("+transactionPassword");
+        
+        // Don't reveal if user exists or not (security)
+        if (!user) {
+            return res.json({
+                success: true,
+                message: "If an account exists with this phone number, you will receive a reset OTP"
+            });
+        }
+        
+        // Check if user has transaction password set
+        if (!user.transactionPassword) {
+            console.log(`User ${user.username} has no transaction password set`);
+            return res.json({
+                success: true,
+                message: "If an account exists with this phone number, you will receive a reset OTP"
+            });
+        }
+        
+        // Check cooldown (prevent spam)
+        if (user.mobileResetOTP && user.mobileResetOTP.lastRequestAt) {
+            const timeSinceLastRequest = (new Date() - new Date(user.mobileResetOTP.lastRequestAt)) / 1000;
+            if (timeSinceLastRequest < OTP_CONFIG.RESEND_COOLDOWN_SECONDS) {
+                const waitSeconds = Math.ceil(OTP_CONFIG.RESEND_COOLDOWN_SECONDS - timeSinceLastRequest);
+                return res.status(429).json({
+                    success: false,
+                    message: `Please wait ${waitSeconds} seconds before requesting a new OTP`
+                });
+            }
+        }
+        
+        // Generate OTP
+        const otpCode = generateOTP();
+        
+        // Store reset info with mobile OTP
+        const resetToken = Math.random().toString(36).substr(2, 32);
+        
+        user.transactionResetToken = resetToken;
+        user.transactionResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        user.mobileResetOTP = {
+            code: otpCode,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+            purpose: "transaction_password_reset_mobile",
+            verified: false,
+            attempts: 0,
+            lastRequestAt: new Date()
+        };
+        
+        await user.save();
+        
+        // Send SMS with OTP
+        const message = `আপনার ট্রানজেকশন পাসওয়ার্ড রিসেট কোড: ${otpCode}\nএই কোডটি ১০ মিনিটের জন্য বৈধ।\n\nYour transaction password reset code is: ${otpCode}. Valid for 10 minutes.`;
+        
+        const smsResult = await sendSMS(formattedPhone, message);
+        
+        // For development/testing
+        if (process.env.NODE_ENV === 'development') {
+            return res.json({
+                success: true,
+                message: 'OTP sent successfully (Development Mode)',
+                data: {
+                    otp: otpCode,
+                    resetToken: resetToken,
+                    expiresAt: user.mobileResetOTP.expiresAt,
+                    phone: formattedPhone
+                }
+            });
+        }
+        
+        if (smsResult.success) {
+            res.json({
+                success: true,
+                message: 'OTP sent successfully. Please check your phone.',
+                data: {
+                    resetToken: resetToken,
+                    expiresAt: user.mobileResetOTP.expiresAt,
+                    phone: formattedPhone
+                }
+            });
+        } else {
+            console.error('SMS sending failed but OTP saved:', smsResult.error);
+            res.json({
+                success: true,
+                message: 'OTP generated but SMS delivery failed. Please try again.',
+                data: {
+                    resetToken: resetToken,
+                    expiresAt: user.mobileResetOTP.expiresAt,
+                    phone: formattedPhone,
+                    devOtp: process.env.NODE_ENV === 'development' ? otpCode : undefined
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error("Forgot transaction password mobile error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to process request"
+        });
+    }
+});
+
+// 9. VERIFY MOBILE OTP FOR TRANSACTION PASSWORD RESET
+Userrouter.post("/verify-transaction-mobile-otp", async (req, res) => {
+    try {
+        const { resetToken, otp } = req.body;
+        
+        if (!resetToken || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Reset token and OTP are required"
+            });
+        }
+        
+        const user = await User.findOne({
+            transactionResetToken: resetToken,
+            transactionResetExpires: { $gt: new Date() }
+        });
+        
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset token"
+            });
+        }
+        
+        if (!user.mobileResetOTP || user.mobileResetOTP.purpose !== "transaction_password_reset_mobile") {
+            return res.status(400).json({
+                success: false,
+                message: "No OTP request found. Please request a new reset"
+            });
+        }
+        
+        if (new Date() > user.mobileResetOTP.expiresAt) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP has expired. Please request a new reset"
+            });
+        }
+        
+        // Track attempts
+        user.mobileResetOTP.attempts = (user.mobileResetOTP.attempts || 0) + 1;
+        
+        if (user.mobileResetOTP.attempts > OTP_CONFIG.MAX_ATTEMPTS) {
+            user.mobileResetOTP = undefined;
+            user.transactionResetToken = undefined;
+            user.transactionResetExpires = undefined;
+            await user.save();
+            
+            return res.status(400).json({
+                success: false,
+                message: "Too many failed attempts. Please request a new reset."
+            });
+        }
+        
+        if (user.mobileResetOTP.code !== otp) {
+            await user.save();
+            
+            const remainingAttempts = Math.max(0, OTP_CONFIG.MAX_ATTEMPTS - user.mobileResetOTP.attempts);
+            return res.status(400).json({
+                success: false,
+                message: `Invalid OTP. ${remainingAttempts} attempts remaining`
+            });
+        }
+        
+        // Mark OTP as verified
+        user.mobileResetOTP.verified = true;
+        await user.save();
+        
+        res.json({
+            success: true,
+            message: "OTP verified successfully. You can now reset your transaction password."
+        });
+        
+    } catch (error) {
+        console.error("Verify transaction mobile OTP error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+// 10. RESET TRANSACTION PASSWORD VIA MOBILE (after OTP verified)
+Userrouter.post("/reset-transaction-password-mobile", async (req, res) => {
+    try {
+        const { resetToken, newPassword, confirmPassword } = req.body;
+        
+        if (!resetToken || !newPassword || !confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Reset token and new password are required"
+            });
+        }
+        
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Passwords do not match"
+            });
+        }
+        
+        if (newPassword.length < 4) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password must be at least 4 characters"
+            });
+        }
+        
+        if (newPassword.length > 20) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password cannot exceed 20 characters"
+            });
+        }
+        
+        const user = await User.findOne({
+            transactionResetToken: resetToken,
+            transactionResetExpires: { $gt: new Date() }
+        }).select("+transactionPassword");
+        
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset token"
+            });
+        }
+        
+        // Check if OTP was verified
+        if (!user.mobileResetOTP || !user.mobileResetOTP.verified || 
+            user.mobileResetOTP.purpose !== "transaction_password_reset_mobile") {
+            return res.status(400).json({
+                success: false,
+                message: "OTP not verified. Please verify OTP first."
+            });
+        }
+        
+        // Update transaction password
+        user.transactionPassword = newPassword;
+        user.transactionResetToken = undefined;
+        user.transactionResetExpires = undefined;
+        user.mobileResetOTP = undefined;
+        await user.save();
+        
+        // Add to transaction history
+        user.transactionHistory = user.transactionHistory || [];
+        user.transactionHistory.push({
+            type: "security",
+            amount: 0,
+            balanceBefore: user.balance,
+            balanceAfter: user.balance,
+            description: "Transaction password reset via mobile",
+            referenceId: `TXPRESET-MOBILE-${Date.now()}`,
+            createdAt: new Date()
+        });
+        await user.save();
+        
+        // Send confirmation SMS
+        const confirmationMessage = `আপনার ট্রানজেকশন পাসওয়ার্ড সফলভাবে রিসেট করা হয়েছে।\n\nYour transaction password has been successfully reset.`;
+        await sendSMS(user.phone, confirmationMessage).catch(err => 
+            console.error('Failed to send confirmation SMS:', err)
+        );
+        
+        // Send confirmation email if available
+        if (user.email && user.isEmailVerified) {
+            await sendEmail(
+                user.email,
+                "Transaction Password Reset Successful",
+                `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2>Transaction Password Reset Successful</h2>
+                        <p>Hello ${user.username},</p>
+                        <p>Your transaction password has been successfully reset via mobile number verification.</p>
+                        <p>If you did not make this change, please contact our support immediately.</p>
+                        <hr>
+                        <p style="color: #666; font-size: 12px;">This is an automated message, please do not reply.</p>
+                    </div>
+                `
+            );
+        }
+        
+        res.json({
+            success: true,
+            message: "Transaction password reset successfully"
+        });
+        
+    } catch (error) {
+        console.error("Reset transaction password mobile error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to reset transaction password"
+        });
+    }
+});
+
+// 11. RESEND MOBILE OTP FOR TRANSACTION PASSWORD RESET
+Userrouter.post("/resend-transaction-mobile-otp", async (req, res) => {
+    try {
+        const { resetToken } = req.body;
+        
+        if (!resetToken) {
+            return res.status(400).json({
+                success: false,
+                message: "Reset token is required"
+            });
+        }
+        
+        const user = await User.findOne({
+            transactionResetToken: resetToken,
+            transactionResetExpires: { $gt: new Date() }
+        });
+        
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset token"
+            });
+        }
+        
+        if (!user.phone) {
+            return res.status(400).json({
+                success: false,
+                message: "No phone number associated with this account"
+            });
+        }
+        
+        // Check cooldown
+        if (user.mobileResetOTP && user.mobileResetOTP.lastRequestAt) {
+            const timeSinceLastRequest = (new Date() - new Date(user.mobileResetOTP.lastRequestAt)) / 1000;
+            if (timeSinceLastRequest < OTP_CONFIG.RESEND_COOLDOWN_SECONDS) {
+                const waitSeconds = Math.ceil(OTP_CONFIG.RESEND_COOLDOWN_SECONDS - timeSinceLastRequest);
+                return res.status(429).json({
+                    success: false,
+                    message: `Please wait ${waitSeconds} seconds before requesting a new OTP`
+                });
+            }
+        }
+        
+        // Generate new OTP
+        const otpCode = generateOTP();
+        
+        // Update OTP
+        user.mobileResetOTP = {
+            code: otpCode,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+            purpose: "transaction_password_reset_mobile",
+            verified: false,
+            attempts: 0,
+            lastRequestAt: new Date()
+        };
+        
+        await user.save();
+        
+        // Send SMS
+        const message = `আপনার নতুন ট্রানজেকশন পাসওয়ার্ড রিসেট কোড: ${otpCode}\nএই কোডটি ১০ মিনিটের জন্য বৈধ।\n\nYour new transaction password reset code is: ${otpCode}. Valid for 10 minutes.`;
+        
+        const smsResult = await sendSMS(user.phone, message);
+        
+        if (process.env.NODE_ENV === 'development') {
+            return res.json({
+                success: true,
+                message: 'OTP resent successfully (Development Mode)',
+                data: {
+                    otp: otpCode,
+                    resetToken: resetToken,
+                    expiresAt: user.mobileResetOTP.expiresAt,
+                    phone: user.phone
+                }
+            });
+        }
+        
+        if (smsResult.success) {
+            res.json({
+                success: true,
+                message: 'OTP resent successfully. Please check your phone.',
+                data: {
+                    resetToken: resetToken,
+                    expiresAt: user.mobileResetOTP.expiresAt,
+                    phone: user.phone
+                }
+            });
+        } else {
+            res.json({
+                success: true,
+                message: 'OTP regenerated but SMS delivery failed. Please try again.',
+                data: {
+                    resetToken: resetToken,
+                    expiresAt: user.mobileResetOTP.expiresAt,
+                    phone: user.phone
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error("Resend transaction mobile OTP error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to resend OTP"
+        });
+    }
+});
+
+// 12. GET TRANSACTION PASSWORD RESET STATUS (Mobile)
+Userrouter.get("/transaction-reset-status-mobile", async (req, res) => {
+    try {
+        const { resetToken } = req.query;
+        
+        if (!resetToken) {
+            return res.status(400).json({
+                success: false,
+                message: "Reset token is required"
+            });
+        }
+        
+        const user = await User.findOne({
+            transactionResetToken: resetToken,
+            transactionResetExpires: { $gt: new Date() }
+        });
+        
+        if (!user) {
+            return res.json({
+                success: false,
+                message: "Invalid or expired reset token",
+                isValid: false
+            });
+        }
+        
+        const isOtpVerified = user.mobileResetOTP?.verified === true;
+        const isOtpExpired = user.mobileResetOTP && new Date() > new Date(user.mobileResetOTP.expiresAt);
+        
+        res.json({
+            success: true,
+            data: {
+                isValid: true,
+                username: user.username,
+                phone: user.phone ? user.phone.slice(-4) : null, // Only show last 4 digits
+                otpStatus: {
+                    isVerified: isOtpVerified,
+                    isExpired: isOtpExpired,
+                    expiresAt: user.mobileResetOTP?.expiresAt,
+                    attemptsUsed: user.mobileResetOTP?.attempts || 0,
+                    maxAttempts: OTP_CONFIG.MAX_ATTEMPTS
+                },
+                canReset: isOtpVerified && !isOtpExpired
+            }
+        });
+        
+    } catch (error) {
+        console.error("Get transaction reset status error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
 module.exports = Userrouter;

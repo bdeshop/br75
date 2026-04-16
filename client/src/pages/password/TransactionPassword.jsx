@@ -1,26 +1,104 @@
-// TransactionPassword.js
-import React, { useState, useContext, useRef, useEffect } from "react";
+// TransactionPassword.tsx
+import React, { useState, useContext, useEffect } from "react";
 import Sidebar from "../../components/sidebar/Sidebar";
 import { Header } from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
 import { 
   FiCheck, 
-  FiX, 
   FiEye, 
   FiEyeOff, 
   FiMail, 
   FiLock,
   FiKey,
   FiSave,
-  FiInfo
+  FiInfo,
+  FiShield,
+  FiArrowLeft,
+  FiAlertTriangle,
+  FiUserPlus,
+  FiRefreshCw
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { LanguageContext } from "../../context/LanguageContext";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { IoIosArrowBack } from "react-icons/io";
 import { FiAlertCircle } from "react-icons/fi";
+
+// Mode Selection Card Component
+const ModeCard = ({ icon: Icon, title, description, buttonText, onClick, isActive, isExisting }) => (
+  <div 
+    className={`relative overflow-hidden rounded-xl transition-all duration-300 cursor-pointer
+      ${isActive 
+        ? 'bg-gradient-to-br from-[#F9BC20]/20 to-[#F9BC20]/5 border border-[#F9BC20]' 
+        : 'bg-[#1E1E2E]/50 border border-gray-700/50 hover:border-gray-600'
+      }`}
+    onClick={onClick}
+  >
+    <div className="p-4 sm:p-5">
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center mb-3 transition-all duration-300
+        ${isActive ? 'bg-[#F9BC20]/20' : 'bg-[#F9BC20]/10'}`}>
+        <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isActive ? 'text-[#F9BC20]' : 'text-[#F9BC20]/70'}`} />
+      </div>
+      <h3 className="text-sm sm:text-base font-semibold text-white mb-1">{title}</h3>
+      <p className="text-xs text-gray-400 mb-3">{description}</p>
+      {isExisting && (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 rounded-full mb-2">
+          <FiCheck className="w-2.5 h-2.5 text-green-400" />
+          <span className="text-[9px] sm:text-xs text-green-400">Password Set</span>
+        </div>
+      )}
+      <button
+        className={`w-full py-2 rounded-lg font-semibold transition-all duration-300 text-xs sm:text-sm
+          ${isActive 
+            ? 'bg-[#F9BC20] text-gray-900 hover:shadow-lg hover:shadow-[#F9BC20]/25' 
+            : 'bg-gray-700/50 text-white hover:bg-gray-700'
+          }`}
+      >
+        {buttonText}
+      </button>
+    </div>
+  </div>
+);
+
+// No Email Screen
+const NoEmailScreen = ({ onNavigate }) => (
+  <div className="bg-[#13131F]/80 backdrop-blur-sm border border-gray-800/50 rounded-xl overflow-hidden">
+    <div className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-[#F9BC20]/10 to-transparent"></div>
+      <div className="relative px-4 py-3 sm:px-5 sm:py-4">
+        <h2 className="text-base sm:text-lg font-semibold text-white">
+          Transaction Password
+        </h2>
+        <p className="text-xs text-gray-400 mt-0.5">
+          Secure your account with transaction password
+        </p>
+      </div>
+    </div>
+    
+    <div className="p-5 sm:p-6 text-center">
+      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
+        <FiMail className="w-8 h-8 text-amber-500" />
+      </div>
+      
+      <h3 className="text-base font-semibold text-white mb-1.5">
+        Email Address Required
+      </h3>
+      
+      <p className="text-xs text-gray-400 mb-5 max-w-xs mx-auto">
+        You need to add an email address to your account before setting up a transaction password. This is required for security verification.
+      </p>
+      
+      <button
+        onClick={() => onNavigate('/member/profile/info')}
+        className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F9BC20] to-[#F9BC20]/80 text-gray-900 px-4 py-2 rounded-lg font-semibold hover:shadow-lg hover:shadow-[#F9BC20]/25 transition-all duration-300 text-xs sm:text-sm"
+      >
+        <FiUserPlus size={14} />
+        Add Email Now
+      </button>
+    </div>
+  </div>
+);
 
 const TransactionPassword = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,17 +106,16 @@ const TransactionPassword = () => {
   const [loading, setLoading] = useState(true);
   const [isTransactionPasswordSet, setIsTransactionPasswordSet] = useState(false);
   
-  // Mode: 'set' for first time, 'update' for updating existing
   const [mode, setMode] = useState(null);
   
-  // Set Password Form States
+  // Set Password Form
   const [setNewPassword, setSetNewPassword] = useState("");
   const [setConfirmPassword, setSetConfirmPassword] = useState("");
   const [showSetNewPassword, setShowSetNewPassword] = useState(false);
   const [showSetConfirmPassword, setShowSetConfirmPassword] = useState(false);
   const [isSetLoading, setIsSetLoading] = useState(false);
   
-  // Update Password Form States
+  // Update Password Form
   const [updateCurrentPassword, setUpdateCurrentPassword] = useState("");
   const [updateNewPassword, setUpdateNewPassword] = useState("");
   const [updateConfirmPassword, setUpdateConfirmPassword] = useState("");
@@ -51,7 +128,6 @@ const TransactionPassword = () => {
   const { language, t } = useContext(LanguageContext);
   const navigate = useNavigate();
 
-  // Check user data and transaction password status
   useEffect(() => {
     checkUserStatus();
   }, []);
@@ -66,13 +142,11 @@ const TransactionPassword = () => {
     try {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
-      // Get user information
       const userResponse = await axios.get(`${API_BASE_URL}/api/user/my-information`);
       if (userResponse.data.success) {
         setUserData(userResponse.data.data);
       }
       
-      // Check transaction password status
       const statusResponse = await axios.get(`${API_BASE_URL}/api/user/transaction-password-status`);
       if (statusResponse.data.success) {
         setIsTransactionPasswordSet(statusResponse.data.data.isSet);
@@ -88,14 +162,12 @@ const TransactionPassword = () => {
     }
   };
 
-  // Start Set flow (first time)
   const handleStartSet = () => {
     setMode('set');
     setSetNewPassword("");
     setSetConfirmPassword("");
   };
 
-  // Start Update flow (existing password - requires current password)
   const handleStartUpdate = () => {
     setMode('update');
     setUpdateCurrentPassword("");
@@ -103,19 +175,15 @@ const TransactionPassword = () => {
     setUpdateConfirmPassword("");
   };
 
-  // Go back to mode selection
   const handleBackToMode = () => {
     setMode(null);
-    // Reset set form
     setSetNewPassword("");
     setSetConfirmPassword("");
-    // Reset update form
     setUpdateCurrentPassword("");
     setUpdateNewPassword("");
     setUpdateConfirmPassword("");
   };
 
-  // Set Transaction Password (first time setup - uses /set-transaction-password endpoint)
   const handleSetPassword = async (e) => {
     e.preventDefault();
     
@@ -141,13 +209,10 @@ const TransactionPassword = () => {
 
     setIsSetLoading(true);
     try {
-      // Using separate SET endpoint - no current password needed
       const response = await axios.post(`${API_BASE_URL}/api/user/set-transaction-password`, {
         transactionPassword: setNewPassword,
         confirmTransactionPassword: setConfirmPassword
       });
-      
-      console.log("Set password response:", response.data);
       
       if (response.data.success) {
         toast.success("Transaction password set successfully!");
@@ -168,7 +233,6 @@ const TransactionPassword = () => {
     }
   };
 
-  // Update Transaction Password (needs current password - uses /update-transaction-password endpoint)
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     
@@ -199,14 +263,11 @@ const TransactionPassword = () => {
 
     setIsUpdateLoading(true);
     try {
-      // Using separate UPDATE endpoint - requires current password
       const response = await axios.post(`${API_BASE_URL}/api/user/update-transaction-password`, {
         currentPassword: updateCurrentPassword,
         newPassword: updateNewPassword,
         confirmNewPassword: updateConfirmPassword
       });
-      
-      console.log("Update password response:", response.data);
       
       if (response.data.success) {
         toast.success("Transaction password updated successfully!");
@@ -226,147 +287,107 @@ const TransactionPassword = () => {
     }
   };
 
-  // Render No Email Screen with responsive styling
-  const renderNoEmailScreen = () => (
-    <div className="bg-[#161616] border border-gray-800 rounded-lg overflow-hidden">
-      <div className="bg-[#F9BC20] px-4 py-3 sm:px-6 sm:py-4">
-        <button 
-          onClick={() => navigate('/profile')}
-          className="text-gray-800 hover:text-gray-900 flex items-center gap-2 mb-2 text-sm sm:text-base"
-        >
-          <IoIosArrowBack size={16} className="sm:w-4 sm:h-4" /> Back to Profile
-        </button>
-        <h2 className="text-base sm:text-xl font-semibold text-gray-900">
-          Transaction Password
-        </h2>
+  const renderModeSelection = () => (
+    <div className="bg-[#13131F]/80 backdrop-blur-sm border border-gray-800/50 rounded-xl overflow-hidden shadow-xl">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#F9BC20]/10 to-transparent"></div>
+        <div className="relative px-4 py-3 sm:px-5 sm:py-4">
+          <button 
+            onClick={() => navigate('/profile')}
+            className="text-gray-400 hover:text-white flex items-center gap-1.5 mb-2 text-xs transition-colors group"
+          >
+            <FiArrowLeft size={11} className="group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Profile</span>
+          </button>
+          <h2 className="text-base sm:text-lg font-bold text-white">
+            Transaction Password
+          </h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {isTransactionPasswordSet 
+              ? "Update your transaction password for enhanced security"
+              : "Set up transaction password to secure your withdrawals"}
+          </p>
+        </div>
       </div>
       
-      <div className="p-6 sm:p-8 text-center">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
-          <FiMail className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-500" />
+      <div className="p-4 sm:p-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <ModeCard
+            icon={FiKey}
+            title="Set Transaction Password"
+            description="Create a new transaction password for withdrawals and sensitive operations."
+            buttonText={isTransactionPasswordSet ? "Reset Password" : "Set New Password"}
+            onClick={handleStartSet}
+            isActive={mode === 'set'}
+            isExisting={isTransactionPasswordSet}
+          />
+          
+          {isTransactionPasswordSet && (
+            <ModeCard
+              icon={FiRefreshCw}
+              title="Update Password"
+              description="Change your existing transaction password to a new one."
+              buttonText="Update Password"
+              onClick={handleStartUpdate}
+              isActive={mode === 'update'}
+              isExisting={false}
+            />
+          )}
         </div>
         
-        <h3 className="text-base sm:text-lg font-semibold text-white mb-2">
-          Email Address Required
-        </h3>
-        
-        <p className="text-xs sm:text-sm text-gray-400 mb-6 max-w-sm mx-auto">
-          You need to add an email address to your account before setting up a transaction password. This is required for security verification.
-        </p>
-        
-        <button
-          onClick={() => navigate('/member/profile/info')}
-          className="bg-theme_color text-gray-900 px-5 py-2.5 sm:px-6 sm:py-3 rounded-lg font-semibold hover:bg-theme_color/80 transition-colors flex items-center gap-2 mx-auto text-sm sm:text-base"
-        >
-          <FiMail size={16} className="sm:w-4 sm:h-4" /> Add Email Now
-        </button>
-      </div>
-    </div>
-  );
-
-  // Render Mode Selection with responsive styling
-  const renderModeSelection = () => (
-    <div className="bg-[#161616] border border-gray-800 rounded-lg overflow-hidden">
-      <div className="bg-[#F9BC20] px-4 py-3 sm:px-6 sm:py-4">
-        <h2 className="text-base sm:text-xl font-semibold text-gray-900">
-          Transaction Password
-        </h2>
-        <p className="text-xs sm:text-sm text-gray-700 mt-0.5 sm:mt-1">
-          {isTransactionPasswordSet 
-            ? "Update your transaction password"
-            : "Set up transaction password for secure withdrawals"}
-        </p>
-      </div>
-      
-      <div className="p-4 sm:p-6">
-        {!isTransactionPasswordSet ? (
-          // First time setup
-          <div className="text-center">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 rounded-full bg-theme_color/20 flex items-center justify-center">
-              <FiLock className="w-7 h-7 sm:w-8 sm:h-8 text-theme_color" />
-            </div>
-            
-            <h3 className="text-base sm:text-lg font-semibold text-white mb-2">
-              No Transaction Password Set
-            </h3>
-            
-            <p className="text-xs sm:text-sm text-gray-400 mb-6">
-              Setting up a transaction password adds an extra layer of security for withdrawals and other sensitive operations.
-            </p>
-            
-            <button
-              onClick={handleStartSet}
-              className="bg-theme_color text-gray-900 px-5 py-2.5 sm:px-6 sm:py-3 rounded-lg font-semibold hover:bg-theme_color/80 transition-colors flex items-center gap-2 mx-auto text-sm sm:text-base"
-            >
-              <FiKey size={16} className="sm:w-4 sm:h-4" /> Set Transaction Password
-            </button>
+        <div className="mt-4 p-3 bg-[#1E1E2E]/50 rounded-lg border border-gray-800/50">
+          <div className="flex items-center gap-1.5 text-[#F9BC20] mb-1.5">
+            <FiShield size={12} />
+            <span className="text-xs font-medium">Security Guidelines</span>
           </div>
-        ) : (
-          // Has password - options
-          <div className="space-y-3 sm:space-y-4">
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
-              <div className="flex items-center gap-2 text-green-400 mb-1 sm:mb-2">
-                <FiCheck size={14} className="sm:w-4 sm:h-4" />
-                <span className="text-xs sm:text-sm font-medium">Password Set</span>
-              </div>
-            </div>
-            
-            <button
-              onClick={handleStartUpdate}
-              className="w-full bg-theme_color text-gray-900 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-theme_color/80 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
-            >
-              <FiSave size={16} className="sm:w-4 sm:h-4" /> Update Transaction Password
-            </button>
-          </div>
-        )}
-        
-        {/* Info Box */}
-        <div className="mt-5 sm:mt-6 p-3 sm:p-4 bg-[#1a1c1d] rounded-lg border border-gray-700">
-          <div className="flex items-center gap-1.5 sm:gap-2 text-theme_color mb-1.5 sm:mb-2">
-            <FiInfo size={14} className="sm:w-4 sm:h-4" />
-            <span className="text-xs sm:text-sm font-medium">About Transaction Password</span>
-          </div>
-          <ul className="text-[10px] sm:text-xs text-gray-400 space-y-0.5 sm:space-y-1 list-disc list-inside">
+          <ul className="text-[10px] text-gray-400 space-y-1 list-disc list-inside">
             <li>Used for withdrawals and sensitive account operations</li>
-            <li>Must be 4-20 characters (numbers or letters)</li>
-            <li>Cannot reuse recent passwords</li>
-            <li>Keep it secure and don't share with anyone</li>
+            <li>Must be 4-20 characters (numbers or letters only)</li>
+            <li>Cannot reuse recent passwords for security</li>
+            <li>Keep it confidential and never share with anyone</li>
           </ul>
         </div>
       </div>
     </div>
   );
 
-  // Render Set Password Form (First Time Setup)
   const renderSetPasswordForm = () => (
-    <div className="bg-[#161616] border border-gray-800 rounded-lg overflow-hidden">
-      <div className="bg-[#F9BC20] px-4 py-3 sm:px-6 sm:py-4">
-        <button 
-          onClick={handleBackToMode}
-          className="text-gray-800 hover:text-gray-900 flex items-center gap-2 mb-2 text-sm sm:text-base"
-        >
-          <IoIosArrowBack size={16} className="sm:w-4 sm:h-4" /> Back
-        </button>
-        <h2 className="text-base sm:text-xl font-semibold text-gray-900">
-          Set Transaction Password
-        </h2>
-        <p className="text-xs sm:text-sm text-gray-700 mt-0.5 sm:mt-1">
-          Create your transaction password
-        </p>
+    <div className="bg-[#13131F]/80 backdrop-blur-sm border border-gray-800/50 rounded-xl overflow-hidden shadow-xl">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#F9BC20]/10 to-transparent"></div>
+        <div className="relative px-4 py-3 sm:px-5 sm:py-4">
+          <button 
+            onClick={handleBackToMode}
+            className="text-gray-400 hover:text-white flex items-center gap-1.5 mb-2 text-xs transition-colors group"
+          >
+            <FiArrowLeft size={11} className="group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back</span>
+          </button>
+          <h2 className="text-base sm:text-lg font-bold text-white">
+            Set Transaction Password
+          </h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Create a secure password for your transactions
+          </p>
+        </div>
       </div>
       
-      <div className="p-4 sm:p-6">
-        <form onSubmit={handleSetPassword}>
-          <div className="mb-3 sm:mb-4">
-            <label className="block text-xs sm:text-sm text-gray-400 mb-1.5 sm:mb-2">
+      <div className="p-4 sm:p-5">
+        <form onSubmit={handleSetPassword} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-300 mb-1.5">
               New Transaction Password
             </label>
-            <div className="relative">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiLock className="text-gray-500 group-focus-within:text-[#F9BC20] transition-colors" size={14} />
+              </div>
               <input
                 type={showSetNewPassword ? "text" : "password"}
                 value={setNewPassword}
                 onChange={(e) => setSetNewPassword(e.target.value)}
-                className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:border-theme_color"
+                className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
+                  focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
                 placeholder="Enter new transaction password"
                 required
                 minLength={4}
@@ -376,26 +397,30 @@ const TransactionPassword = () => {
               <button
                 type="button"
                 onClick={() => setShowSetNewPassword(!showSetNewPassword)}
-                className="absolute right-2 sm:right-3 top-2 sm:top-3 text-gray-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
               >
-                {showSetNewPassword ? <FiEyeOff size={18} className="sm:w-4 sm:h-4" /> : <FiEye size={18} className="sm:w-4 sm:h-4" />}
+                {showSetNewPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
               </button>
             </div>
-            <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
-              4-20 characters, numbers or letters
+            <p className="text-[10px] text-gray-500 mt-1">
+              4-20 characters, numbers or letters only
             </p>
           </div>
 
-          <div className="mb-5 sm:mb-6">
-            <label className="block text-xs sm:text-sm text-gray-400 mb-1.5 sm:mb-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-300 mb-1.5">
               Confirm Transaction Password
             </label>
-            <div className="relative">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiLock className="text-gray-500 group-focus-within:text-[#F9BC20] transition-colors" size={14} />
+              </div>
               <input
                 type={showSetConfirmPassword ? "text" : "password"}
                 value={setConfirmPassword}
                 onChange={(e) => setSetConfirmPassword(e.target.value)}
-                className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:border-theme_color"
+                className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
+                  focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
                 placeholder="Confirm your password"
                 required
                 disabled={isSetLoading}
@@ -403,54 +428,57 @@ const TransactionPassword = () => {
               <button
                 type="button"
                 onClick={() => setShowSetConfirmPassword(!showSetConfirmPassword)}
-                className="absolute right-2 sm:right-3 top-2 sm:top-3 text-gray-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
               >
-                {showSetConfirmPassword ? <FiEyeOff size={18} className="sm:w-4 sm:h-4" /> : <FiEye size={18} className="sm:w-4 sm:h-4" />}
+                {showSetConfirmPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
               </button>
             </div>
           </div>
 
-          {/* Password Match Indicator */}
           {setNewPassword && setConfirmPassword && (
-            <div className="mb-3 sm:mb-4 text-xs sm:text-sm">
+            <div className={`flex items-center gap-1.5 text-xs ${setNewPassword === setConfirmPassword ? 'text-green-400' : 'text-red-400'}`}>
               {setNewPassword === setConfirmPassword ? (
-                <div className="flex items-center gap-1.5 sm:gap-2 text-green-400">
-                  <FiCheck size={14} className="sm:w-4 sm:h-4" /> Passwords match
-                </div>
+                <>
+                  <FiCheck size={12} />
+                  <span>Passwords match</span>
+                </>
               ) : (
-                <div className="flex items-center gap-1.5 sm:gap-2 text-red-400">
-                  <FiAlertCircle size={14} className="sm:w-4 sm:h-4" /> Passwords do not match
-                </div>
+                <>
+                  <FiAlertCircle size={12} />
+                  <span>Passwords do not match</span>
+                </>
               )}
             </div>
           )}
 
-          <div className="flex gap-2 sm:gap-3">
+          <div className="flex gap-2 pt-1">
             <button
               type="button"
               onClick={handleBackToMode}
               disabled={isSetLoading}
-              className="flex-1 bg-gray-600 text-white py-2.5 sm:py-3 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
+              className="flex-1 bg-gray-700/50 text-white py-2 rounded-lg hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSetLoading || !setNewPassword || !setConfirmPassword || setNewPassword !== setConfirmPassword}
-              className="flex-1 bg-theme_color text-gray-900 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-theme_color/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
+              className="flex-1 bg-gradient-to-r from-[#F9BC20] to-[#F9BC20]/80 text-gray-900 py-2 rounded-lg font-semibold 
+                hover:shadow-lg hover:shadow-[#F9BC20]/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed
+                flex items-center justify-center gap-1.5 text-xs sm:text-sm"
             >
               {isSetLoading ? (
                 <>
-                  <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  <span className="text-sm sm:text-base">Setting...</span>
+                  <span>Setting...</span>
                 </>
               ) : (
                 <>
-                  <FiSave size={16} className="sm:w-4 sm:h-4" />
-                  <span className="text-sm sm:text-base">Set Password</span>
+                  <FiSave size={13} />
+                  <span>Set Password</span>
                 </>
               )}
             </button>
@@ -460,36 +488,43 @@ const TransactionPassword = () => {
     </div>
   );
 
-  // Render Update Password Form (Requires Current Password)
   const renderUpdatePasswordForm = () => (
-    <div className="bg-[#161616] border border-gray-800 rounded-lg overflow-hidden">
-      <div className="bg-[#F9BC20] px-4 py-3 sm:px-6 sm:py-4">
-        <button 
-          onClick={handleBackToMode}
-          className="text-gray-800 hover:text-gray-900 flex items-center gap-2 mb-2 text-sm sm:text-base"
-        >
-          <IoIosArrowBack size={16} className="sm:w-4 sm:h-4" /> Back
-        </button>
-        <h2 className="text-base sm:text-xl font-semibold text-gray-900">
-          Update Transaction Password
-        </h2>
-        <p className="text-xs sm:text-sm text-gray-700 mt-0.5 sm:mt-1">
-          Enter current and new transaction password
-        </p>
+    <div className="bg-[#13131F]/80 backdrop-blur-sm border border-gray-800/50 rounded-xl overflow-hidden shadow-xl">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#F9BC20]/10 to-transparent"></div>
+        <div className="relative px-4 py-3 sm:px-5 sm:py-4">
+          <button 
+            onClick={handleBackToMode}
+            className="text-gray-400 hover:text-white flex items-center gap-1.5 mb-2 text-xs transition-colors group"
+          >
+            <FiArrowLeft size={11} className="group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back</span>
+          </button>
+          <h2 className="text-base sm:text-lg font-bold text-white">
+            Update Transaction Password
+          </h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Enter your current password and create a new one
+          </p>
+        </div>
       </div>
       
-      <div className="p-4 sm:p-6">
-        <form onSubmit={handleUpdatePassword}>
-          <div className="mb-3 sm:mb-4">
-            <label className="block text-xs sm:text-sm text-gray-400 mb-1.5 sm:mb-2">
+      <div className="p-4 sm:p-5">
+        <form onSubmit={handleUpdatePassword} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-300 mb-1.5">
               Current Transaction Password
             </label>
-            <div className="relative">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiLock className="text-gray-500 group-focus-within:text-[#F9BC20] transition-colors" size={14} />
+              </div>
               <input
                 type={showUpdateCurrentPassword ? "text" : "password"}
                 value={updateCurrentPassword}
                 onChange={(e) => setUpdateCurrentPassword(e.target.value)}
-                className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:border-theme_color"
+                className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
+                  focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
                 placeholder="Enter current password"
                 required
                 disabled={isUpdateLoading}
@@ -497,23 +532,27 @@ const TransactionPassword = () => {
               <button
                 type="button"
                 onClick={() => setShowUpdateCurrentPassword(!showUpdateCurrentPassword)}
-                className="absolute right-2 sm:right-3 top-2 sm:top-3 text-gray-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
               >
-                {showUpdateCurrentPassword ? <FiEyeOff size={18} className="sm:w-4 sm:h-4" /> : <FiEye size={18} className="sm:w-4 sm:h-4" />}
+                {showUpdateCurrentPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
               </button>
             </div>
           </div>
 
-          <div className="mb-3 sm:mb-4">
-            <label className="block text-xs sm:text-sm text-gray-400 mb-1.5 sm:mb-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-300 mb-1.5">
               New Transaction Password
             </label>
-            <div className="relative">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiKey className="text-gray-500 group-focus-within:text-[#F9BC20] transition-colors" size={14} />
+              </div>
               <input
                 type={showUpdateNewPassword ? "text" : "password"}
                 value={updateNewPassword}
                 onChange={(e) => setUpdateNewPassword(e.target.value)}
-                className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:border-theme_color"
+                className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
+                  focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
                 placeholder="Enter new transaction password"
                 required
                 minLength={4}
@@ -523,81 +562,88 @@ const TransactionPassword = () => {
               <button
                 type="button"
                 onClick={() => setShowUpdateNewPassword(!showUpdateNewPassword)}
-                className="absolute right-2 sm:right-3 top-2 sm:top-3 text-gray-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
               >
-                {showUpdateNewPassword ? <FiEyeOff size={18} className="sm:w-4 sm:h-4" /> : <FiEye size={18} className="sm:w-4 sm:h-4" />}
+                {showUpdateNewPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
               </button>
             </div>
-            <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
-              4-20 characters, numbers or letters
+            <p className="text-[10px] text-gray-500 mt-1">
+              4-20 characters, numbers or letters only
             </p>
           </div>
 
-          <div className="mb-5 sm:mb-6">
-            <label className="block text-xs sm:text-sm text-gray-400 mb-1.5 sm:mb-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-300 mb-1.5">
               Confirm Transaction Password
             </label>
-            <div className="relative">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiLock className="text-gray-500 group-focus-within:text-[#F9BC20] transition-colors" size={14} />
+              </div>
               <input
                 type={showUpdateConfirmPassword ? "text" : "password"}
                 value={updateConfirmPassword}
                 onChange={(e) => setUpdateConfirmPassword(e.target.value)}
-                className="w-full bg-[#222] border border-gray-700 rounded px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:border-theme_color"
-                placeholder="Confirm your password"
+                className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
+                  focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
+                placeholder="Confirm your new password"
                 required
                 disabled={isUpdateLoading}
               />
               <button
                 type="button"
                 onClick={() => setShowUpdateConfirmPassword(!showUpdateConfirmPassword)}
-                className="absolute right-2 sm:right-3 top-2 sm:top-3 text-gray-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
               >
-                {showUpdateConfirmPassword ? <FiEyeOff size={18} className="sm:w-4 sm:h-4" /> : <FiEye size={18} className="sm:w-4 sm:h-4" />}
+                {showUpdateConfirmPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
               </button>
             </div>
           </div>
 
-          {/* Password Match Indicator */}
           {updateNewPassword && updateConfirmPassword && (
-            <div className="mb-3 sm:mb-4 text-xs sm:text-sm">
+            <div className={`flex items-center gap-1.5 text-xs ${updateNewPassword === updateConfirmPassword ? 'text-green-400' : 'text-red-400'}`}>
               {updateNewPassword === updateConfirmPassword ? (
-                <div className="flex items-center gap-1.5 sm:gap-2 text-green-400">
-                  <FiCheck size={14} className="sm:w-4 sm:h-4" /> Passwords match
-                </div>
+                <>
+                  <FiCheck size={12} />
+                  <span>Passwords match</span>
+                </>
               ) : (
-                <div className="flex items-center gap-1.5 sm:gap-2 text-red-400">
-                  <FiAlertCircle size={14} className="sm:w-4 sm:h-4" /> Passwords do not match
-                </div>
+                <>
+                  <FiAlertCircle size={12} />
+                  <span>Passwords do not match</span>
+                </>
               )}
             </div>
           )}
 
-          <div className="flex gap-2 sm:gap-3">
+          <div className="flex gap-2 pt-1">
             <button
               type="button"
               onClick={handleBackToMode}
               disabled={isUpdateLoading}
-              className="flex-1 bg-gray-600 text-white py-2.5 sm:py-3 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
+              className="flex-1 bg-gray-700/50 text-white py-2 rounded-lg hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isUpdateLoading || !updateCurrentPassword || !updateNewPassword || !updateConfirmPassword || updateNewPassword !== updateConfirmPassword}
-              className="flex-1 bg-theme_color text-gray-900 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-theme_color/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
+              className="flex-1 bg-gradient-to-r from-[#F9BC20] to-[#F9BC20]/80 text-gray-900 py-2 rounded-lg font-semibold 
+                hover:shadow-lg hover:shadow-[#F9BC20]/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed
+                flex items-center justify-center gap-1.5 text-xs sm:text-sm"
             >
               {isUpdateLoading ? (
                 <>
-                  <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  <span className="text-sm sm:text-base">Updating...</span>
+                  <span>Updating...</span>
                 </>
               ) : (
                 <>
-                  <FiSave size={16} className="sm:w-4 sm:h-4" />
-                  <span className="text-sm sm:text-base">Update Password</span>
+                  <FiSave size={13} />
+                  <span>Update Password</span>
                 </>
               )}
             </button>
@@ -609,22 +655,23 @@ const TransactionPassword = () => {
 
   if (loading) {
     return (
-      <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
+      <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#0F0F1A] via-[#1A1A2E] to-[#16213E] text-white">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex h-[calc(100vh-56px)]">
           <Sidebar sidebarOpen={sidebarOpen} />
-     
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#F9BC20]"></div>
+          </div>
         </div>
         <Footer />
       </div>
     );
   }
 
-  // Check if user has email
   const hasEmail = userData?.email && userData.email.trim() !== "";
 
   return (
-    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
+    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#0F0F1A] via-[#1A1A2E] to-[#16213E] text-white">
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -642,13 +689,11 @@ const TransactionPassword = () => {
       <div className="flex h-[calc(100vh-56px)]">
         <Sidebar sidebarOpen={sidebarOpen} />
 
-        <div className="flex-1 overflow-auto transition-all duration-300">
-          <div className="mx-auto w-full min-h-screen max-w-md px-3 sm:px-4 pt-[60px] sm:pt-[80px] pb-6 sm:pb-8">
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-md sm:max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto px-3 sm:px-4 pt-14 sm:pt-16 pb-6">
             
-            {/* No Email Screen */}
-            {!hasEmail && renderNoEmailScreen()}
+            {!hasEmail && <NoEmailScreen onNavigate={navigate} />}
             
-            {/* Has Email - Show appropriate content */}
             {hasEmail && (
               <>
                 {mode === null && renderModeSelection()}

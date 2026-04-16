@@ -131,35 +131,62 @@ function generateOTP(length = OTP_CONFIG.CODE_LENGTH) {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Helper function to format phone number for Bangladesh
-function formatBangladeshPhone(phone) {
+// Helper function to format phone number for API (without any special characters)
+function formatPhoneForAPI(phone) {
     if (!phone) return null;
     
+    // Remove all non-digit characters
     let cleaned = phone.replace(/\D/g, '');
     
+    // If empty after cleaning, return null
+    if (!cleaned) return null;
+    
+    // If the number starts with 0, remove it (e.g., 01612258208 -> 1612258208)
     if (cleaned.startsWith('0')) {
         cleaned = cleaned.substring(1);
     }
     
-    if (cleaned.startsWith('880')) {
-        cleaned = cleaned.substring(2);
+    // If the number starts with 1, it's a Bangladeshi mobile number without country code
+    // Add 880 as country code (not 88)
+    if (cleaned.startsWith('1')) {
+        cleaned = `880${cleaned}`;
     }
     
-    if (cleaned.length === 10 && cleaned.startsWith('1')) {
-        return `+880${cleaned}`;
+    // If the number starts with 88, add another 8 to make it 880
+    if (cleaned.startsWith('88') && !cleaned.startsWith('880')) {
+        cleaned = `8${cleaned}`;
     }
     
-    return null;
+    // Final validation: should be 12 digits (880 + 10 digits) for Bangladesh
+    // or 13 digits (880 + 10 digits + extra)
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+        cleaned = `880${cleaned}`;
+    }
+    
+    console.log(`Formatted phone for API: ${cleaned}`);
+    return cleaned;
 }
 
 // Helper function to send SMS via Xend API
 async function sendSMS(phoneNumber, message) {
     try {
-        let apiPhone = phoneNumber.replace(/\D/g, '');
-        if (apiPhone.startsWith('880')) {
-            apiPhone = apiPhone;
-        } else if (apiPhone.startsWith('1')) {
-            apiPhone = '880' + apiPhone;
+        // Format phone number properly for API
+        let apiPhone = formatPhoneForAPI(phoneNumber);
+        
+        if (!apiPhone) {
+            console.error('Invalid phone number for SMS:', phoneNumber);
+            return { success: false, error: 'Invalid phone number format' };
+        }
+        
+        // Ensure we have a 12-digit number (880 + 10 digits)
+        if (apiPhone.length !== 12 && apiPhone.length !== 13) {
+            console.error(`Phone number length issue: ${apiPhone} (length: ${apiPhone.length})`);
+            // Try to fix by ensuring 880 prefix
+            let cleaned = phoneNumber.replace(/\D/g, '');
+            if (cleaned.startsWith('0')) cleaned = cleaned.substring(1);
+            if (!cleaned.startsWith('880')) {
+                apiPhone = `880${cleaned}`;
+            }
         }
         
         const url = `${OTP_CONFIG.API_BASE_URL}/sms/send`;
@@ -171,29 +198,33 @@ async function sendSMS(phoneNumber, message) {
         };
 
         console.log(`Sending SMS to ${apiPhone}: ${message.substring(0, 20)}...`);
+        console.log('Request body:', JSON.stringify(requestBody));
 
         const response = await axios.post(url, requestBody, {
             headers: {
                 'Authorization': `Bearer ${OTP_CONFIG.TOKEN}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            timeout: 30000 // 30 second timeout
         });
+        
+        console.log('SMS API Response:', response.data);
         
         if (response.data && response.data.status === 'success') {
             return { success: true, data: response.data };
         } else {
             console.error('SMS sending failed:', response.data);
-            return { success: false, error: 'SMS sending failed' };
+            return { success: false, error: response.data?.message || 'SMS sending failed' };
         }
     } catch (error) {
         console.error('Error sending SMS:', error.response?.data || error.message);
+        console.error('Full error:', error);
         return { 
             success: false, 
             error: error.response?.data?.message || error.message 
         };
     }
 }
-
 // ==================== DIRECT SIGNUP ROUTE (No OTP) ====================
 Authrouter.post("/signup", async (req, res) => {
   try {
@@ -657,7 +688,7 @@ Authrouter.post("/login", async (req, res) => {
   }
 });
 
-// ==================== EMAIL-BASED PASSWORD RESET (NEW) ====================
+// ==================== EMAIL-BASED PASSWORD RESET ====================
 
 // Request password reset via email (forgot password)
 Authrouter.post("/forgot-password-email", async (req, res) => {
@@ -996,13 +1027,15 @@ Authrouter.post("/resend-reset-otp", async (req, res) => {
   }
 });
 
-// ==================== SMS-BASED PASSWORD RESET (Existing) ====================
+// ==================== SMS-BASED PASSWORD RESET (Fixed) ====================
 
 // Request OTP for password reset (SMS)
 Authrouter.post("/forgot-password/request-otp", async (req, res) => {
   try {
     const { phone } = req.body;
-
+    
+    console.log("Phone received:", phone);
+    
     if (!phone) {
       return res.status(400).json({
         success: false,
@@ -1010,16 +1043,15 @@ Authrouter.post("/forgot-password/request-otp", async (req, res) => {
       });
     }
 
-    const formattedPhone = formatBangladeshPhone(phone);
-    
-    if (!formattedPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Bangladeshi phone number. Please use a valid 11-digit number starting with 01"
-      });
+    // Format phone for database lookup (with 0 prefix)
+    let dbPhone = phone;
+    if (!dbPhone.startsWith('0')) {
+      dbPhone = `0${dbPhone}`;
     }
-
-    const user = await User.findOne({ phone: formattedPhone });
+    
+    console.log("Looking for user with phone:", dbPhone);
+    
+    const user = await User.findOne({ phone: dbPhone });
     
     if (!user) {
       return res.json({
@@ -1044,7 +1076,8 @@ Authrouter.post("/forgot-password/request-otp", async (req, res) => {
 
     const message = `আপনার পাসওয়ার্ড রিসেট কোড: ${otpCode}\nএই কোডটি ${OTP_CONFIG.EXPIRY_MINUTES} মিনিটের জন্য বৈধ।\n\nYour password reset code is: ${otpCode}. Valid for ${OTP_CONFIG.EXPIRY_MINUTES} minutes.`;
 
-    const smsResult = await sendSMS(formattedPhone, message);
+    // Use the original phone number (without 0 prefix) for SMS
+    const smsResult = await sendSMS(phone, message);
 
     if (process.env.NODE_ENV === 'development') {
       return res.json({
@@ -1053,7 +1086,7 @@ Authrouter.post("/forgot-password/request-otp", async (req, res) => {
         data: {
           otp: otpCode,
           expiresAt: expiresAt,
-          phone: formattedPhone
+          phone: phone
         }
       });
     }
@@ -1064,7 +1097,7 @@ Authrouter.post("/forgot-password/request-otp", async (req, res) => {
         message: 'OTP sent successfully. Please check your phone.',
         data: {
           expiresAt: expiresAt,
-          phone: formattedPhone
+          phone: phone
         }
       });
     } else {
@@ -1074,7 +1107,7 @@ Authrouter.post("/forgot-password/request-otp", async (req, res) => {
         message: 'OTP generated but SMS delivery failed. Please try again or contact support.',
         data: {
           expiresAt: expiresAt,
-          phone: formattedPhone
+          phone: phone
         }
       });
     }
@@ -1100,16 +1133,13 @@ Authrouter.post("/forgot-password/verify-otp", async (req, res) => {
       });
     }
 
-    const formattedPhone = formatBangladeshPhone(phone);
-    
-    if (!formattedPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Bangladeshi phone number"
-      });
+    // Format phone for database lookup
+    let dbPhone = phone;
+    if (!dbPhone.startsWith('0')) {
+      dbPhone = `0${dbPhone}`;
     }
 
-    const user = await User.findOne({ phone: formattedPhone });
+    const user = await User.findOne({ phone: dbPhone });
 
     if (!user) {
       return res.status(404).json({
@@ -1176,7 +1206,7 @@ Authrouter.post("/forgot-password/verify-otp", async (req, res) => {
       message: 'OTP verified successfully',
       data: {
         resetToken,
-        phone: formattedPhone
+        phone: user.phone
       }
     });
 
@@ -1260,8 +1290,14 @@ Authrouter.post("/forgot-password/reset", async (req, res) => {
     
     await user.save();
 
+    // Get phone number without 0 prefix for SMS
+    let smsPhone = user.phone;
+    if (smsPhone.startsWith('0')) {
+      smsPhone = smsPhone.substring(1);
+    }
+    
     const message = `আপনার পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে।\n\nYour password has been changed successfully.`;
-    await sendSMS(user.phone, message).catch(err => 
+    await sendSMS(smsPhone, message).catch(err => 
       console.error('Failed to send password change SMS:', err)
     );
 
@@ -1291,16 +1327,13 @@ Authrouter.post("/forgot-password/resend-otp", async (req, res) => {
       });
     }
 
-    const formattedPhone = formatBangladeshPhone(phone);
-    
-    if (!formattedPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Bangladeshi phone number"
-      });
+    // Format phone for database lookup
+    let dbPhone = phone;
+    if (!dbPhone.startsWith('0')) {
+      dbPhone = `0${dbPhone}`;
     }
 
-    const user = await User.findOne({ phone: formattedPhone });
+    const user = await User.findOne({ phone: dbPhone });
 
     if (!user) {
       return res.json({
@@ -1336,7 +1369,7 @@ Authrouter.post("/forgot-password/resend-otp", async (req, res) => {
 
     const message = `আপনার নতুন পাসওয়ার্ড রিসেট কোড: ${otpCode}\nএই কোডটি ${OTP_CONFIG.EXPIRY_MINUTES} মিনিটের জন্য বৈধ।\n\nYour new password reset code is: ${otpCode}. Valid for ${OTP_CONFIG.EXPIRY_MINUTES} minutes.`;
     
-    const smsResult = await sendSMS(formattedPhone, message);
+    const smsResult = await sendSMS(phone, message);
 
     if (process.env.NODE_ENV === 'development') {
       return res.json({
@@ -1345,7 +1378,7 @@ Authrouter.post("/forgot-password/resend-otp", async (req, res) => {
         data: {
           otp: otpCode,
           expiresAt: expiresAt,
-          phone: formattedPhone
+          phone: phone
         }
       });
     }
@@ -1356,7 +1389,7 @@ Authrouter.post("/forgot-password/resend-otp", async (req, res) => {
         message: 'OTP resent successfully. Please check your phone.',
         data: {
           expiresAt: expiresAt,
-          phone: formattedPhone
+          phone: phone
         }
       });
     } else {
@@ -1365,7 +1398,7 @@ Authrouter.post("/forgot-password/resend-otp", async (req, res) => {
         message: 'OTP regenerated but SMS delivery failed. Please try again.',
         data: {
           expiresAt: expiresAt,
-          phone: formattedPhone
+          phone: phone
         }
       });
     }

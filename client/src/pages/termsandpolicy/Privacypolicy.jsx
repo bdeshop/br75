@@ -62,7 +62,7 @@ const Privacypolicy = () => {
       {/* Top Logo Bar */}
       <div className="bg-[#041512] border-b border-white/5 sticky top-0 z-50">
         <NavLink to="/" className="max-w-7xl mx-auto p-4 flex items-center">
-          <img className="w-[100px] md:w-[120px] object-contain" src={logo} alt="BajiMan Logo" />
+          <img className="w-[100px] md:w-[120px] object-contain" src={logo} alt="Bir75 Logo" />
         </NavLink>
       </div>
 
@@ -72,91 +72,147 @@ const Privacypolicy = () => {
             
             {/* Page Header */}
             <div className="text-center mb-6">
-              <h1 className="text-lg font-normal text-yellow-500">Privacy Policy</h1>
+              <h1 className="text-lg font-normal text-yellow-500">🔐 Privacy Policy – Bir75</h1>
             </div>
 
-            {/* Content Body */}
+            {/* Content Body - New Text */}
             <div className="space-y-6 text-[13px] text-gray-200 leading-snug font-normal">
-              <section className="space-y-4">
-                <p>Your privacy is important to us, and we are committed to protecting your personal information. We will be clear and open about why we collect your personal information and how we use it. Where you have choices or rights, we will explain these to you.</p>
-                <p>This Privacy Policy explains how BajiMan uses your personal information when you are using one of our website.</p>
-                <p>If you do not agree with any statements contained within this Privacy Policy, please do not proceed any further on our website. Please be aware that registering an account on our website, placing bets and transferring funds will be deemed confirmation of your full agreement with our Terms and Conditions and our Privacy Policy. You have the right to cease using the website at any time; however, we may still be legally required to retain some of your personal information.</p>
-                <p>We may periodically make changes to this Privacy Policy and will notify you of these changes by posting the modified terms on our platforms. We recommend that you revisit this Privacy Policy regularly.</p>
+              <p><strong>Last Updated: 2026</strong></p>
+              <p>Your privacy is important to us. At Bir75, we are committed to protecting your personal information and being transparent about how we collect, use, and safeguard your data.</p>
+              <p>This Privacy Policy explains how Bir75 uses your personal information when you access and use our website and services.</p>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">⚠️ Acceptance of Policy</h2>
+                <p>By registering an account, using our services, or accessing the Bir75 platform, you agree to this Privacy Policy and our Terms & Conditions.</p>
+                <p>If you do not agree, please discontinue using our website. You may stop using our services at any time; however, we may still be required to retain certain data for legal or regulatory reasons.</p>
               </section>
 
               <section className="space-y-2">
-                <h2 className="text-[14px] font-bold">Who is in control of your information?</h2>
-                <p>Throughout this Privacy Policy, BajiMan together with our subsidiaries and affiliates (collectively, "we" or "us" or "our") control the ways your Personal Data is collected and the purposes for which your Personal Data is used by BajiMan, acting as the "data controller" for the purposes of applicable European data protection legislation.</p>
+                <h2 className="text-[14px] font-bold">🏢 Data Controller</h2>
+                <p>Bir75 (referred to as "We", "Us", or "Our") is responsible for collecting and processing your personal data.</p>
               </section>
 
               <section className="space-y-2">
-                <h2 className="text-[14px] font-bold">Our Data Protection Officer</h2>
-                <p>If you have concerns or would like any further information about how BajiMan handles your personal information, you can contact our Data Protection Officer at support.bd@baji.live.</p>
+                <h2 className="text-[14px] font-bold">📩 Contact Information</h2>
+                <p>If you have any questions or concerns regarding your data:</p>
+                <p>📧 Email: <a href="mailto:support@bir75.com" className="text-yellow-500 hover:underline">support@bir75.com</a></p>
               </section>
 
               <section className="space-y-3">
-                <h2 className="text-[14px] font-bold">Information we collect about you</h2>
-                <h3 className="text-[13px] font-bold">Personally identifiable information</h3>
-                <p>You provide this information to us in the process of setting up an account, placing bets and using the services of the website. This information is required to give you access to certain parts of our website and related services. This data is collected when you:</p>
+                <h2 className="text-[14px] font-bold">📊 Information We Collect</h2>
+                <h3 className="text-[13px] font-bold">🔹 Personal Information</h3>
+                <p>We collect information you provide when you:</p>
                 <ul className="list-disc ml-8 space-y-1">
-                  <li>Register an account with BajiMan;</li>
-                  <li>Voluntarily provide it when using the website;</li>
-                  <li>Personally disclose the information in public areas of the website; and</li>
-                  <li>Provide it when you contact our customer support team</li>
+                  <li>Register an account</li>
+                  <li>Use our services</li>
+                  <li>Contact customer support</li>
                 </ul>
-                <p>The information includes your:</p>
+                <p>This may include:</p>
                 <ul className="list-disc ml-8 space-y-1">
-                  <li>Username;</li>
-                  <li>First and surname;</li>
-                  <li>Email address;</li>
-                  <li>Residential address;</li>
-                  <li>Phone number;</li>
-                  <li>Billing address;</li>
-                  <li>Identification documents;</li>
-                  <li>Proof of address documents;</li>
-                  <li>Transaction history;</li>
-                  <li>Website usage preferences;</li>
-                  <li>Any other information you provide us when using our platforms; and</li>
-                  <li>Credit/debit card details, or other payment information</li>
+                  <li>Username</li>
+                  <li>Full name</li>
+                  <li>Email address</li>
+                  <li>Phone number</li>
+                  <li>Residential address</li>
+                  <li>Payment details (if applicable)</li>
+                  <li>Identification documents (KYC)</li>
+                  <li>Transaction history</li>
+                  <li>Any other information you provide</li>
                 </ul>
-                <p>The information is also required for billing purposes and for the protection of minors. You can amend and update this information by contacting Customer Support. This data is for internal use only and is never passed to any third parties except those stated below.</p>
-              </section>
-
-              <section className="space-y-2">
-                <h2 className="text-[14px] font-bold">Telephone Calls</h2>
-                <p>Telephone calls to and from our Customer Contact Centre are recorded for training and security purposes along with the resolution of any queries arising from the service you received.</p>
-              </section>
-
-              <section className="space-y-2">
-                <h2 className="text-[14px] font-bold">Social Features of Our Products</h2>
-                <p>If you choose to participate in any of the social features that we provide with our products (such as chat rooms), BajiMan may store record or otherwise process this data.</p>
-              </section>
-
-              <section className="space-y-2">
-                <h2 className="text-[14px] font-bold">Non-personally identifiable information and traffic analysis</h2>
-                <p>BajiMan strives to make our website as user friendly as possible and easy to find on the Internet. BajiMan collects data on how you use the site, which does not identify you personally. When you interact with the services, our servers keep an activity log unique to you that collects certain administrative and traffic information including: source IP address, time of access, date of access, web page(s) visited, language use, software crash reports and type of browser used. This information is essential for the provision and quality of our services.</p>
-              </section>
-
-              <section className="space-y-2">
-                <h2 className="text-[14px] font-bold">Cookies</h2>
-                <p>BajiMan uses cookies to ensure our website works efficiently and to enhance your visits to our platforms. Further information can be found in our Cookie Policy.</p>
-              </section>
-
-              <section className="space-y-3">
-                <h2 className="text-[14px] font-bold">How and why we use your personal information</h2>
-                <p>We use your personal information in a range of ways that fall into the following categories:</p>
+                <h3 className="text-[13px] font-bold">🔹 Non-Personal Information</h3>
+                <p>We also collect technical data such as:</p>
                 <ul className="list-disc ml-8 space-y-1">
-                  <li>To provide you with the products or services you have requested;</li>
-                  <li>To meet our legal or regulatory obligations;</li>
-                  <li>To monitor our website performance; and</li>
-                  <li>To provide you with marketing information</li>
+                  <li>IP address</li>
+                  <li>Device and browser type</li>
+                  <li>Access time and date</li>
+                  <li>Website activity and usage</li>
                 </ul>
-                <p>Your rights over your personal information differ according to which category and lawful basis this fall into. This section provides more information about each category, the rights it gives you, and how to exercise these rights. These rights are in bold following each category.</p>
+                <p>👉 This helps us improve performance and user experience.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">☎️ Communication & Monitoring</h2>
+                <p>Customer support interactions (including emails or chats) may be recorded or stored for:</p>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>Security</li>
+                  <li>Training</li>
+                  <li>Service improvement</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">💬 Social Features</h2>
+                <p>If you use features like chat or community tools, we may store and process that data to maintain a safe environment.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">🍪 Cookies</h2>
+                <p>Bir75 uses cookies to:</p>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>Improve website functionality</li>
+                  <li>Enhance user experience</li>
+                </ul>
+                <p>You can manage cookie preferences through your browser settings.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">⚙️ How We Use Your Information</h2>
+                <p>We use your data to:</p>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>Provide and manage your account</li>
+                  <li>Process transactions</li>
+                  <li>Deliver customer support</li>
+                  <li>Improve website performance</li>
+                  <li>Comply with legal and regulatory requirements</li>
+                  <li>Send important updates or promotional offers</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">🔐 Data Protection</h2>
+                <p>We implement strict security measures to protect your personal information from unauthorized access, misuse, or disclosure.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">📤 Data Sharing</h2>
+                <p>Your personal data is never sold. We may share information only when necessary with:</p>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>Payment providers</li>
+                  <li>Legal authorities (if required)</li>
+                  <li>Service partners (for platform operation)</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">📅 Data Retention</h2>
+                <p>We retain your data only as long as necessary for:</p>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>Legal obligations</li>
+                  <li>Security purposes</li>
+                  <li>Service operation</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">👤 Your Rights</h2>
+                <p>You have the right to:</p>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>Access your personal data</li>
+                  <li>Request correction or updates</li>
+                  <li>Request deletion (where applicable)</li>
+                  <li>Restrict or object to processing</li>
+                </ul>
+                <p>To exercise your rights, contact our support team.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">🔄 Policy Updates</h2>
+                <p>Bir75 may update this Privacy Policy from time to time. Any changes will be posted on this page, and we recommend reviewing it regularly.</p>
               </section>
 
               <section className="space-y-2 pb-10">
-                <h2 className="text-[14px] font-bold">Providing our products and services</h2>
-                <p>We use your personal information to enable you to use our websites, to set up your account, participate in the online sports book, casino and to provide you with customer service assistance.</p>
+                <h2 className="text-[14px] font-bold">🎯 Final Note</h2>
+                <p>Your trust is important to us. We are committed to ensuring your data is handled securely and responsibly at all times.</p>
               </section>
             </div>
           </div>
@@ -164,7 +220,7 @@ const Privacypolicy = () => {
           <footer className="bg-black text-gray-400 py-10 px-6 md:px-16 border-t border-gray-900 mt-auto">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-8">
               <div className="flex flex-col items-start min-w-[150px]">
-                <img src={logo} alt="BajiMan" className="w-20 mb-2" />
+                <img src={logo} alt="Bir75" className="w-20 mb-2" />
                 <p className="text-[10px] text-gray-500">©Copyright 2026</p>
               </div>
 

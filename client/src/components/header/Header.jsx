@@ -625,7 +625,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     { id: "betting-records", label: t.bettingRecords, icon: <MdSportsSoccer />, path: "/member/betting-records/settled" },
     { id: "turnover", label: t.turnover, icon: <FiTrendingUp />, path: "/member/turnover/uncomplete" },
     { id: "referral", label: t.myReferral, icon: <FiUsers />, path: "/referral-program/details" },
-    { id: "bonuses", label: t.bonuses || "Bonuses", icon: <FaGift />, path: "/member/bonuses" },
+    { id: "bonuses", label: t.bonuses_text || "Bonuses", icon: <FaGift />, path: "/member/bonuses" },
   ];
 
   const bottomMenuItems = [

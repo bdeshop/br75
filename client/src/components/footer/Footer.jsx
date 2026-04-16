@@ -230,21 +230,28 @@ const Footer = () => {
               <li><a href="/promotions" className="hover:text-white transition-colors duration-200">{t.footerPromotions}</a></li>
               <li><NavLink to="/vip-club" className="hover:text-white transition-colors duration-200">{t.footerVipClub}</NavLink></li>
               <li><NavLink to="/referral-program" className="hover:text-white transition-colors duration-200">{t.footerReferral}</NavLink></li>
-              <li><NavLink to="/coming-soon?title=Brand Ambassadors" className="hover:text-white transition-colors duration-200">{t.footerBrandAmbassadors}</NavLink></li>
             </ul>
           </div>
-
-          {/* Column 4: Help */}
-          <div>
-            <h3 className="font-medium mb-4 text-white">{t.footerHelp}</h3>
-            <ul className="space-y-2">
-              <li>
-                <NavLink to="/coming-soon?title=BJ Forum" className="hover:text-white transition-colors duration-200 flex justify-start items-center gap-[2px]">
-                  {t.footerBjForum} <span className="inline-block text-gray-500 text-xs ml-[2px] text-[20px]"><IoOpenOutline /></span>
-                </NavLink>
-              </li>
-            </ul>
-          </div>
+{/* Column 4: Help */}
+<div>
+  <h3 className="font-medium mb-4 text-white">{t.footerHelp}</h3>
+  <ul className="space-y-2">
+    <li>
+      <a 
+        href="#" 
+        onClick={(e) => {
+          e.preventDefault();
+          // Add your live chat initialization logic here
+          // For example: window.LiveChatWidget?.call('maximize');
+          alert('Live chat will open here');
+        }}
+        className="hover:text-white transition-colors duration-200 flex justify-start items-center gap-[2px]"
+      >
+        Live Chat <span className="inline-block text-gray-500 text-xs ml-[2px] text-[20px]"><IoOpenOutline /></span>
+      </a>
+    </li>
+  </ul>
+</div>
         </div>
 
         <div className="h-[1px] bg-gray-700 my-4 md:my-8"></div>

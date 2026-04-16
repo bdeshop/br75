@@ -62,7 +62,7 @@ const Responsiblegaming = () => {
       {/* Top Logo Bar */}
       <div className="bg-[#041512] border-b border-white/5 sticky top-0 z-50">
         <NavLink to="/" className="max-w-7xl mx-auto p-4 flex items-center">
-          <img className="w-[100px] md:w-[120px] object-contain" src={logo} alt="BajiMan Logo" />
+          <img className="w-[100px] md:w-[120px] object-contain" src={logo} alt="Bir75 Logo" />
         </NavLink>
       </div>
 
@@ -78,78 +78,98 @@ const Responsiblegaming = () => {
             {/* Content Body */}
             <div className="space-y-6 text-[13px] text-gray-200 leading-snug font-normal">
               
-              <section className="space-y-4">
-                <p className="font-bold">Gambling With Responsibility</p>
-                <p className="text-[11px] text-gray-400">Last updated: 18 September 2023</p>
-                <p className="italic">Please read this information carefully for your own benefit.</p>
-                <p>https://www.bajiman.com is operated by Aurora Holdings N.V., having its office at Abraham de Veerstraat 9, Curacao. Company Registration number 157258.</p>
-              </section>
-
+              {/* Title Section */}
               <section className="space-y-2">
-                <h2 className="text-[14px] font-bold">Interpretation</h2>
-                <p>The words of which the initial letter is capitalized have meanings defined under the following conditions.</p>
-                <p>The following definitions shall have the same meaning regardless of whether they appear in singular or in plural.</p>
+                <p className="font-bold text-base">🎯 Gambling with Responsibility – Bir75</p>
+                <p className="text-[11px] text-gray-400">Last Updated: 2026</p>
+                <p>Please read this information carefully for your own benefit.</p>
+                <p>Bir75 is committed to promoting responsible gaming. While gambling is a source of entertainment and enjoyment for most users, we recognize that it may cause negative effects for some individuals. We aim to provide tools, guidance, and support to help users stay in control of their gaming behavior.</p>
               </section>
 
+              {/* Definitions */}
               <section className="space-y-3">
-                <h2 className="text-[14px] font-bold">Definitions</h2>
-                <p>For the purposes of these Terms and Conditions:</p>
+                <h2 className="text-[14px] font-bold">📘 Definitions</h2>
                 <ul className="list-disc ml-8 space-y-1">
-                  <li><span className="font-bold">Account</span> means a unique account created for You to access our Service or parts of our Service.</li>
-                  <li><span className="font-bold">Company</span> (referred to as either "the Company", "We", "Us" or "Our" in this Agreement) refers to Aurora Holdings N.V.</li>
-                  <li><span className="font-bold">Service</span> refers to the Website.</li>
-                  <li><span className="font-bold">Website</span> refers to https://www.bajiman.com.</li>
-                  <li><span className="font-bold">You</span> mean the individual accessing or using the Service, or the company, or other legal entity on behalf of which such individual is accessing or using the Service, as applicable.</li>
+                  <li><span className="font-bold">Account</span> means a unique account created to access Bir75 services.</li>
+                  <li><span className="font-bold">Company</span> (referred to as "Bir75", "We", "Us", or "Our") refers to the platform operator.</li>
+                  <li><span className="font-bold">Service</span> refers to the Bir75 website and related services.</li>
+                  <li><span className="font-bold">Website</span> refers to the official Bir75 platform.</li>
+                  <li><span className="font-bold">User</span> (You) means any individual accessing or using our services.</li>
                 </ul>
               </section>
 
+              {/* Responsible Gambling & Self-Control */}
               <section className="space-y-2">
-                <h2 className="text-[14px] font-bold">Responsible Gambling and Self Exclusion</h2>
-                <p>Gambling means for the majority of our Users, entertainment, fun and excitement. But we also know that for some of our Users gambling has negative side effects. In the medical science is pathologic gambling since many years as serious sickness recognised.</p>
-                <p>Since our first day we have thought about this problem and try our best to help. Under "Responsible Gambling" We understand multiple steps of measures, with which a gambling provider can help to lower the possibility of negative side effects appearing. -In case they already appear we also try to take active steps against them.</p>
-                <p>The most important instrument against negative side effects from gambling is knowledge and education about the risks of gambling to support our Users self-control in order to make sure they do not suffer from negative side effects.</p>
+                <h2 className="text-[14px] font-bold">⚠️ Responsible Gambling & Self-Control</h2>
+                <p>Gambling should always be considered as a form of entertainment, not a way to earn money. While most users enjoy gaming responsibly, some may experience difficulties.</p>
+                <p>Bir75 supports responsible gaming through:</p>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>Awareness and education</li>
+                  <li>Self-control tools</li>
+                  <li>Account restriction options</li>
+                </ul>
+                <p>If you feel your gaming behavior is becoming harmful, we strongly encourage you to take immediate action.</p>
               </section>
 
-              <section className="space-y-3">
-                <h2 className="text-[14px] font-bold">Information and contact</h2>
-                <p>Our customer support team will help you via email at all time without any additional costs for you:</p>
-                <ul className="list-disc ml-8">
-                  <li>email: support.bd@baji.live.</li>
-                </ul>
-                <p>Our customer support team will of course not give out any information about You without Your consent to anyone else</p>
-                <p>In addition you also can take a self-test, if You are already gambling addicted at: https://www.begambleaware.org/gambling-problems/do-i-have-a-gambling-problem/</p>
-                <p>And you can also find additional information about gambling addictions at: https://www.begambleaware.org/safer-gambling/</p>
+              {/* Support & Assistance */}
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">📩 Support & Assistance</h2>
+                <p>📧 Email: <a href="mailto:support@bir75.com" className="text-yellow-500 hover:underline">support@bir75.com</a></p>
+                <p>We respect your privacy and will never share your personal information without your consent, unless required by law.</p>
+                <p>Self-assessment test:<br />
+                  👉 <a href="https://www.begambleaware.org/gambling-problems/do-i-have-a-gambling-problem/" target="_blank" rel="noopener noreferrer" className="text-yellow-500 hover:underline break-all">https://www.begambleaware.org/gambling-problems/do-i-have-a-gambling-problem/</a>
+                </p>
+                <p>More info:<br />
+                  👉 <a href="https://www.begambleaware.org/safer-gambling/" target="_blank" rel="noopener noreferrer" className="text-yellow-500 hover:underline break-all">https://www.begambleaware.org/safer-gambling/</a>
+                </p>
               </section>
 
-              <section className="space-y-3">
-                <h2 className="text-[14px] font-bold">Helpful hints for responsible gambling at https://www.bajiman.com</h2>
-                <p>We recommend you think about the following hints, before gambling in order to insure gambling stays fun for You and without any negative side effects:</p>
-                <ul className="list-disc ml-8 space-y-3">
-                  <li>
-                    <span className="font-bold underline">Set yourself a deposit limit</span>
-                    <p>Before you start to gambling, think about how much you can afford to gamble according to Your financial situation. Play with amounts which are for fun and for Your entertainment</p>
-                  </li>
-                  <li>
-                    <span className="font-bold underline">Do not try to win back a loss at every cost</span>
-                    <p>Try to not take huge risks to win back what You lost before at any cost. Play for Entertainment and not to earn money.</p>
-                  </li>
-                  <li>
-                    <span className="font-bold underline">Set yourself a time limit</span>
-                    <p>Set yourself a time limit and do not break it. Keep in mind gambling should stay in balance with your other hobbies and not be Your only hobby.</p>
-                  </li>
-                  <li>
-                    <span className="font-bold underline">Play smart</span>
-                    <p>It is smarter to not play when You are extremely stressed, depressed or under too much pressure. Also do not play when you are under the influence of Medications, Drugs or Alcohol.</p>
-                  </li>
-                  <li>
-                    <span className="font-bold underline">Take breaks</span>
-                    <p>You should take breaks when You notice, that You get tired or can't concentrate anymore</p>
-                  </li>
-                  <li>
-                    <span className="font-bold underline">Only one account</span>
-                    <p>To make it easier to have an overview of how much time and money You spend on gambling it is highly advised to not create more than one Account per Person.</p>
-                  </li>
+              {/* Responsible Gambling Guidelines */}
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">💡 Responsible Gambling Guidelines</h2>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>✔️ Set a budget and deposit limits</li>
+                  <li>❌ Do not chase losses</li>
+                  <li>⏱️ Set time limits</li>
+                  <li>🧠 Avoid gambling under stress, pressure, or influence</li>
+                  <li>☕️ Take regular breaks</li>
                 </ul>
+              </section>
+
+              {/* Underage Gambling */}
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">🚫 Underage Gambling</h2>
+                <p>Bir75 strictly prohibits access to anyone under the age of 18. We reserve the right to verify user identity at any time.</p>
+              </section>
+
+              {/* Self-Exclusion & Account Control */}
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">🔐 Self-Exclusion & Account Control</h2>
+                <p>You may request:</p>
+                <ul className="list-disc ml-8 space-y-1">
+                  <li>Temporary suspension</li>
+                  <li>Permanent self-exclusion</li>
+                  <li>Account limits</li>
+                </ul>
+                <p>Contact support to activate these features.</p>
+              </section>
+
+              {/* Single Account Policy */}
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">⚙️ Single Account Policy</h2>
+                <p>Only one account per user is allowed. Multiple accounts may lead to suspension.</p>
+              </section>
+
+              {/* Responsible Gaming Notice */}
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">⚠️ Responsible Gaming Notice</h2>
+                <p className="italic">"Play responsibly. Bir75 is for 18+ users only. Gaming is for entertainment, not a source of income. Contact support for account limits or self-exclusion."</p>
+              </section>
+
+              {/* Final Note */}
+              <section className="space-y-2 pt-2">
+                <h2 className="text-[14px] font-bold">🎯 Final Note</h2>
+                <p>Gambling should always remain fun and controlled. If it stops being enjoyable, take a break and seek support.</p>
               </section>
             </div>
           </div>
@@ -157,7 +177,7 @@ const Responsiblegaming = () => {
           <footer className="bg-black text-gray-400 py-10 px-6 md:px-16 border-t border-gray-900 mt-auto">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-8">
               <div className="flex flex-col items-start min-w-[150px]">
-                <img src={logo} alt="BajiMan" className="w-20 mb-2" />
+                <img src={logo} alt="Bir75" className="w-20 mb-2" />
                 <p className="text-[10px] text-gray-500">©Copyright 2026</p>
               </div>
 
