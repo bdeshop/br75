@@ -13,7 +13,7 @@ import axios from "axios";
 
 const Sidebar = ({ 
   sidebarOpen, 
-  setSidebarOpen,
+  setSidebarOpen,  // ← Make sure this is in props
   onCategorySelect, 
   onExpandAndActivate, 
   activeCategory 
@@ -117,7 +117,7 @@ const Sidebar = ({
     }
   };
 
-  // New function to fetch content based on category
+  // Function to fetch content based on category
   const fetchCategoryContent = async (category) => {
     if (!category) return;
     
@@ -202,6 +202,16 @@ const Sidebar = ({
     return `${API_BASE_URL}/${cleanPath}`;
   };
 
+  // Function to close sidebar - with error checking
+  const closeSidebar = () => {
+    console.log("Closing sidebar", { setSidebarOpen: typeof setSidebarOpen });
+    if (setSidebarOpen && typeof setSidebarOpen === 'function') {
+      setSidebarOpen(false);
+    } else {
+      console.error("setSidebarOpen is not a function", setSidebarOpen);
+    }
+  };
+
   const secondaryMenuItems = [
     {
       title: "Promotions",
@@ -225,7 +235,7 @@ const Sidebar = ({
       title: "Affiliate",
       icon: <FaHandshake className="w-5 h-5 min-w-[20px]" />,
       subItems: ["Join Program", "Marketing Tools", "Commission Rates"],
-      onClick: () => { window.location.href = "https://m-affiliate.bir75.com"; },
+      onClick: () => { window.location.href = "https://m-affiliate.bir75.com"; }
     },
   ];
 
@@ -317,21 +327,20 @@ const Sidebar = ({
 
             {/* Submenu - Providers or Exclusive Games */}
             <div
-              className={`transition-all duration-300 ease-in-out ${
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
                 sidebarOpen && activeMenu === category.name
                   ? "max-h-screen"
                   : "max-h-0"
               }`}
             >
               {sidebarOpen && activeMenu === category.name && (
-                <div className="mt-1 mb-2">
+                <div className="ml-8 mt-1 mb-2">
                   {isLoading ? (
                     <div className="p-4 text-center text-[12px] text-gray-400">
                       Loading...
                     </div>
                   ) : category.name?.toLowerCase() === "exclusive" ? (
-                    // Added scrollbar for exclusive games - max-h-[500px] with overflow-y-auto
-                    <div className="grid grid-cols-2 gap-2 p-2 max-h-[500px] overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-2 p-2">
                       {exclusiveGames.length === 0 ? (
                         <div className="col-span-2 text-center text-gray-400 py-4">
                           No exclusive games found
@@ -363,7 +372,7 @@ const Sidebar = ({
                       )}
                     </div>
                   ) : (
-                    <div className="space-y-1 max-h-[500px] overflow-y-auto">
+                    <div className="space-y-1">
                       {providers.length === 0 && !isLoading ? (
                         <div className="text-center text-gray-400 py-4">
                           No providers found
@@ -490,33 +499,40 @@ const Sidebar = ({
     </div>
   );
 
-  // Mobile Sidebar (overlay)
+  // Mobile Sidebar (full width overlay)
   const MobileSidebar = () => (
     <>
+      {/* Backdrop overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-[rgba(0,0,0,0.7)] bg-opacity-50 z-40 md:hidden transition-opacity duration-300"
-          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-black bg-opacity-70 z-40 md:hidden transition-opacity duration-300"
+          onClick={closeSidebar}
         ></div>
       )}
       
+      {/* Mobile sidebar panel - full width */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 no-scrollbar overflow-y-auto pb-[100px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white z-50 transition-all duration-300 ease-in-out md:hidden ${
+        className={`fixed top-0 left-0 h-full w-full md:hidden bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white z-50 transition-transform duration-300 ease-in-out overflow-y-auto ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ marginTop: "56px" }}
       >
-        <div className="px-[10px] flex justify-end items-center">
-          <button onClick={() => setSidebarOpen(false)} className="cursor-pointer p-2 rounded-[3px] z-50">
-            <IoClose size={22} />
+        {/* Close button - fixed at top right */}
+        <div className="sticky top-0 z-10 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] px-4 py-3 flex justify-end items-center border-b border-gray-700">
+          <button 
+            onClick={closeSidebar} 
+            className="cursor-pointer p-2 rounded-full bg-red-500 hover:bg-red-600 transition-colors duration-200"
+            aria-label="Close sidebar"
+          >
+            <IoClose size={24} className="text-white" />
           </button>
         </div>
 
-        <div className="w-full">
+        <div className="w-full pb-20">
           {/* Live Chat */}
-          <div className="w-full flex justify-start items-center px-4 border-b-[1px] border-gray-700 pt-4 pb-3">
+          <div className="w-full flex justify-start items-center px-4 pt-4 pb-3">
             <a href="https://wa.me/+4407386588951" target="_blank" rel="noopener noreferrer" className="block w-full">
-              <span className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border-[1px] border-blue-500 text-[16px] px-2 py-2.5 mt-3 rounded-[3px] text-center flex justify-center items-center gap-3 cursor-pointer hover:bg-[#2a2a2a] transition">
+              <span className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border-[1px] border-blue-500 text-[16px] px-2 py-2.5 rounded-[3px] text-center flex justify-center items-center gap-3 cursor-pointer hover:bg-[#2a2a2a] transition">
                 <MdSupportAgent className="text-white text-[20px]" />
                 <span className="text-[13px]">24/7 Live Chat</span>
               </span>
@@ -524,7 +540,7 @@ const Sidebar = ({
           </div>
 
           {/* Banner */}
-          <div className="p-[10px]">
+          <div className="px-4 py-2">
             <img
               className="w-full rounded"
               src="https://img.b112j.com/upload/h5Announcement/image_182702.jpg"
@@ -533,14 +549,15 @@ const Sidebar = ({
           </div>
 
           {/* Categories for Mobile */}
-          <div className="space-y-1 px-2 mt-[15px]">
+          <div className="space-y-1 px-4 mt-4">
+            <h3 className="text-lg font-semibold text-white mb-3 px-2">Categories</h3>
             {categories.map((category) => (
               <div key={category._id}>
                 <div
                   className={`flex items-center p-3 rounded cursor-pointer transition-colors duration-200 ${
                     activeMenu === category.name 
                       ? "bg-[#ffffff10] text-white" 
-                      : "text-gray-400 hover:text-gray-300"
+                      : "text-gray-400 hover:text-gray-300 hover:bg-[#ffffff05]"
                   }`}
                   onClick={() => handleCategoryItemClick(category)}
                 >
@@ -551,10 +568,10 @@ const Sidebar = ({
                       className="w-5 h-5 min-w-[20px] object-contain"
                     />
                   ) : (
-                    <div className="w-5 h-5 min-w-[20px]"></div>
+                    <div className="w-5 h-5 min-w-[20px] bg-gray-700 rounded"></div>
                   )}
-                  <div className="flex items-center ml-3 w-full">
-                    <span className="text-sm flex-grow whitespace-nowrap font-semibold">
+                  <div className="flex items-center justify-between ml-3 w-full">
+                    <span className="text-sm flex-grow font-semibold">
                       {category.name}
                     </span>
                     {category.name?.toLowerCase() !== "exclusive" && (
@@ -578,8 +595,7 @@ const Sidebar = ({
                       {isLoading ? (
                         <div className="p-4 text-center text-[12px] text-gray-400">Loading...</div>
                       ) : category.name?.toLowerCase() === "exclusive" ? (
-                        // Added scrollbar for mobile exclusive games
-                        <div className="grid grid-cols-2 gap-2 p-2 max-h-[400px] overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-3 p-2">
                           {exclusiveGames.map((game, gameIndex) => (
                             <div
                               key={gameIndex}
@@ -600,7 +616,7 @@ const Sidebar = ({
                           ))}
                         </div>
                       ) : (
-                        <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                        <div className="space-y-1">
                           {providers.map((provider, providerIndex) => (
                             <div
                               key={providerIndex}
@@ -626,14 +642,26 @@ const Sidebar = ({
             ))}
           </div>
 
+          {/* Divider */}
+          <div className="border-t border-[#222424] my-4 mx-4"></div>
+          
+          {/* Promotions Section */}
+          <div className="px-4 mb-2">
+            <div className="flex justify-between items-center p-2">
+              <span className="text-sm font-medium text-gray-300">Promotions</span>
+              <a href="/promotions" className="text-xs text-theme_color2 underline cursor-pointer">
+                View all
+              </a>
+            </div>
+          </div>
+
           {/* Secondary Menu for Mobile */}
-          <div className="border-t border-[#222424] my-4 mx-2"></div>
-          <div className="space-y-1 px-2">
+          <div className="space-y-1 px-4">
             {secondaryMenuItems.map((item, index) => (
               <div key={index}>
                 <div
                   className={`flex items-center p-3 rounded text-gray-400 cursor-pointer transition-colors duration-200 ${
-                    activeMenu === item.title ? "bg-[#ffffff10] text-white" : "hover:text-gray-300"
+                    activeMenu === item.title ? "bg-[#ffffff10] text-white" : "hover:text-gray-300 hover:bg-[#ffffff05]"
                   }`}
                   onClick={() => {
                     if (item.onClick) {
@@ -711,25 +739,6 @@ const Sidebar = ({
         .no-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
-        }
-        
-        /* Custom scrollbar styles for the exclusive games section */
-        .overflow-y-auto::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        .overflow-y-auto::-webkit-scrollbar-track {
-          background: #1a1a2e;
-          border-radius: 3px;
-        }
-        
-        .overflow-y-auto::-webkit-scrollbar-thumb {
-          background: #4a4a6a;
-          border-radius: 3px;
-        }
-        
-        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-          background: #6a6a8a;
         }
       `}</style>
     </>

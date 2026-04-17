@@ -107,30 +107,17 @@ const HomeContent = () => {
   const [dynamicLogo, setDynamicLogo] = useState(logo);
   const [notice, setNotice] = useState("");
   
-  // THIS IS THE KEY STATE - for active category highlighting
+  // State for sidebar category activation - THIS IS THE KEY STATE
   const [activeCategory, setActiveCategory] = useState(null);
   
   // State for providers and exclusive games
   const [providers, setProviders] = useState([]);
   const [exclusiveGames, setExclusiveGames] = useState([]);
-  const [categories, setCategories] = useState([]);
 
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
 
   // Cache for branding data
   const [brandingCache, setBrandingCache] = useState(null);
-
-  // Fetch categories
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get(`${base_url}/api/categories`);
-      if (response.data?.data?.length > 0) {
-        setCategories(response.data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
 
   // Function to fetch providers
   const fetchProviders = async (categoryName) => {
@@ -148,7 +135,7 @@ const HomeContent = () => {
 
   // Function to handle category click from Sidebar
   const handleCategorySelect = async (category) => {
-    console.log("Category selected:", category.name);
+    console.log("Category selected:", category);
     
     // Set the active category - this will highlight it in both sidebar and header
     setActiveCategory(category.name);
@@ -161,8 +148,6 @@ const HomeContent = () => {
 
   // Function to handle expanding sidebar and activating category (when clicked from collapsed state)
   const handleExpandAndActivate = async (category) => {
-    console.log("Expand and activate category:", category.name);
-    
     // 1. Open the full sidebar
     setSidebarOpen(true);
     
@@ -258,7 +243,6 @@ const HomeContent = () => {
 
     fetchBrandingData();
     fetchNotice();
-    fetchCategories();
 
     const handleLoad = () => {
       if (mounted) {
@@ -291,6 +275,14 @@ const HomeContent = () => {
     };
   }, []);
 
+  // Reset active category when sidebar closes (optional)
+  useEffect(() => {
+    if (!sidebarOpen) {
+      // You can choose to keep the active category or clear it
+      // setActiveCategory(null);
+    }
+  }, [sidebarOpen]);
+
   return (
     <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Loading Overlay */}
@@ -315,31 +307,24 @@ const HomeContent = () => {
         </div>
       )}
       
-      {/* Header - Pass activeCategory and handlers */}
+      {/* Header - Pass active category */}
       <Header 
         sidebarOpen={sidebarOpen} 
         setSidebarOpen={setSidebarOpen}
         activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
         onExpandAndActivate={handleExpandAndActivate}
-        categories={categories}
-        fetchProviders={fetchProviders}
-        providers={providers}
-        setProviders={setProviders}
-        exclusiveGames={exclusiveGames}
-        setExclusiveGames={setExclusiveGames}
       />
 
       {/* Main Content */}
       <div className="flex h-[calc(100vh-56px)]">
-        {/* Sidebar - Pass activeCategory and handlers */}
-        <Sidebar
-          sidebarOpen={sidebarOpen}
-          onCategorySelect={handleCategorySelect}
-          onExpandAndActivate={handleExpandAndActivate}
-          activeCategory={activeCategory}
-        />
-
+        {/* Sidebar - Pass active category and handlers */}
+<Sidebar
+  sidebarOpen={sidebarOpen}
+  setSidebarOpen={setSidebarOpen}  // ← This must be passed
+  onCategorySelect={handleCategorySelect}
+  onExpandAndActivate={handleExpandAndActivate}
+  activeCategory={activeCategory}
+/>
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto transition-all duration-300">
           <div className="">
