@@ -6416,10 +6416,10 @@ Userrouter.post("/verify-mobile-otp", authenticateToken, async (req, res) => {
         await user.save();
 
         // Send confirmation SMS
-        const confirmationMessage = `আপনার মোবাইল নম্বর সফলভাবে ভেরিফাই করা হয়েছে: ${pendingPhone}\n\nYour mobile number has been successfully verified: ${pendingPhone}`;
-        await sendSMS(pendingPhone, confirmationMessage).catch(err => 
-            console.error('Failed to send confirmation SMS:', err)
-        );
+        // const confirmationMessage = `আপনার মোবাইল নম্বর সফলভাবে ভেরিফাই করা হয়েছে: ${pendingPhone}\n\nYour mobile number has been successfully verified: ${pendingPhone}`;
+        // await sendSMS(pendingPhone, confirmationMessage).catch(err => 
+        //     console.error('Failed to send confirmation SMS:', err)
+        // );
 
         res.json({
             success: true,

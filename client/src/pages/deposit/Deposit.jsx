@@ -31,7 +31,7 @@ const Deposit = () => {
   // Get translation function from context
   const { t } = useContext(LanguageContext);
 
-  const quickAmounts = [50,100,300,500, 1000,25000];
+  const quickAmounts = [50, 100, 300, 500, 1000, 25000];
 
   // Fetch deposit methods
   useEffect(() => {
@@ -193,13 +193,9 @@ const Deposit = () => {
     }
     if (!amount) {
       errors.amount = t.amountRequired || "Amount is required";
-    } else if (parseFloat(amount) < 5) {
-      errors.amount = t.minDepositAmount || "Minimum deposit amount is ৳5";
-    } else if (!/^\d+$/.test(amount)) {
-      errors.amount = t.amountMustBeWholeNumber || "Amount must be a whole number";
-    } else if (parseFloat(amount) < parseFloat(activeMethod?.minAmount || 5)) {
-      errors.amount = `${t.minDepositAmount || "Minimum deposit amount is"} ৳${activeMethod?.minAmount || 5}`;
-    } else if (parseFloat(amount) > parseFloat(activeMethod?.maxAmount || 50000)) {
+    } else if (parseFloat(amount) < 50) {
+      errors.amount = t.minDepositAmount || "Minimum deposit amount is ৳50";
+    }else if (parseFloat(amount) > parseFloat(activeMethod?.maxAmount || 50000)) {
       errors.amount = `${t.maxDepositAmount || "Maximum deposit amount is"} ৳${activeMethod?.maxAmount || 50000}`;
     }
 
@@ -648,11 +644,11 @@ const Deposit = () => {
                                 ? "border-[#ff6b6b]"
                                 : "border-[#2a2f2f]"
                             }`}
-                            placeholder={t.enterDepositAmount || "Enter deposit amount (minimum ৳5)"}
+                            placeholder={t.enterDepositAmount || "Enter deposit amount (minimum ৳50)"}
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                             required
-                            min="5"
+                            min="50"
                           />
                           {formErrors.amount && (
                             <p className="text-[#ff6b6b] text-xs md:text-sm mt-1">
@@ -901,7 +897,7 @@ const Deposit = () => {
                 </h3>
                 <ol className="text-xs md:text-sm text-[#8a9ba8] space-y-2 md:space-y-3 list-decimal list-inside">
                   <li>{t.selectPaymentMethod || "Select your preferred payment method"}</li>
-                  <li>{t.enterDepositAmountInstruction || "Enter the amount you want to deposit (minimum ৳5)"}</li>
+                  <li>{t.enterDepositAmountInstruction || "Enter the amount you want to deposit (minimum ৳50)"}</li>
                   <li>{t.selectBonusIfAvailable || "Select a bonus option if available (optional)"}</li>
                   <li>{t.clickProceedToPayment || `Click "Proceed to [Payment Method] Payment"`}</li>
                   <li>{t.redirectedToOraclePay || "You will be redirected to OraclePay secure payment page"}</li>

@@ -11,7 +11,9 @@ createRoot(document.getElementById('root')).render(
    <SidebarProvider>
       <CategoryProvider>
         <LanguageProvider>
-          <App />
+            <SidebarProvider>
+              <App />
+            </SidebarProvider>
         </LanguageProvider>
       </CategoryProvider>
    </SidebarProvider>

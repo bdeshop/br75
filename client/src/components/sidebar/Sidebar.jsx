@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FaChevronDown,
   FaChevronRight,
@@ -8,54 +8,143 @@ import {
   FaHandshake,
 } from "react-icons/fa";
 import { MdSupportAgent } from "react-icons/md";
-import { useSidebar } from "../../../context/SidebarContext";
+import { IoClose } from "react-icons/io5";
+import axios from "axios";
 
-const Sidebar = ({ sidebarOpen, onCategorySelect }) => {
+const Sidebar = ({ 
+  sidebarOpen, 
+  setSidebarOpen,
+  onCategorySelect, 
+  onExpandAndActivate, 
+  activeCategory 
+}) => {
   const [activeMenu, setActiveMenu] = useState(null);
   const [activeSubMenu, setActiveSubMenu] = useState(null);
-  
-  // Use context instead of local state and axios
-  const {
-    categories,
-    promotions,
-    isLoading,
-    fetchCategories,
-    fetchPromotions,
-    fetchProviders,
-    setProviders,
-    setExclusiveGames
-  } = useSidebar();
+  const [categories, setCategories] = useState([]);
+  const [providers, setProviders] = useState([]);
+  const [exclusiveGames, setExclusiveGames] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch categories on component mount
+  const API_BASE_URL = import.meta.env.VITE_API_KEY_Base_URL;
+
+  // Sync active category from parent to local state AND fetch content
+  useEffect(() => {
+    if (activeCategory !== undefined && activeCategory !== null) {
+      setActiveMenu(activeCategory);
+      // Fetch content for the active category when it changes
+      const category = categories.find(cat => cat.name === activeCategory);
+      if (category) {
+        fetchCategoryContent(category);
+      }
+    }
+  }, [activeCategory, categories]);
+
+  // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
-    fetchPromotions();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/api/categories`);
+      if (response.data?.data?.length > 0) {
+        setCategories(response.data.data);
+        localStorage.setItem("categories", JSON.stringify(response.data.data));
+      } else {
+        const fallbackCategories = [
+          { _id: "1", name: "Sports", image: null },
+          { _id: "2", name: "Casino", image: null },
+          { _id: "3", name: "Slots", image: null },
+          { _id: "4", name: "Live Casino", image: null },
+          { _id: "5", name: "Fishing", image: null },
+          { _id: "6", name: "Exclusive", image: null },
+        ];
+        setCategories(fallbackCategories);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      const cached = localStorage.getItem("categories");
+      if (cached) {
+        setCategories(JSON.parse(cached));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchProviders = async (categoryName) => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/api/providers/${categoryName}`);
+      if (response.data.success) {
+        setProviders(response.data.data);
+        setExclusiveGames([]);
+        return response.data.data;
+      } else {
+        setProviders([]);
+      }
+    } catch (error) {
+      console.error("Error fetching providers:", error);
+      setProviders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchExclusiveGames = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/api/menu-games`);
+      let gamesData = [];
+      if (response.data?.data) gamesData = response.data.data;
+      else if (Array.isArray(response.data)) gamesData = response.data;
+      
+      const exclusiveGamesData = gamesData.filter((game) => {
+        if (!game) return false;
+        const categoryName = (game.categoryname || game.category || game.categoryName || "").toLowerCase();
+        const gameName = (game.name || game.gameName || "").toLowerCase();
+        return categoryName.includes("exclusive") || categoryName.includes("exlusive") ||
+               gameName.includes("exclusive") || gameName.includes("exlusive");
+      });
+      setExclusiveGames(exclusiveGamesData);
+      setProviders([]);
+    } catch (error) {
+      console.error("Error fetching exclusive games:", error);
+      setExclusiveGames([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // New function to fetch content based on category
+  const fetchCategoryContent = async (category) => {
+    if (!category) return;
+    
+    if (category.name?.toLowerCase() === "exclusive") {
+      await fetchExclusiveGames();
+    } else {
+      await fetchProviders(category.name);
+    }
+  };
 
   const toggleMenu = async (title, category) => {
     if (activeMenu === title) {
       setActiveMenu(null);
       setActiveSubMenu(null);
-      // Clear providers when collapsing
       setProviders([]);
       setExclusiveGames([]);
     } else {
       setActiveMenu(title);
       setActiveSubMenu(null);
-      
-      // If a category is clicked, fetch its providers
       if (category && category.name) {
-        await fetchProviders(category.name);
+        await fetchCategoryContent(category);
       }
     }
   };
 
   const toggleSubMenu = (subItem) => {
-    if (activeSubMenu === subItem) {
-      setActiveSubMenu(null);
-    } else {
-      setActiveSubMenu(subItem);
-    }
+    setActiveSubMenu(activeSubMenu === subItem ? null : subItem);
   };
 
   const handleCategoryClick = (category) => {
@@ -64,41 +153,520 @@ const Sidebar = ({ sidebarOpen, onCategorySelect }) => {
     }
   };
 
+  const handleCategoryItemClick = async (category) => {
+    console.log("Category clicked:", category.name);
+    
+    // If sidebar is closed: tell parent to open it and activate this category
+    if (!sidebarOpen) {
+      console.log("Sidebar closed, calling onExpandAndActivate");
+      if (onExpandAndActivate) {
+        await onExpandAndActivate(category);
+      }
+      return;
+    }
+
+    // Normal behaviour when sidebar is open
+    if (activeMenu === category.name) {
+      setActiveMenu(null);
+      setActiveSubMenu(null);
+      setProviders([]);
+      setExclusiveGames([]);
+    } else {
+      setActiveMenu(category.name);
+      setActiveSubMenu(null);
+      await fetchCategoryContent(category);
+    }
+    
+    handleCategoryClick(category);
+  };
+
+  const handleProviderClick = (provider) => {
+    if (activeMenu) {
+      window.location.href = `/games?category=${activeMenu.toLowerCase()}&provider=${provider.name.toLowerCase()}`;
+    }
+  };
+
+  const handleGameClick = (game) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
+    window.location.href = `/game/${game.gameId || game._id}`;
+  };
+
+  const getFullImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith("http")) return imagePath;
+    const cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+    return `${API_BASE_URL}/${cleanPath}`;
+  };
+
   const secondaryMenuItems = [
     {
       title: "Promotions",
       icon: <FaGift className="w-5 h-5 min-w-[20px]" />,
       subItems: ["Welcome Bonus", "Reload Bonus", "Cashback"],
+      path: "/promotions"
     },
     {
       title: "VIP Club",
       icon: <FaCrown className="w-5 h-5 min-w-[20px]" />,
       subItems: ["VIP Levels", "Exclusive Rewards", "Personal Manager"],
+      path: "/vip-club"
     },
     {
       title: "Referral program",
       icon: <FaUserFriends className="w-5 h-5 min-w-[20px]" />,
       subItems: ["Invite Friends", "Earn Commission", "Bonus Terms"],
+      path: "/referral-program"
     },
     {
       title: "Affiliate",
       icon: <FaHandshake className="w-5 h-5 min-w-[20px]" />,
       subItems: ["Join Program", "Marketing Tools", "Commission Rates"],
+      onClick: () => { window.location.href = "https://m-affiliate.bir75.com"; },
     },
   ];
 
-  if (isLoading.categories) {
+  // Desktop Sidebar Content
+  const DesktopSidebar = () => (
+    <div
+      className={`fixed md:block hidden md:relative min-h-[calc(100vh-56px)] no-scrollbar border-r border-[#222424] z-20 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white overflow-y-auto
+        transition-all duration-300 ease-in-out px-2
+        ${sidebarOpen ? "w-75" : "w-15 -translate-x-full md:translate-x-0"}`}
+    >
+      {/* Live Chat button */}
+      <div
+        className={`w-full flex justify-start items-center px-4 pt-4 pb-3 transition-all duration-300 ${
+          sidebarOpen ? "opacity-100" : "opacity-0 h-0 p-0 mb-0"
+        }`}
+      >
+        {sidebarOpen ? (
+          <a 
+            href="https://wa.me/+4407386588951" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="bg-theme_gray p-2 rounded-[3px] text-center flex justify-center items-center gap-3 w-full hover:bg-opacity-80 transition"
+          >
+            <MdSupportAgent className="text-white text-[20px]" />
+            <span className="text-[13px]">24/7 Live Chat</span>
+          </a>
+        ) : (
+          <a 
+            href="https://wa.me/+4407386588951" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="bg-theme_gray p-2 rounded-[3px] text-center flex justify-center items-center gap-3 w-full"
+          >
+            <MdSupportAgent className="text-white text-[20px]" />
+          </a>
+        )}
+      </div>
+
+      {/* Banner Image */}
+      {sidebarOpen && (
+        <div className="p-[10px]">
+          <img
+            className="w-full rounded"
+            src="https://img.b112j.com/upload/h5Announcement/image_182702.jpg"
+            alt="Promotion Banner"
+          />
+        </div>
+      )}
+
+      {/* Categories Section */}
+      <div className="space-y-1 mt-[15px]">
+        {categories.map((category) => (
+          <div key={category._id}>
+            <div
+              className={`flex items-center p-3 rounded cursor-pointer hover:text-gray-500 text-gray-400 transition-colors duration-200 ${
+                activeMenu === category.name ? "bg-[#ffffff10] text-white" : ""
+              }`}
+              onClick={() => handleCategoryItemClick(category)}
+            >
+              {category.image ? (
+                <img
+                  src={getFullImageUrl(category.image)}
+                  alt={category.name}
+                  className="w-5 h-5 min-w-[20px] object-contain"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="w-5 h-5 min-w-[20px] bg-gray-700 rounded"></div>
+              )}
+              <div
+                className={`flex items-center overflow-hidden transition-all duration-300 ${
+                  sidebarOpen ? "ml-3 w-full" : "w-0"
+                }`}
+              >
+                <span className="text-sm flex-grow whitespace-nowrap font-medium">
+                  {category.name}
+                </span>
+                {category.name?.toLowerCase() !== "exclusive" && (
+                  activeMenu === category.name ? (
+                    <FaChevronDown className="text-xs transition-transform duration-200" />
+                  ) : (
+                    <FaChevronRight className="text-xs transition-transform duration-200" />
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Submenu - Providers or Exclusive Games */}
+            <div
+              className={`transition-all duration-300 ease-in-out ${
+                sidebarOpen && activeMenu === category.name
+                  ? "max-h-screen"
+                  : "max-h-0"
+              }`}
+            >
+              {sidebarOpen && activeMenu === category.name && (
+                <div className="mt-1 mb-2">
+                  {isLoading ? (
+                    <div className="p-4 text-center text-[12px] text-gray-400">
+                      Loading...
+                    </div>
+                  ) : category.name?.toLowerCase() === "exclusive" ? (
+                    // Added scrollbar for exclusive games - max-h-[500px] with overflow-y-auto
+                    <div className="grid grid-cols-2 gap-2 p-2 max-h-[500px] overflow-y-auto">
+                      {exclusiveGames.length === 0 ? (
+                        <div className="col-span-2 text-center text-gray-400 py-4">
+                          No exclusive games found
+                        </div>
+                      ) : (
+                        exclusiveGames.map((game, gameIndex) => (
+                          <div
+                            key={gameIndex}
+                            className="flex flex-col items-center rounded-[3px] transition-all cursor-pointer group"
+                            onClick={() => handleGameClick(game)}
+                          >
+                            <div className="game-image-container w-full mb-2">
+                              <img
+                                src={getFullImageUrl(game.portraitImage || game.image)}
+                                alt={game.name || game.gameName}
+                                className="game-image rounded-[6px] transition-transform duration-300 group-hover:scale-105"
+                                onError={(e) => { 
+                                  e.target.src = "https://via.placeholder.com/100x133?text=Game"; 
+                                }}
+                              />
+                            </div>
+                            <div className="w-full pt-1">
+                              <span className="text-xs text-gray-400 truncate block text-center">
+                                {game.name || game.gameName || "Game"}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1 max-h-[500px] overflow-y-auto">
+                      {providers.length === 0 && !isLoading ? (
+                        <div className="text-center text-gray-400 py-4">
+                          No providers found
+                        </div>
+                      ) : (
+                        providers.map((provider, providerIndex) => (
+                          <div
+                            key={providerIndex}
+                            className="flex items-center p-2 rounded cursor-pointer hover:bg-[#333] transition-colors duration-200"
+                            onClick={() => handleProviderClick(provider)}
+                          >
+                            {provider.image && (
+                              <img
+                                src={getFullImageUrl(provider.image)}
+                                alt={provider.name}
+                                className="w-6 h-6 mr-2 object-contain"
+                                onError={(e) => { 
+                                  e.target.style.display = "none"; 
+                                }}
+                              />
+                            )}
+                            <span className="text-xs text-gray-400 hover:text-white">
+                              {provider.name}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div
+        className={`border-t border-[#222424] my-4 mx-2 transition-all duration-300 ${
+          sidebarOpen ? "opacity-100" : "opacity-0"
+        }`}
+      ></div>
+
+      {/* Promotions label */}
+      <div
+        className={`px-2 mb-2 transition-all duration-300 overflow-hidden ${
+          sidebarOpen ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="flex justify-between items-center p-2">
+          <span className="text-sm font-medium text-gray-300">Promotions</span>
+          <a href="/promotions" className="text-xs text-theme_color2 underline cursor-pointer hover:text-opacity-80">
+            View all
+          </a>
+        </div>
+      </div>
+
+      {/* Secondary menu items */}
+      <div className="space-y-1">
+        {secondaryMenuItems.map((item, index) => (
+          <div key={index}>
+            <div
+              className={`flex items-center p-3 rounded text-gray-400 cursor-pointer hover:text-gray-300 transition-colors duration-200 ${
+                activeMenu === item.title ? "bg-[#ffffff10] text-white" : ""
+              }`}
+              onClick={() => {
+                if (item.onClick) {
+                  item.onClick();
+                } else if (item.path) {
+                  window.location.href = item.path;
+                } else {
+                  toggleMenu(item.title, { name: item.title });
+                }
+              }}
+            >
+              <span className="text-yellow_theme">{item.icon}</span>
+              <div
+                className={`flex items-center overflow-hidden transition-all duration-300 ${
+                  sidebarOpen ? "ml-3 w-full" : "w-0"
+                }`}
+              >
+                <span className="text-sm flex-grow whitespace-nowrap font-medium">
+                  {item.title}
+                </span>
+                {item.subItems.length > 0 && (
+                  activeMenu === item.title ? (
+                    <FaChevronDown className="text-xs transition-transform duration-200" />
+                  ) : (
+                    <FaChevronRight className="text-xs transition-transform duration-200" />
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Secondary Submenu */}
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                sidebarOpen && activeMenu === item.title && item.subItems.length > 0
+                  ? "max-h-96"
+                  : "max-h-0"
+              }`}
+            >
+              {sidebarOpen && (
+                <div className="ml-8 mt-1 mb-2 space-y-1">
+                  {item.subItems.map((subItem, subIndex) => (
+                    <div
+                      key={subIndex}
+                      className={`p-2 text-xs rounded cursor-pointer hover:bg-[#333] transition-colors duration-200 ${
+                        activeSubMenu === subItem ? "bg-[#333] text-white" : "text-gray-400"
+                      }`}
+                      onClick={() => toggleSubMenu(subItem)}
+                    >
+                      {subItem}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="h-10"></div>
+    </div>
+  );
+
+  // Mobile Sidebar (overlay)
+  const MobileSidebar = () => (
+    <>
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-[rgba(0,0,0,0.7)] bg-opacity-50 z-40 md:hidden transition-opacity duration-300"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+      
+      <div
+        className={`fixed top-0 left-0 h-full w-80 no-scrollbar overflow-y-auto pb-[100px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white z-50 transition-all duration-300 ease-in-out md:hidden ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{ marginTop: "56px" }}
+      >
+        <div className="px-[10px] flex justify-end items-center">
+          <button onClick={() => setSidebarOpen(false)} className="cursor-pointer p-2 rounded-[3px] z-50">
+            <IoClose size={22} />
+          </button>
+        </div>
+
+        <div className="w-full">
+          {/* Live Chat */}
+          <div className="w-full flex justify-start items-center px-4 border-b-[1px] border-gray-700 pt-4 pb-3">
+            <a href="https://wa.me/+4407386588951" target="_blank" rel="noopener noreferrer" className="block w-full">
+              <span className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border-[1px] border-blue-500 text-[16px] px-2 py-2.5 mt-3 rounded-[3px] text-center flex justify-center items-center gap-3 cursor-pointer hover:bg-[#2a2a2a] transition">
+                <MdSupportAgent className="text-white text-[20px]" />
+                <span className="text-[13px]">24/7 Live Chat</span>
+              </span>
+            </a>
+          </div>
+
+          {/* Banner */}
+          <div className="p-[10px]">
+            <img
+              className="w-full rounded"
+              src="https://img.b112j.com/upload/h5Announcement/image_182702.jpg"
+              alt="Promotion Banner"
+            />
+          </div>
+
+          {/* Categories for Mobile */}
+          <div className="space-y-1 px-2 mt-[15px]">
+            {categories.map((category) => (
+              <div key={category._id}>
+                <div
+                  className={`flex items-center p-3 rounded cursor-pointer transition-colors duration-200 ${
+                    activeMenu === category.name 
+                      ? "bg-[#ffffff10] text-white" 
+                      : "text-gray-400 hover:text-gray-300"
+                  }`}
+                  onClick={() => handleCategoryItemClick(category)}
+                >
+                  {category.image ? (
+                    <img
+                      src={getFullImageUrl(category.image)}
+                      alt={category.name}
+                      className="w-5 h-5 min-w-[20px] object-contain"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 min-w-[20px]"></div>
+                  )}
+                  <div className="flex items-center ml-3 w-full">
+                    <span className="text-sm flex-grow whitespace-nowrap font-semibold">
+                      {category.name}
+                    </span>
+                    {category.name?.toLowerCase() !== "exclusive" && (
+                      activeMenu === category.name ? (
+                        <FaChevronDown className="text-xs transition-transform duration-200" />
+                      ) : (
+                        <FaChevronRight className="text-xs transition-transform duration-200" />
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile Submenu */}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    activeMenu === category.name ? "max-h-screen" : "max-h-0"
+                  }`}
+                >
+                  {activeMenu === category.name && (
+                    <div className="ml-8 mt-1 mb-2">
+                      {isLoading ? (
+                        <div className="p-4 text-center text-[12px] text-gray-400">Loading...</div>
+                      ) : category.name?.toLowerCase() === "exclusive" ? (
+                        // Added scrollbar for mobile exclusive games
+                        <div className="grid grid-cols-2 gap-2 p-2 max-h-[400px] overflow-y-auto">
+                          {exclusiveGames.map((game, gameIndex) => (
+                            <div
+                              key={gameIndex}
+                              className="flex flex-col items-center rounded-[3px] transition-all cursor-pointer group"
+                              onClick={() => handleGameClick(game)}
+                            >
+                              <div className="game-image-container w-full mb-2">
+                                <img
+                                  src={getFullImageUrl(game.portraitImage || game.image)}
+                                  alt={game.name || game.gameName}
+                                  className="game-image rounded-[6px]"
+                                />
+                              </div>
+                              <span className="text-xs text-gray-400 text-center truncate w-full">
+                                {game.name || game.gameName || "Game"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                          {providers.map((provider, providerIndex) => (
+                            <div
+                              key={providerIndex}
+                              className="flex items-center p-2 rounded cursor-pointer hover:bg-[#333] transition-colors duration-200"
+                              onClick={() => handleProviderClick(provider)}
+                            >
+                              {provider.image && (
+                                <img
+                                  src={getFullImageUrl(provider.image)}
+                                  alt={provider.name}
+                                  className="w-6 h-6 mr-2 object-contain"
+                                />
+                              )}
+                              <span className="text-xs text-gray-400">{provider.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Secondary Menu for Mobile */}
+          <div className="border-t border-[#222424] my-4 mx-2"></div>
+          <div className="space-y-1 px-2">
+            {secondaryMenuItems.map((item, index) => (
+              <div key={index}>
+                <div
+                  className={`flex items-center p-3 rounded text-gray-400 cursor-pointer transition-colors duration-200 ${
+                    activeMenu === item.title ? "bg-[#ffffff10] text-white" : "hover:text-gray-300"
+                  }`}
+                  onClick={() => {
+                    if (item.onClick) {
+                      item.onClick();
+                    } else if (item.path) {
+                      window.location.href = item.path;
+                    } else {
+                      toggleMenu(item.title, { name: item.title });
+                    }
+                  }}
+                >
+                  <span className="text-yellow_theme">{item.icon}</span>
+                  <div className="flex items-center ml-3 w-full">
+                    <span className="text-sm flex-grow whitespace-nowrap font-medium">
+                      {item.title}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  if (isLoading && categories.length === 0) {
     return (
       <div
-        className={`fixed md:block hidden md:relative min-h-[calc(100vh-56px)] no-scrollbar border-r border-[#222424] z-20 bg-[#1a1a1a] text-white overflow-y-auto
+        className={`fixed md:block hidden md:relative min-h-[calc(100vh-56px)] no-scrollbar border-r border-[#222424] z-20 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white overflow-y-auto
           transition-all duration-300 ease-in-out
-          ${
-            sidebarOpen
-              ? "w-75 "
-              : "w-20 -translate-x-full py-4 md:translate-x-0"
-          }`}
+          ${sidebarOpen ? "w-75" : "w-20 -translate-x-full py-4 md:translate-x-0"}`}
       >
-        {/* Loading skeleton */}
         <div className="p-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center p-3 mb-2">
@@ -116,199 +684,55 @@ const Sidebar = ({ sidebarOpen, onCategorySelect }) => {
   }
 
   return (
-    <div
-      className={`fixed md:block hidden md:relative min-h-[calc(100vh-56px)] no-scrollbar border-r border-[#222424] z-20 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white overflow-y-auto
-        transition-all duration-300 ease-in-out px-2
-        ${sidebarOpen ? "w-75" : "w-15 -translate-x-full md:translate-x-0"}`}
-    >
-      {/* Logo - Only show when sidebar is open */}
-      <span
-        className={`w-full flex justify-start items-center px-4 pt-4 pb-3 transition-all duration-300 ${
-          sidebarOpen ? "opacity-100" : "opacity-0 h-0 p-0 mb-0"
-        }`}
-      >
-        {sidebarOpen ? (
-          <span className="bg-theme_gray p-2 rounded-[3px] text-center flex justify-center items-center gap-3">
-            <MdSupportAgent className="text-white text-[20px]" />
-            <span className="text-[13px]">24/7 Live Chat</span>
-          </span>
-        ) : (
-          <span className="bg-theme_gray p-2 rounded-[3px] text-center flex justify-center items-center gap-3">
-            <MdSupportAgent className="text-white text-[20px]" />
-          </span>
-        )}
-      </span>
-      {!sidebarOpen ? (
-        <span className="bg-theme_gray p-2 rounded-[3px] text-center flex justify-center items-center gap-3">
-          <MdSupportAgent className="text-white text-[20px]" />
-        </span>
-      ) : (
-        ""
-      )}
-
-      <div className={sidebarOpen ? "p-[10px]" : "hidden"}>
-        <img
-          className="w-full"
-          src="https://img.b112j.com/upload/h5Announcement/image_182702.jpg"
-          alt=""
-        />
-      </div>
-
-      {/* Main menu items - Categories from API */}
-      <div className="space-y-1 mt-[15px]">
-        {categories.map((category, index) => (
-          <div key={category._id}>
-            <div
-              className={`flex items-center p-3 rounded cursor-pointer hover:text-gray-500 text-gray-400 transition-colors duration-200 ${
-                activeMenu === category.name ? "" : ""
-              }`}
-              onClick={() => {
-                toggleMenu(category.name, category);
-                handleCategoryClick(category);
-              }}
-            >
-              {category.image ? (
-                <img
-                  src={`${import.meta.env.VITE_API_KEY_Base_URL}/${category.image}`}
-                  alt={category.name}
-                  className="w-5 h-5 min-w-[20px] object-contain"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    // You could add a fallback icon here
-                  }}
-                />
-              ) : (
-                <div className="w-5 h-5 min-w-[20px] bg-gray-700 rounded"></div>
-              )}
-              <div
-                className={`flex items-center overflow-hidden transition-all duration-300 ${
-                  sidebarOpen ? "ml-3 w-full" : "w-0"
-                }`}
-              >
-                <span className="text-sm flex-grow whitespace-nowrap">
-                  {category.name}
-                </span>
-                {(category.providers && category.providers.length > 0) ? (
-                  activeMenu === category.name ? (
-                    <FaChevronDown className="text-xs transition-transform duration-200" />
-                  ) : (
-                    <FaChevronRight className="text-xs transition-transform duration-200" />
-                  )
-                ) : null}
-              </div>
-            </div>
-
-            {/* Submenu items - Providers */}
-            <div
-              className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                sidebarOpen &&
-                activeMenu === category.name
-                  ? "max-h-96"
-                  : "max-h-0"
-              }`}
-            >
-              {sidebarOpen && category.providers && category.providers.length > 0 && (
-                <div className="ml-8 mt-1 mb-2 space-y-1">
-                  {category.providers.map((provider) => (
-                    <div
-                      key={provider._id}
-                      className={`p-2 text-xs rounded cursor-pointer hover:bg-[#333] transition-colors duration-200 ${
-                        activeSubMenu === provider.name ? "bg-[#333]" : ""
-                      }`}
-                      onClick={() => toggleSubMenu(provider.name)}
-                    >
-                      {provider.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Divider */}
-      <div
-        className={`border-t border-[#222424] my-4 mx-2 transition-all duration-300 ${
-          sidebarOpen ? "opacity-100" : "opacity-0"
-        }`}
-      ></div>
-
-      {/* Promotions section */}
-      <div
-        className={`px-2 mb-2 transition-all duration-300 overflow-hidden ${
-          sidebarOpen ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
-        }`}
-      >
-        <div className="flex justify-between items-center p-2">
-          <span className="text-sm font-medium">Promotions</span>
-          <span className="text-xs text-theme_color2 underline cursor-pointer">
-            View all
-          </span>
-        </div>
-      </div>
-
-      {/* Secondary menu items */}
-      <div className="space-y-1 ">
-        {secondaryMenuItems.map((item, index) => (
-          <div key={index}>
-            <div
-              className={`flex items-center p-3 rounded text-gray-500 cursor-pointer hover:text-gray-600 transition-colors duration-200 ${
-                activeMenu === item.title ? "bg-[#333]" : ""
-              }`}
-              onClick={() => toggleMenu(item.title)}
-            >
-              {item.icon}
-              <div
-                className={`flex items-center overflow-hidden transition-all duration-300 ${
-                  sidebarOpen ? "ml-3 w-full" : "w-0"
-                }`}
-              >
-                <span className="text-sm flex-grow whitespace-nowrap">
-                  {item.title}
-                </span>
-                {item.subItems.length > 0 &&
-                  (activeMenu === item.title ? (
-                    <FaChevronDown className="text-xs transition-transform duration-200" />
-                  ) : (
-                    <FaChevronRight className="text-xs transition-transform duration-200" />
-                  ))}
-              </div>
-            </div>
-
-            {/* Submenu items */}
-            <div
-              className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                sidebarOpen &&
-                activeMenu === item.title &&
-                item.subItems.length > 0
-                  ? "max-h-96"
-                  : "max-h-0"
-              }`}
-            >
-              {sidebarOpen && (
-                <div className="ml-8 mt-1 mb-2 space-y-1">
-                  {item.subItems.map((subItem, subIndex) => (
-                    <div
-                      key={subIndex}
-                      className={`p-2 text-xs rounded cursor-pointer hover:bg-[#333] transition-colors duration-200 ${
-                        activeSubMenu === subItem ? "bg-[#333]" : ""
-                      }`}
-                      onClick={() => toggleSubMenu(subItem)}
-                    >
-                      {subItem}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Bottom spacing */}
-      <div className="h-10"></div>
-    </div>
+    <>
+      <DesktopSidebar />
+      <MobileSidebar />
+      
+      <style jsx>{`
+        .game-image-container {
+          position: relative;
+          width: 100%;
+          height: 0;
+          padding-bottom: 133.33%;
+          overflow: hidden;
+          border-radius: 6px;
+        }
+        .game-image {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
+        /* Custom scrollbar styles for the exclusive games section */
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: #1a1a2e;
+          border-radius: 3px;
+        }
+        
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background: #4a4a6a;
+          border-radius: 3px;
+        }
+        
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background: #6a6a8a;
+        }
+      `}</style>
+    </>
   );
 };
 

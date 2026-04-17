@@ -255,60 +255,6 @@ const Footer = () => {
         </div>
 
         <div className="h-[1px] bg-gray-700 my-4 md:my-8"></div>
-        {/* --- Sponsorships (Image 2 Style) --- */}
-        <section className="mb-10">
-          <h3 className="text-[#12b16a] font-bold text-[13px] md:text-base mb-6 uppercase tracking-wider">
-            {t.footerSponsorships}
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-8 gap-x-4">
-            {[
-              { img: "https://img.b112j.com/bj/h5/assets/v3/images/sponsor/quetta-gladiators.png", name: "Quetta Gladiators", role: t.footerMainSponsor, date: "2023" },
-              { img: "https://img.b112j.com/bj/h5/assets/v3/images/sponsor/sunrisers-eastern-cape.png", name: "Sunrisers Eastern Cape", role: t.footerMainSponsor, date: "2023 - 2024" },
-              { img: "https://img.b112j.com/bj/h5/assets/v3/images/sponsor/deccan-gladiators.png", name: "Deccan Gladiators", role: t.footerOfficialPartner, date: "2023 - 2024" },
-              { img: "https://img.b112j.com/bj/h5/assets/v3/images/sponsor/st-kitts-and-nevis-patriots.png", name: "St Kitts & Nevis Patriots", role: t.footerPrincipleSponsor, date: "2024 - 2025" },
-              { img: "https://img.b112j.com/bj/h5/assets/v3/images/sponsor/biratnagar-kings.png", name: "Biratnagar Kings", role: t.footerBackJersey, date: "2024 - 2025" },
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-start gap-3">
-                <img src={item.img} alt={item.name} className="h-9 w-9 object-contain" />
-                <div>
-                  <h4 className="text-gray-300 font-semibold text-[13px]">{item.name}</h4>
-                  <p className="text-[10px] text-yellow_theme uppercase">{item.role}</p>
-                  <p className="text-[10px] text-yellow_theme">{item.date}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <hr className="border-gray-900 mb-10" />
-
-        {/* --- Brand Ambassadors (Image 2 Style) --- */}
-        <section className="mb-10">
-          <h3 className="text-[#12b16a] font-bold text-[13px] md:text-base mb-6 uppercase tracking-wider">
-            {t.footerBrandAmbassadors}
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-y-8 gap-x-4">
-            {[
-              { name: "Mia Khalifa", date: "2024 - 2028", img: "https://img.b112j.com/bj/h5/assets/v3/images/ambassador/mia-k.png" },
-              { name: "Kevin Pietersen", date: "2024 - 2028", img: "https://img.b112j.com/bj/h5/assets/v3/images/ambassador/kevin-pietersen.png" },
-              { name: "Amy Jackson", date: "2023 - 2024", img: "https://img.b112j.com/bj/h5/assets/v3/images/ambassador/amy-jacson.png" },
-              { name: "Hansika Motwani", date: "2023 - 2024", img: "https://img.b112j.com/bj/h5/assets/v3/images/ambassador/hansika.png" },
-              { name: "Chan Samart", date: "2024 - 2025", img: "https://img.b112j.com/bj/h5/assets/v3/images/ambassador/chan-samart.png" },
-              { name: "Keya Akter Payel", date: "2025", img: "https://img.b112j.com/bj/h5/assets/v3/images/ambassador/keya-akter-payel.png" },
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-start gap-3">
-                <img src={item.img} alt={item.name} className="h-8 w-8 object-contain grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" />
-                <div>
-                  <h4 className="text-gray-300 font-semibold text-[13px]">{item.name}</h4>
-                  <p className="text-[10px] text-yellow_theme">{item.date}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <hr className="border-gray-900 mb-10" />
-
         {/* --- Desktop Navigation --- */}
         <div className="hidden md:grid grid-cols-4 gap-8 mb-10">
           <div>

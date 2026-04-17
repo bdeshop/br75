@@ -2789,7 +2789,49 @@ Adminrouter.delete("/game-providers/:id", async (req, res) => {
       return res.status(404).json({ error: "Game provider not found" });
     }
 
-    // Delete image file
+    // Find all games under this provider
+    const gamesToDelete = await Game.find({ provider: provider.name });
+    const gamesCount = gamesToDelete.length;
+    
+    // Delete associated game images and remove games
+    let deletedGamesCount = 0;
+    let failedGamesCount = 0;
+    const failedGames = [];
+    
+    for (const game of gamesToDelete) {
+      try {
+        // Delete portrait image if it's a local file (not a URL)
+        if (game.portraitImage && !game.portraitImage.startsWith('http')) {
+          const portraitPath = path.join(__dirname, "..", "public", game.portraitImage);
+          if (fs.existsSync(portraitPath)) {
+            fs.unlinkSync(portraitPath);
+          }
+        }
+
+        // Delete landscape image if it's a local file (not a URL)
+        if (game.landscapeImage && !game.landscapeImage.startsWith('http')) {
+          const landscapePath = path.join(__dirname, "..", "public", game.landscapeImage);
+          if (fs.existsSync(landscapePath)) {
+            fs.unlinkSync(landscapePath);
+          }
+        }
+        
+        // Delete the game from database
+        await Game.findByIdAndDelete(game._id);
+        deletedGamesCount++;
+        
+      } catch (gameError) {
+        console.error(`Error deleting game ${game._id}:`, gameError);
+        failedGamesCount++;
+        failedGames.push({
+          gameId: game._id,
+          gameName: game.name,
+          error: gameError.message
+        });
+      }
+    }
+
+    // Delete provider image file
     if (provider.image) {
       const imagePath = path.join(__dirname, "..", provider.image);
       if (fs.existsSync(imagePath)) {
@@ -2797,10 +2839,27 @@ Adminrouter.delete("/game-providers/:id", async (req, res) => {
       }
     }
 
+    // Delete the provider
     await GameProvider.findByIdAndDelete(req.params.id);
 
-    res.json({ message: "Game provider deleted successfully" });
+    res.json({ 
+      message: `Game provider "${provider.name}" deleted successfully along with ${deletedGamesCount} associated games`,
+      details: {
+        provider: {
+          id: provider._id,
+          name: provider.name,
+          providercode: provider.providercode
+        },
+        games: {
+          total: gamesCount,
+          deleted: deletedGamesCount,
+          failed: failedGamesCount
+        },
+        failedGames: failedGames.length > 0 ? failedGames : undefined
+      }
+    });
   } catch (error) {
+    console.error("Error deleting game provider:", error);
     res.status(500).json({ error: "Failed to delete game provider" });
   }
 });

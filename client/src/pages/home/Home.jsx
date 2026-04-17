@@ -45,7 +45,6 @@ const AuthProvider = ({ children }) => {
       return;
     }
 
-    // Check cache first
     if (userCache && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
       setUser(userCache);
       setLoading(false);
@@ -104,28 +103,89 @@ const AuthProvider = ({ children }) => {
 
 const HomeContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Changed to false by default
+  const [isLoading, setIsLoading] = useState(false);
   const [dynamicLogo, setDynamicLogo] = useState(logo);
-  const [notice, setNotice] = useState(""); // State for notice text
+  const [notice, setNotice] = useState("");
+  
+  // THIS IS THE KEY STATE - for active category highlighting
+  const [activeCategory, setActiveCategory] = useState(null);
+  
+  // State for providers and exclusive games
+  const [providers, setProviders] = useState([]);
+  const [exclusiveGames, setExclusiveGames] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
 
   // Cache for branding data
   const [brandingCache, setBrandingCache] = useState(null);
 
-  // Fetch branding data for dynamic logo - only once
+  // Fetch categories
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${base_url}/api/categories`);
+      if (response.data?.data?.length > 0) {
+        setCategories(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  // Function to fetch providers
+  const fetchProviders = async (categoryName) => {
+    try {
+      const response = await axios.get(`${base_url}/api/providers/${categoryName}`);
+      if (response.data.success) {
+        setProviders(response.data.data);
+        setExclusiveGames([]);
+      }
+    } catch (error) {
+      console.error("Error fetching providers:", error);
+      setProviders([]);
+    }
+  };
+
+  // Function to handle category click from Sidebar
+  const handleCategorySelect = async (category) => {
+    console.log("Category selected:", category.name);
+    
+    // Set the active category - this will highlight it in both sidebar and header
+    setActiveCategory(category.name);
+    
+    // Fetch providers for this category
+    if (category.name?.toLowerCase() !== "exclusive") {
+      await fetchProviders(category.name);
+    }
+  };
+
+  // Function to handle expanding sidebar and activating category (when clicked from collapsed state)
+  const handleExpandAndActivate = async (category) => {
+    console.log("Expand and activate category:", category.name);
+    
+    // 1. Open the full sidebar
+    setSidebarOpen(true);
+    
+    // 2. Set the active category - this highlights in both sidebar and header
+    setActiveCategory(category.name);
+    
+    // 3. Fetch providers for the category
+    if (category.name?.toLowerCase() !== "exclusive") {
+      await fetchProviders(category.name);
+    }
+  };
+
+  // Fetch branding data for dynamic logo
   const fetchBrandingData = async () => {
-    // Check if we already have branding data
     if (brandingCache) {
       setDynamicLogo(brandingCache);
       return;
     }
 
-    // Check localStorage for cached branding data
     const cachedBranding = localStorage.getItem('branding_logo');
     const cacheTime = localStorage.getItem('branding_cache_time');
     
-    if (cachedBranding && cacheTime && Date.now() - parseInt(cacheTime) < 30 * 60 * 1000) { // 30 minutes cache
+    if (cachedBranding && cacheTime && Date.now() - parseInt(cacheTime) < 30 * 60 * 1000) {
       setDynamicLogo(cachedBranding);
       setBrandingCache(cachedBranding);
       return;
@@ -140,15 +200,11 @@ const HomeContent = () => {
         
         setDynamicLogo(logoUrl);
         setBrandingCache(logoUrl);
-        
-        // Cache in localStorage
         localStorage.setItem('branding_logo', logoUrl);
         localStorage.setItem('branding_cache_time', Date.now().toString());
       }
     } catch (error) {
       console.error("Error fetching branding data:", error);
-      // Fallback to default logo without setting loading to false
-      // since we don't want to trigger loader for this
     }
   };
 
@@ -158,20 +214,14 @@ const HomeContent = () => {
       const response = await axios.get(`${base_url}/api/notice`);
       
       if (response.data.success) {
-        // Check if notice exists and has title
         if (response.data.data && response.data.data.title) {
           setNotice(response.data.data.title);
-          
-          // Cache notice in localStorage
           localStorage.setItem('notice_data', JSON.stringify({
             title: response.data.data.title,
             timestamp: Date.now()
           }));
         } else {
-          // Set default notice if none exists
           setNotice("Welcome to Our Platform - Deposit Now and Get Exciting Bonuses!");
-          
-          // Cache default notice
           localStorage.setItem('notice_data', JSON.stringify({
             title: "Welcome to Our Platform - Deposit Now and Get Exciting Bonuses!",
             timestamp: Date.now()
@@ -181,11 +231,9 @@ const HomeContent = () => {
     } catch (error) {
       console.error("Error fetching notice:", error);
       
-      // Try to get cached notice from localStorage
       const cachedNotice = localStorage.getItem('notice_data');
       if (cachedNotice) {
         const parsedNotice = JSON.parse(cachedNotice);
-        // Check if cache is not too old (1 hour)
         if (Date.now() - parsedNotice.timestamp < 60 * 60 * 1000) {
           setNotice(parsedNotice.title);
         } else {
@@ -197,234 +245,10 @@ const HomeContent = () => {
     }
   };
 
-  // Provider data with image URLs
-  const providers = [
-    {
-      name: "Every",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-awcmsexy.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "JL",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-awcmjili.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "JIU",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-awcmjili.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "EVO",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-evo.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "JD",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-jdb.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "JDB",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-jdb.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "FC",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-awcmfc.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "FG Chat",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-awcmyesbingo.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Yellow Bot",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/vendor-type/for-dark/vendor-awcmyesbingo.png?v=1754999737902&source=drccdnsrc",
-    },
-  ];
-
-  // Events data
-  const events = [
-    {
-      name: "HUNDRED",
-      image: "https://img.b112j.com/upload/announcement/image_247589.jpg",
-      time: "23:30",
-      date: "19 AUG 2025 (TUE)",
-    },
-    {
-      name: "PATRICTS",
-      image: "https://img.b112j.com/upload/announcement/image_247687.jpg",
-      time: "05:00",
-      date: "20 AUG 2025 (WED)",
-    },
-    {
-      name: "HUNDRED",
-      image: "https://img.b112j.com/upload/announcement/image_247589.jpg",
-      time: "20:00",
-      date: "20 AUG 2025 (WED)",
-    },
-  ];
-
-  // Featured games data
-  const featuredGames = [
-    {
-      name: "MAGIC ACE",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-super-elements.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "WILD LOCK",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-money-wheel.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "PIGGY BANK",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-divas-ace.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "FRUITY BONANZA",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-golden-genie.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "SUGAR BANG BANG 2",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-the-kings-ace.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "OUTES OF QIYMPUS",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-super-elements.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "SUPER BANK",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-money-wheel.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "SWEET BOX AND SPOT DOWN",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-divas-ace.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "SUPER ACE",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-golden-genie.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "BOX IN KINI",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-the-kings-ace.png?v=1754999737902&source=drccdnsrc",
-    },
-  ];
-
-  // Exclusive categories data
-  const exclusiveCategories = [
-    {
-      name: "Sports",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-sport.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Casino",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-casino.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Slots",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-slot.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Table",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-table.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Fishing",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-fish.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Crash",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-crash.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Arcade",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-arcade.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Lottery",
-      image:
-        "https://img.b112j.com/bj/h5/assets/v3/images/icon-set/menu-type/inactive/icon-lottery.png?v=1754999737902&source=drccdnsrc",
-    },
-  ];
-
-  // Effects games data
-  const effectsGames = [
-    {
-      name: "Super",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-super-elements.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Flaments",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-money-wheel.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "BLOODY",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-fortune-gems.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "WATER",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-divas-ace.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "Parmin Grims",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-golden-genie.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "DIVAS AGB",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-the-kings-ace.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "GOLDEN",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-super-elements.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "GEKLE",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-money-wheel.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "THERINGS",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-fortune-gems.png?v=1754999737902&source=drccdnsrc",
-    },
-    {
-      name: "ACB",
-      image:
-        "https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-divas-ace.png?v=1754999737902&source=drccdnsrc",
-    },
-  ];
-
-  // Use useEffect to handle the actual loading state - only run once
+  // Use useEffect to handle loading state
   useEffect(() => {
     let mounted = true;
 
-    // Only show loading for initial page load, not when navigating back
     const isInitialLoad = performance.navigation.type === performance.navigation.TYPE_NAVIGATE ||
                          performance.navigation.type === performance.navigation.TYPE_RELOAD;
 
@@ -432,11 +256,9 @@ const HomeContent = () => {
       setIsLoading(true);
     }
 
-    // Fetch branding data when component mounts
     fetchBrandingData();
-    
-    // Fetch notice when component mounts
     fetchNotice();
+    fetchCategories();
 
     const handleLoad = () => {
       if (mounted) {
@@ -444,7 +266,6 @@ const HomeContent = () => {
       }
     };
 
-    // Check if the page has already loaded
     if (document.readyState === "complete") {
       if (mounted) {
         setIsLoading(false);
@@ -452,12 +273,11 @@ const HomeContent = () => {
     } else {
       window.addEventListener("load", handleLoad);
 
-      // Fallback timer
       const fallbackTimer = setTimeout(() => {
         if (mounted) {
           setIsLoading(false);
         }
-      }, 3000); // Reduced to 3 seconds
+      }, 3000);
 
       return () => {
         mounted = false;
@@ -472,14 +292,11 @@ const HomeContent = () => {
   }, []);
 
   return (
-/* Changed to a diagonal gradient with a stronger, deeper blue */
-<div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
-      {/* Loading Overlay - Only show for initial load */}
-{isLoading && (
- <div className="fixed top-0 left-0 w-full h-full bg-[#0a0a0a] flex justify-center items-center z-[10000000]">
+    <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-full bg-[#0a0a0a] flex justify-center items-center z-[10000000]">
           <div className="relative w-36 h-36 md:w-44 md:h-44 flex justify-center items-center">
-            
-            {/* The 2-Part Rotating Ring with increased width and neon glow */}
             <div 
               className="absolute w-full h-full rounded-full border-[5px] border-transparent border-t-[#ff0000] border-b-[#ff0000] animate-spin"
               style={{
@@ -487,8 +304,6 @@ const HomeContent = () => {
                 animationDuration: '1s'
               }}
             ></div>
-
-            {/* Inner dynamic logo stays fixed while the arcs rotate */}
             <div className="z-10 flex justify-center items-center">
               <img 
                 className="w-[130px] md:w-[160px] object-contain" 
@@ -499,24 +314,42 @@ const HomeContent = () => {
           </div>
         </div>
       )}
-      {/* Header */}
-      <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      
+      {/* Header - Pass activeCategory and handlers */}
+      <Header 
+        sidebarOpen={sidebarOpen} 
+        setSidebarOpen={setSidebarOpen}
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+        onExpandAndActivate={handleExpandAndActivate}
+        categories={categories}
+        fetchProviders={fetchProviders}
+        providers={providers}
+        setProviders={setProviders}
+        exclusiveGames={exclusiveGames}
+        setExclusiveGames={setExclusiveGames}
+      />
 
       {/* Main Content */}
       <div className="flex h-[calc(100vh-56px)]">
-        {/* Sidebar */}
-        <Sidebar sidebarOpen={sidebarOpen} />
+        {/* Sidebar - Pass activeCategory and handlers */}
+        <Sidebar
+          sidebarOpen={sidebarOpen}
+          onCategorySelect={handleCategorySelect}
+          onExpandAndActivate={handleExpandAndActivate}
+          activeCategory={activeCategory}
+        />
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto transition-all duration-300">
           <div className="">
             <div className="md:hidden">
-                <Mobileslider/>
+              <Mobileslider/>
             </div>
             <div className="md:block hidden">
-                   <Slider />
+              <Slider />
             </div>
-            <main className="mx-auto w-full max-w-screen-xl px-2 md:px-4  md:py-4">
+            <main className="mx-auto w-full max-w-screen-xl px-2 md:px-4 md:py-4">
               {/* Notice Section */}
               <div className="p-2 md:p-4 text-black border-[1px] border-blue-400 rounded-[5px] md:rounded-[10px] flex items-center justify-between">
                 <AiOutlineSound className="text-xl text-theme_color mr-2" />
@@ -534,13 +367,14 @@ const HomeContent = () => {
               <Category />
 
               {/* Providers Section */}
-              
               <ProviderSlider />
 
               {/* Events Section */}
               <Event />
-              {/* ==========sports========= */}
+              
+              {/* Sports Section */}
               <Sports/>
+              
               {/* Featured Games Section */}
               <Featured />
             </main>

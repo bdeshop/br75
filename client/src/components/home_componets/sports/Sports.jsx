@@ -1,156 +1,253 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import logo from "../../../assets/logo.png";
 
-const Sports = () => {
+// --- AUTH CONTEXT ---
+const AuthContext = createContext();
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const base_url = import.meta.env.VITE_API_KEY_Base_URL;
+
+  const checkAuthStatus = async () => {
+    const token = localStorage.getItem("usertoken");
+    if (!token) { setLoading(false); return; }
+    try {
+      const response = await fetch(`${base_url}/api/user/my-information`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.data);
+      } else { localStorage.removeItem("usertoken"); }
+    } catch (error) { console.error("Auth check failed:", error); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { checkAuthStatus(); }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, loading, checkAuthStatus }}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+};
+const useAuth = () => useContext(AuthContext);
+
+// --- MAIN CONTENT ---
+const SportsContent = () => {
+  const base_url = import.meta.env.VITE_API_KEY_Base_URL;
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [dynamicLogo, setDynamicLogo] = useState(logo);
+  
+  // DRAG STATES
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftState, setScrollLeftState] = useState(0);
+
   const scrollRef = useRef(null);
+  const popupRef = useRef(null);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    fetch("https://api.oraclegames.live/api/cricket/matches")
+    fetch("https://api.oraclegames.live/api/cricket/live-crex")
       .then((res) => res.json())
       .then((json) => {
-        console.log("Fetched matches:", json);
         if (json.success) setMatches(json.data);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("Error fetching matches:", err);
-        setLoading(false);
-      });
-  }, []);
+      .catch(() => setLoading(false));
 
-  const scroll = (direction) => {
+    const fetchBrandingData = async () => {
+      try {
+        const response = await axios.get(`${base_url}/api/branding`);
+        if (response.data.success && response.data.data?.logo) {
+          const logoUrl = response.data.data.logo.startsWith('http') 
+            ? response.data.data.logo 
+            : `${base_url}${response.data.data.logo.startsWith('/') ? '' : '/'}${response.data.data.logo}`;
+          setDynamicLogo(logoUrl);
+        }
+      } catch (error) { setDynamicLogo(logo); }
+    };
+    fetchBrandingData();
+  }, [base_url]);
+
+  // --- MOUSE DRAG HANDLERS ---
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeftState(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => setIsDragging(false);
+  const handleMouseUp = () => {
+    // Small delay to prevent accidental click triggers after drag
+    setTimeout(() => setIsDragging(false), 50);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed
+    scrollRef.current.scrollLeft = scrollLeftState - walk;
+  };
+
+  const handleAction = () => {
+    if (isDragging) return; // Prevent navigation if we were just dragging
+    if (!user) {
+      setShowLoginPopup(true);
+    } else {
+      navigate(`/game/0?provider=LUCKYSPORTS&category=Exclusive`);
+    }
+  };
+
+  const scrollManual = (direction) => {
     if (scrollRef.current) {
-      const scrollAmount = 400; 
-      scrollRef.current.scrollBy({ 
-        left: direction === 'left' ? -scrollAmount : scrollAmount, 
-        behavior: 'smooth' 
+      const scrollAmount = window.innerWidth < 768 ? 200 : 350;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
       });
     }
   };
 
   if (loading) return (
-    <div className="min-h-[300px] flex items-center justify-center">
-       <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+    <div className="min-h-[300px] flex items-center justify-center bg-[#0f0f0f]">
+      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
 
   return (
-    <div className="text-white py-8 font-sans">
-      <div className="max-w-[1400px] mx-auto">
+    <div className="py-[10px] md:py-[20px] text-white font-inter">
+      <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row bg-[#1a1a1a] rounded-[24px] md:rounded-[28px] overflow-hidden border border-white/5 relative">
         
-        {/* Header Section */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <span className="w-[3px] h-5 bg-emerald-500 rounded-full"></span>
-            <h2 className="text-xl font-bold tracking-tight">Live Score</h2>
+        {/* Sidebar Notch (Desktop) */}
+        <div className="hidden md:flex w-[85px] flex-col bg-[#1a1a1a] shrink-0 relative">
+          <div className="h-[120px] bg-[#222222] rounded-br-[32px] flex flex-col items-center justify-center gap-1.5 border-b border-r border-white/5 relative z-20">
+            <div className="w-8 h-8 border-2 border-white/10 rounded-full flex items-center justify-center">
+              <div className="w-4 h-4 bg-white rounded-full shadow-inner opacity-90"></div>
+            </div>
+            <span className="text-[9px] font-black tracking-widest text-gray-400 uppercase">Cricket</span>
           </div>
-
-          <div className="flex gap-1">
-            <button 
-              onClick={() => scroll('left')}
- className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 cursor-pointer rounded-[3px] transition-colors duration-200"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button 
-              onClick={() => scroll('right')}
-    className="p-2 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 cursor-pointer rounded-[3px] transition-colors duration-200"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
+          <div className="absolute top-[120px] left-0 w-8 h-8 bg-[#222222]"></div>
+          <div className="absolute top-[120px] left-0 w-full h-8 bg-[#1a1a1a] rounded-tl-[32px] z-20"></div>
         </div>
 
-        {/* Horizontal Scroll Area */}
-        <div 
-          ref={scrollRef}
-          className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x pb-4 "
-        >
-          {matches.map((match, index) => (
-            <div 
-              key={index} 
-              className={`
-                snap-start shrink-0
-                w-[320px] md:w-[380px]
-                bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border border-blue-500 rounded-lg p-5
-                flex flex-col relative transition-colors hover:border-[#333]
-                ${match.state === 'live' ? 'border-t-2' : ''}
-              `}
-            >
-              {/* Match Meta */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="overflow-hidden">
-                  <span className="text-[10px] font-bold bg-red-600 px-[10px] py-[5px] rounded-[3px] text-white  uppercase tracking-widest">
-                    {match.matchType}
-                  </span>
-                  <p className="text-[13px] text-gray-500 font-semibold uppercase truncate mt-3">
-                    {match.title}
-                  </p>
-                </div>
-                
-                <div className="flex flex-col items-end">
-                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                    match.state === 'live' ? 'text-red-500' : 'text-gray-600'
-                  }`}>
-                    {match.state === 'live' ? '● LIVE' : 'ENDED'}
-                  </span>
-                </div>
-              </div>
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex items-center justify-between px-4 md:px-6 py-4 md:py-5">
+            <div className="flex items-center gap-3">
+              <div className="px-5 md:px-6 py-1.5 bg-white text-black rounded-full font-bold text-[10px] uppercase cursor-pointer">All</div>
+              <div onClick={handleAction} className="px-4 md:px-5 py-1.5 border border-white/10 text-gray-400 rounded-full font-bold text-[10px] uppercase cursor-pointer hover:text-white transition-colors">IPL</div>
+            </div>
+            <div className="flex items-center gap-2 bg-[#222222] px-3 py-1.5 rounded-lg border border-white/5">
+              <span className="text-[10px] font-bold text-gray-400">{today}</span>
+              <Calendar size={14} className="text-gray-500" />
+            </div>
+          </div>
 
-              {/* Scoreboard Style */}
-              <div className="space-y-4 mb-6">
-                {[match.team1, match.team2].map((team, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={team.flag} 
-                        alt="" 
-                        className="w-6 h-4 object-cover rounded-sm grayscale-[20%]" 
-                      />
-                      <span className="font-bold text-[15px] text-gray-100">
-                        {team.name}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                       <span className="text-lg font-bold tracking-tight">
-                        {team.score || <span className="text-gray-800 text-xs">--</span>}
-                      </span>
+          <div className="relative group px-4 md:px-6 pb-8 md:pb-10">
+            <div 
+              ref={scrollRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              style={{ cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}
+              className="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x"
+            >
+              {matches.map((match, index) => (
+                <div 
+                  key={index} 
+                  onClick={handleAction}
+                  className="match-card snap-start shrink-0 bg-[#212121] rounded-[20px] overflow-hidden border border-white/5 flex flex-col shadow-xl hover:border-white/10 transition-all"
+                >
+                  <div className="bg-[#2434b5] px-4 py-2 flex justify-between items-center">
+                    <span className="text-[9px] font-black text-white/90 uppercase truncate max-w-[70%]">{match.subtitle || "International | T20"}</span>
+                    <div className="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded-full">
+                       <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
+                       <span className="text-[8px] font-black">LIVE</span>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Status Bar */}
-              <div className="">
-                <div className="px-3 py-1 rounded flex items-center gap-2">
-                  {/* Logic for Dots: Red Pulse for Live, Yellow Static for Upcoming */}
-                  {match.status ? (
-                    match.state === 'live' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  ) : (
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                  )}
-
-                  <p className={`text-[11px] font-bold truncate uppercase ${
-                    match.status ? 'text-gray-400' : 'text-yellow-500'
-                  }`}>
-                    {match.status ? match.status : "UPCOMING"}
-                  </p>
+                  <div className="p-4">
+                    <div className="space-y-4 mb-3">
+                      {[match.team1, match.team2].map((team, idx) => (
+                        <div key={idx} className="flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <img src={team.flag} alt="" className="w-7 h-7 rounded-full bg-blue-900 border border-white/10 object-cover" />
+                            <span className="text-[13px] font-bold text-gray-200">{team.name}</span>
+                          </div>
+                          <span className="text-xl font-black">{team.score || "0/0"}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-bold mb-4">{match.status || "1 INN, 8.3 OV"}</p>
+                    <div className="border-t border-white/5 pt-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex rounded-lg overflow-hidden h-9 shadow-inner bg-[#2a2a2a]">
+                           <div className="flex-1 bg-[#72bbef] text-black/70 flex items-center justify-center font-black">--</div>
+                           <div className="flex-1 bg-[#f1a1b8] text-black/70 flex items-center justify-center font-black">--</div>
+                        </div>
+                        <div className="flex rounded-lg overflow-hidden h-9 shadow-inner bg-[#2a2a2a]">
+                           <div className="flex-1 bg-[#72bbef] text-black/70 flex items-center justify-center font-black">--</div>
+                           <div className="flex-1 bg-[#f1a1b8] text-black/70 flex items-center justify-center font-black">--</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-         
-              </div>
+              ))}
             </div>
-          ))}
+            <button onClick={() => scrollManual('left')} className="hidden md:flex absolute left-1 top-1/2 -translate-y-1/2 z-30 p-2 bg-black/80 rounded-full opacity-0 group-hover:opacity-100 transition-all border border-white/5"><ChevronLeft size={16} /></button>
+            <button onClick={() => scrollManual('right')} className="hidden md:flex absolute right-1 top-1/2 -translate-y-1/2 z-30 p-2 bg-black/80 rounded-full opacity-0 group-hover:opacity-100 transition-all border border-white/5"><ChevronRight size={16} /></button>
+          </div>
         </div>
       </div>
+
+      {/* --- POPUP --- */}
+      {showLoginPopup && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[10000] p-4" onClick={() => setShowLoginPopup(false)}>
+          <div ref={popupRef} onClick={e => e.stopPropagation()} className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-6 max-w-md w-full relative">
+            <button onClick={() => setShowLoginPopup(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20} /></button>
+            <div className="flex justify-center mb-6">
+              <img className="h-12 w-auto object-contain" src={dynamicLogo} alt="Logo" onError={(e) => { e.target.src = logo; }} />
+            </div>
+            <p className="text-gray-300 text-center mb-6 text-sm">Please log in to play the game. If you don't have an account, sign up for free!</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={() => navigate("/register")} className="bg-theme_color hover:bg-theme_color/90 text-white font-medium py-3 rounded-md transition-colors">Sign up</button>
+              <button onClick={() => navigate("/login")} className="bg-[#333] hover:bg-[#444] text-white font-medium py-3 rounded-md transition-colors">Log in</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @media (max-width: 767px) {
+          .match-card {
+            width: calc(100vw / 1.8 - 14px); /* Show 1.8 boxes */
+            min-width: 190px;
+          }
+        }
+        @media (min-width: 768px) {
+          .match-card { width: 320px; }
+        }
       `}</style>
     </div>
   );
 };
+
+const Sports = () => (
+  <AuthProvider>
+    <SportsContent />
+  </AuthProvider>
+);
 
 export default Sports;

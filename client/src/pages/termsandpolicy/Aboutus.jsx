@@ -84,7 +84,7 @@ const Aboutus = () => {
       <div className="flex-grow">
         <div className="pt-16 pb-12 px-4 text-center bg-gradient-to-b from-[#004d40] to-[#0a0a0a]">
           <h1 className="text-2xl md:text-3xl font-bold mb-4">
-            Welcome to the <span className="text-white">BajiMan Casino Help Center</span>
+            Welcome to the <span className="text-white">Bir75 Casino Help Center</span>
           </h1>
           <p className="max-w-3xl mx-auto text-xs md:text-sm text-gray-300 leading-relaxed opacity-80">
             Need assistance? You've come to the right place.

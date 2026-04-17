@@ -62,7 +62,7 @@ const Termsandcondition = () => {
       {/* Top Logo Bar */}
       <div className="bg-[#041512] border-b border-white/5 sticky top-0 z-50">
         <NavLink to="/" className="max-w-7xl mx-auto p-4 flex items-center">
-          <img className="w-[100px] md:w-[120px] object-contain" src={logo} alt="BajiMan Logo" />
+          <img className="w-[100px] md:w-[120px] object-contain" src={logo} alt="Bir75 Logo" />
         </NavLink>
       </div>
 
@@ -72,64 +72,167 @@ const Termsandcondition = () => {
             
             {/* Header */}
             <div className="text-center mb-6">
-              <h1 className="text-lg font-normal text-yellow-500">Terms & Conditions</h1>
+              <h1 className="text-lg font-normal text-yellow-500">Our Terms & Policy</h1>
             </div>
 
             {/* Content Body */}
             <div className="space-y-6 text-[13px] text-gray-200 leading-snug font-normal">
               
               <section className="space-y-4">
-                <p className="text-[11px] text-gray-400">Last updated: 18 September 2023</p>
+                <p className="text-[11px] text-gray-400">Last updated: 2026</p>
                 <h2 className="text-[14px] font-bold">1. Introduction</h2>
-                <p>These terms and conditions and the documents referred to below (the "Terms") apply to the use of the current website (the "Website") and its related or connected services (collectively, the "Service").</p>
-                <p>You should carefully review these Terms as they contain important information concerning your rights and obligations concerning the use of the Website and form a binding legal agreement between you – our customer (the "Customer"), and us. By using this Website and/or accessing the Service, you, whether you are a guest or a registered user with an account ("Account"), agree to be bound by these Terms, together with any amendments, which may be published from time to time. If you do not accept these Terms, you should refrain from accessing the Service and using the Website.</p>
-                <p>The Service is owned by Aurora Holdings N.V., a limited liability company registered in Curacao with company registration number 10692, with registered address at Abraham de Veerstraat 9, Willemstad, Curacao ("Company"), licensed in Curacao under Gaming Services Provider N.V. license # 365/JAZ for the provision of online games of chance.</p>
+                <p>These Terms & Conditions ("Terms") apply to the use of the Bir75 website and all related services (collectively, the "Service").</p>
+                <p>By accessing or using Bir75, you agree to be legally bound by these Terms. If you do not agree, you must stop using the website immediately.</p>
+                <p>Bir75 is an international online platform providing gaming and betting services for entertainment purposes only.</p>
               </section>
 
               <section className="space-y-2">
                 <h2 className="text-[14px] font-bold">2. General Terms</h2>
-                <p>We reserve the right to revise and amend the Terms (including any documents referred to and linked to below) at any time. You should visit this page periodically to review the Terms and Conditions. Amendments will be binding and effective immediately upon publication on this Website. If you object to any such changes, you must immediately stop using the Service. Your continued use of the Website following such publication will indicate your agreement to be bound by the Terms as amended. Any bets not changed Terms taking effect will be subject to the pre-existing Terms.</p>
+                <p>Bir75 reserves the right to modify or update these Terms at any time. Changes take effect immediately upon publication.</p>
+                <p>Continued use of the website indicates acceptance of updated Terms.</p>
               </section>
 
               <section className="space-y-3">
-                <h2 className="text-[14px] font-bold">3. Your Obligations</h2>
-                <p>You acknowledge that at all times when accessing the Website and using the Service:</p>
-                <ul className="space-y-2">
-                  <li><span className="font-bold">3.1.</span> You are over 18, or the legal age at which gambling, or gaming activities are allowed under the law or jurisdiction that applies to you. We reserve the right to request proof of age documents from you at any time.</li>
-                  <li><span className="font-bold">3.2.</span> You are of legal capacity and can enter into a binding legal agreement with us. You must not access the Website or utilize the Service if you are not of legal capacity.</li>
-                  <li><span className="font-bold">3.3.</span> You are a resident in a jurisdiction that allows gambling. You are not a resident of any country in which access to online gambling to its residents or to any person within such country is prohibited. It is your sole responsibility to ensure that your use of the service is legal.</li>
-                  <li><span className="font-bold">3.4.</span> You may not use a VPN, proxy or similar services or devices that mask or manipulate the identification of your real location.</li>
-                  <li><span className="font-bold">3.5.</span> You are the authorized user of the payment method you use.</li>
-                  <li><span className="font-bold">3.6.</span> You must make all payments to us in good faith and not attempt to reverse a payment made or take any action which will cause such payment to be reversed by a third party.</li>
-                  <li><span className="font-bold">3.7.</span> When placing bets you may lose some or all of your money deposited to the Service in accordance with these Terms and you will be fully responsible for that loss.</li>
-                  <li><span className="font-bold">3.8.</span> When placing bets you must not use any information obtained in breach of any legislation in force in the country in which you were when the bet was placed.</li>
-                  <li><span className="font-bold">3.9.</span> You are not acting on behalf of another party or for any commercial purposes, but solely on your own behalf as a private individual in a personal capacity.</li>
-                  <li><span className="font-bold">3.10.</span> You must not either attempt to manipulate any market or element within the Service in bad faith nor in a manner that adversely affects the integrity of the Service or us.</li>
+                <h2 className="text-[14px] font-bold">3. User Obligations</h2>
+                <p>By using Bir75, you confirm that:</p>
+                <ul className="list-disc ml-6 space-y-1">
+                  <li>You are 18 years or older</li>
+                  <li>You have legal capacity to enter this agreement</li>
+                  <li>You comply with your local laws</li>
+                  <li>You are the authorized user of your payment method</li>
+                  <li>All payments are made in good faith</li>
+                  <li>You understand gambling involves risk and possible loss</li>
+                  <li>You are using the platform for personal use only</li>
                 </ul>
               </section>
 
               <section className="space-y-3">
-                <h2 className="text-[14px] font-bold">4. Restricted Use</h2>
-                <p>4.1. You must not use the Service:</p>
-                <p>4.1.1. If you are under the age of 18 years (or below the age of majority as stipulated in the laws of the jurisdiction applicable to you)...</p>
-                <p>4.1.3. If you are a resident of one of the following countries, or accessing the Website from one of the following countries:</p>
+                <h2 className="text-[14px] font-bold">4. Prohibited Activities</h2>
+                <p>You must NOT:</p>
+                <ul className="list-disc ml-6 space-y-1">
+                  <li>Use VPN, proxy, or location-masking tools</li>
+                  <li>Create multiple accounts</li>
+                  <li>Commit fraud or payment abuse</li>
+                  <li>Use unauthorized payment methods</li>
+                  <li>Exploit system errors</li>
+                </ul>
+                <p className="text-yellow-500">👉 Violations may result in suspension or permanent ban.</p>
+              </section>
+
+              <section className="space-y-3">
+                <h2 className="text-[14px] font-bold">5. Restricted Countries</h2>
+                <p>Bir75 is not available in:</p>
                 <ul className="list-disc ml-8 grid grid-cols-2 md:grid-cols-3 gap-1">
                   <li>Austria</li>
                   <li>Australia</li>
                   <li>Aruba</li>
                   <li>Bonaire</li>
-                  <li>Curacao</li>
+                  <li>Curaçao</li>
                   <li>France</li>
                   <li>Netherlands</li>
                   <li>Saba</li>
-                  <li>Statia</li>
+                  <li>Sint Eustatius (Statia)</li>
                   <li>St. Maarten</li>
                   <li>Singapore</li>
                   <li>Spain</li>
-                  <li>The United Kingdom</li>
+                  <li>United Kingdom</li>
                   <li>United States</li>
                 </ul>
-                <p className="mt-2">And any other jurisdiction that the Central Government of Curacao deems online gambling illegal.</p>
+                <p>👉 Also restricted in any country where online gambling is illegal.</p>
+              </section>
+
+              <section className="space-y-3 bg-red-900/20 p-4 rounded border border-red-500/30">
+                <h2 className="text-[14px] font-bold text-red-400">6. Asia Restriction Policy</h2>
+                <p className="font-semibold">Bir75 permits access to users from all Asian countries.</p>
+                <p className="text-red-300">⚠️ Users from Asia are not allowed to:</p>
+                <ul className="list-disc ml-8 space-y-1 text-red-200">
+                  <li>Register</li>
+                  <li>Access the platform</li>
+                  <li>Use any services</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">7. Payments & Risk</h2>
+                <p>All bets are final once placed. Losses are the user's responsibility. Bir75 is not liable for financial losses.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">8. Account Suspension</h2>
+                <p>Bir75 may suspend or terminate accounts, withhold funds in case of violations, or request identity verification (KYC).</p>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">9. Responsible Gambling</h2>
+                <p>Bir75 promotes responsible gaming. Users should treat gambling as entertainment, not income.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="text-[14px] font-bold">10. Changes to Terms</h2>
+                <p>We may update these Terms at any time. Users should review regularly.</p>
+              </section>
+
+              {/* NEW ENTERTAINMENT PURPOSE POLICY SECTION */}
+              <section className="space-y-4 bg-yellow-900/20 p-6 rounded border border-yellow-500/30">
+                <h2 className="text-[18px] font-bold text-yellow-400">🎯 11. Entertainment Purpose Policy</h2>
+                <p>Bir75 is designed strictly for <span className="font-semibold text-yellow-300">entertainment and leisure purposes only</span>.</p>
+                
+                <p>By using our platform, you agree that:</p>
+                <ul className="list-disc ml-6 space-y-1">
+                  <li>Gambling is for fun and recreational use only</li>
+                  <li>You will not treat it as a profession or income source</li>
+                  <li>You will only play during your leisure time</li>
+                  <li>Profits are not guaranteed</li>
+                </ul>
+
+                <div className="mt-4 pt-3 border-t border-yellow-500/30">
+                  <h3 className="text-[15px] font-bold text-yellow-400">⏱️ Recommended Play Time</h3>
+                  <p>To promote responsible gaming, Bir75 recommends that users:</p>
+                  <ul className="list-disc ml-6 space-y-1 mt-1">
+                    <li>Limit their gameplay to approximately <span className="font-semibold">6 hours per day</span></li>
+                    <li>Not exceed approximately <span className="font-semibold">120–150 hours per month</span></li>
+                    <li>Always take regular breaks during sessions</li>
+                  </ul>
+                  <p className="text-red-300 text-xs mt-2">👉 Excessive gameplay may lead to unhealthy habits and financial risk.</p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-yellow-500/30">
+                  <h3 className="text-[15px] font-bold text-yellow-400">🎉 Promotional Statement</h3>
+                  <p className="italic">"Have fun & make money with Bir75."</p>
+                  <p>This slogan reflects entertainment value only. Users must understand:</p>
+                  <ul className="list-disc ml-6 space-y-1 mt-1">
+                    <li>Earnings are not guaranteed</li>
+                    <li>Results depend on chance</li>
+                    <li>It is not a stable income source</li>
+                  </ul>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-yellow-500/30">
+                  <h3 className="text-[15px] font-bold text-yellow-400">⚠️ Player Responsibility</h3>
+                  <ul className="list-disc ml-6 space-y-1">
+                    <li>Play within your financial limits</li>
+                    <li>Do not depend on gambling for income</li>
+                    <li>Accept that losses are part of the activity</li>
+                  </ul>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-yellow-500/30">
+                  <h3 className="text-[15px] font-bold text-yellow-400">🚫 Professional Use Restriction</h3>
+                  <p>Users are strictly prohibited from:</p>
+                  <ul className="list-disc ml-6 space-y-1">
+                    <li>Professional gambling</li>
+                    <li>Syndicate/group betting</li>
+                    <li>Commercial exploitation of the platform</li>
+                  </ul>
+                </div>
+
+                <div className="mt-4 pt-4 border-t-2 border-yellow-500/50 bg-black/30 p-4 rounded text-center">
+                  <h3 className="text-[16px] font-bold text-yellow-300">🎯 Final Statement</h3>
+                  <p className="text-sm italic mt-2">
+                    Bir75 is a platform for entertainment during your leisure time. 
+                    It should never be considered a profession, investment, or guaranteed source of income.
+                  </p>
+                </div>
               </section>
             </div>
           </div>
@@ -137,7 +240,7 @@ const Termsandcondition = () => {
           <footer className="bg-black text-gray-400 py-10 px-6 md:px-16 border-t border-gray-900 mt-auto">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-8">
               <div className="flex flex-col items-start min-w-[150px]">
-                <img src={logo} alt="BajiMan" className="w-20 mb-2" />
+                <img src={logo} alt="Bir75" className="w-20 mb-2" />
                 <p className="text-[10px] text-gray-500">©Copyright 2026</p>
               </div>
 
