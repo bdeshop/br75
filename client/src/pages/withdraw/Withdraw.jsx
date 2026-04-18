@@ -255,7 +255,7 @@ const Withdraw = () => {
   });
 
   const API_BASE_URL = import.meta.env.VITE_API_KEY_Base_URL;
-  const quickAmounts = [100, 500, 1000, 2000, 5000];
+  const quickAmounts = [500, 1000, 2000, 5000,10000];
 
   // ==================== CHECK TRANSACTION PASSWORD STATUS ====================
   const checkTransactionPasswordStatus = async () => {
@@ -869,101 +869,100 @@ const Withdraw = () => {
     }
   };
 
-  const validateForm = () => {
-    const errors = {};
-    const currentData = getCurrentMethodData();
+const validateForm = () => {
+  const errors = {};
+  const currentData = getCurrentMethodData();
 
-    if (!activeMethod) {
-      errors.method = language.code === 'bn' ? "পেমেন্ট মেথড নির্বাচন করুন" : "Please select a payment method";
-    }
+  if (!activeMethod) {
+    errors.method = language.code === 'bn' ? "পেমেন্ট মেথড নির্বাচন করুন" : "Please select a payment method";
+  }
 
-    // Check wagering requirements
-    if (userData?.depositamount && userData?.depositamount > 0) {
-      const wageringReq = calculateWageringRequirements(userData);
-      if (!wageringReq.isCompleted) {
-        if (wageringReq.isSpecialCase) {
-          errors.wagering = language.code === 'bn'
-            ? `উত্তোলনের আগে আরও ৳${wageringReq.remaining.toLocaleString()} বাজি রাখতে হবে। প্রয়োজন: ১.১x ডিপোজিট (৳${wageringReq.required.toLocaleString()}), বাজি রাখা হয়েছে: ৳${wageringReq.completed.toLocaleString()}`
-            : `You need to wager ৳${wageringReq.remaining.toLocaleString()} more before withdrawing. Required: 1.1x deposit (৳${wageringReq.required.toLocaleString()}), Wagered: ৳${wageringReq.completed.toLocaleString()}`;
-        } else {
-          errors.wagering = language.code === 'bn'
-            ? `উত্তোলনের আগে আরও ৳${wageringReq.remaining.toLocaleString()} বাজি রাখতে হবে। প্রয়োজন: ৳${wageringReq.required.toLocaleString()}, বাজি রাখা হয়েছে: ৳${wageringReq.completed.toLocaleString()}`
-            : `You need to wager ৳${wageringReq.remaining.toLocaleString()} more before withdrawing. Required: ৳${wageringReq.required.toLocaleString()}, Wagered: ৳${wageringReq.completed.toLocaleString()}`;
-        }
+  // Check wagering requirements
+  if (userData?.depositamount && userData?.depositamount > 0) {
+    const wageringReq = calculateWageringRequirements(userData);
+    if (!wageringReq.isCompleted) {
+      if (wageringReq.isSpecialCase) {
+        errors.wagering = language.code === 'bn'
+          ? `উত্তোলনের আগে আরও ৳${wageringReq.remaining.toLocaleString()} বাজি রাখতে হবে। প্রয়োজন: ১.১x ডিপোজিট (৳${wageringReq.required.toLocaleString()}), বাজি রাখা হয়েছে: ৳${wageringReq.completed.toLocaleString()}`
+          : `You need to wager ৳${wageringReq.remaining.toLocaleString()} more before withdrawing. Required: 1.1x deposit (৳${wageringReq.required.toLocaleString()}), Wagered: ৳${wageringReq.completed.toLocaleString()}`;
+      } else {
+        errors.wagering = language.code === 'bn'
+          ? `উত্তোলনের আগে আরও ৳${wageringReq.remaining.toLocaleString()} বাজি রাখতে হবে। প্রয়োজন: ৳${wageringReq.required.toLocaleString()}, বাজি রাখা হয়েছে: ৳${wageringReq.completed.toLocaleString()}`
+          : `You need to wager ৳${wageringReq.remaining.toLocaleString()} more before withdrawing. Required: ৳${wageringReq.required.toLocaleString()}, Wagered: ৳${wageringReq.completed.toLocaleString()}`;
       }
     }
+  }
 
-    // Check bonus wagering requirements
-    const bonusWagering = checkBonusWagering(userData);
-    if (bonusWagering.hasActiveBonus && bonusWagering.remaining > 0) {
-      errors.bonusWagering = language.code === 'bn'
-        ? `আপনার সক্রিয় বোনাস ওয়েজারিং প্রয়োজনীয়তা রয়েছে। আরও ৳${bonusWagering.remaining.toLocaleString()} বাজি রাখতে হবে (৳${bonusWagering.totalWagered.toLocaleString()}/${bonusWagering.totalWagerRequired.toLocaleString()})`
-        : `You have active bonus wagering requirements. Need to wager ৳${bonusWagering.remaining.toLocaleString()} more (৳${bonusWagering.totalWagered.toLocaleString()}/${bonusWagering.totalWagerRequired.toLocaleString()})`;
-    }
+  // Check bonus wagering requirements
+  const bonusWagering = checkBonusWagering(userData);
+  if (bonusWagering.hasActiveBonus && bonusWagering.remaining > 0) {
+    errors.bonusWagering = language.code === 'bn'
+      ? `আপনার সক্রিয় বোনাস ওয়েজারিং প্রয়োজনীয়তা রয়েছে। আরও ৳${bonusWagering.remaining.toLocaleString()} বাজি রাখতে হবে (৳${bonusWagering.totalWagered.toLocaleString()}/${bonusWagering.totalWagerRequired.toLocaleString()})`
+      : `You have active bonus wagering requirements. Need to wager ৳${bonusWagering.remaining.toLocaleString()} more (৳${bonusWagering.totalWagered.toLocaleString()}/${bonusWagering.totalWagerRequired.toLocaleString()})`;
+  }
 
-    // Validate based on method
-    if (activeMethod) {
-      const methodName = activeMethod.gatewayName?.toLowerCase();
-      
-      if (methodName === "bkash") {
-        if (!currentData.phoneNumber) {
-          errors.phoneNumber = language.code === 'bn' ? "বিকাশ নাম্বার প্রয়োজন" : "bKash number is required";
-        } else if (!/^(01[3-9]\d{8})$/.test(currentData.phoneNumber)) {
-          errors.phoneNumber = language.code === 'bn' ? "সঠিক বিকাশ নাম্বার দিন (01XXXXXXXXX)" : "Enter valid bKash number (01XXXXXXXXX)";
-        }
-        if (!currentData.accountType) {
-          errors.accountType = language.code === 'bn' ? "অ্যাকাউন্ট টাইপ নির্বাচন করুন" : "Account type is required";
-        }
-      } else if (methodName === "rocket") {
-        if (!currentData.phoneNumber) {
-          errors.phoneNumber = language.code === 'bn' ? "রকেট নাম্বার প্রয়োজন" : "Rocket number is required";
-        } else if (!/^(01[3-9]\d{8})$/.test(currentData.phoneNumber)) {
-          errors.phoneNumber = language.code === 'bn' ? "সঠিক রকেট নাম্বার দিন (01XXXXXXXXX)" : "Enter valid Rocket number (01XXXXXXXXX)";
-        }
-      } else if (methodName === "nagad") {
-        if (!currentData.phoneNumber) {
-          errors.phoneNumber = language.code === 'bn' ? "নগদ নাম্বার প্রয়োজন" : "Nagad number is required";
-        } else if (!/^(01[3-9]\d{8})$/.test(currentData.phoneNumber)) {
-          errors.phoneNumber = language.code === 'bn' ? "সঠিক নগদ নাম্বার দিন (01XXXXXXXXX)" : "Enter valid Nagad number (01XXXXXXXXX)";
-        }
-      } else if (methodName === "bank") {
-        if (!currentData.bankName) errors.bankName = language.code === 'bn' ? "ব্যাংকের নাম প্রয়োজন" : "Bank name is required";
-        if (!currentData.accountHolderName) errors.accountHolderName = language.code === 'bn' ? "একাউন্ট হোল্ডারের নাম প্রয়োজন" : "Account holder name is required";
-        if (!currentData.accountNumber) errors.accountNumber = language.code === 'bn' ? "একাউন্ট নাম্বার প্রয়োজন" : "Account number is required";
-        if (!currentData.branchName) errors.branchName = language.code === 'bn' ? "ব্রাঞ্চের নাম প্রয়োজন" : "Branch name is required";
-        if (!currentData.district) errors.district = language.code === 'bn' ? "জেলা প্রয়োজন" : "District is required";
-        if (!currentData.routingNumber) errors.routingNumber = language.code === 'bn' ? "রাউটিং নাম্বার প্রয়োজন" : "Routing number is required";
-        if (currentData.routingNumber && !/^\d{9}$/.test(currentData.routingNumber)) {
-          errors.routingNumber = language.code === 'bn' ? "রাউটিং নাম্বার ৯ ডিজিট হতে হবে" : "Routing number must be 9 digits";
-        }
+  // Validate based on method
+  if (activeMethod) {
+    const methodName = activeMethod.gatewayName?.toLowerCase();
+    
+    if (methodName === "bkash") {
+      if (!currentData.phoneNumber) {
+        errors.phoneNumber = language.code === 'bn' ? "বিকাশ নাম্বার প্রয়োজন" : "bKash number is required";
+      } else if (!/^(01[3-9]\d{8})$/.test(currentData.phoneNumber)) {
+        errors.phoneNumber = language.code === 'bn' ? "সঠিক বিকাশ নাম্বার দিন (01XXXXXXXXX)" : "Enter valid bKash number (01XXXXXXXXX)";
+      }
+      if (!currentData.accountType) {
+        errors.accountType = language.code === 'bn' ? "অ্যাকাউন্ট টাইপ নির্বাচন করুন" : "Account type is required";
+      }
+    } else if (methodName === "rocket") {
+      if (!currentData.phoneNumber) {
+        errors.phoneNumber = language.code === 'bn' ? "রকেট নাম্বার প্রয়োজন" : "Rocket number is required";
+      } else if (!/^(01[3-9]\d{8})$/.test(currentData.phoneNumber)) {
+        errors.phoneNumber = language.code === 'bn' ? "সঠিক রকেট নাম্বার দিন (01XXXXXXXXX)" : "Enter valid Rocket number (01XXXXXXXXX)";
+      }
+    } else if (methodName === "nagad") {
+      if (!currentData.phoneNumber) {
+        errors.phoneNumber = language.code === 'bn' ? "নগদ নাম্বার প্রয়োজন" : "Nagad number is required";
+      } else if (!/^(01[3-9]\d{8})$/.test(currentData.phoneNumber)) {
+        errors.phoneNumber = language.code === 'bn' ? "সঠিক নগদ নাম্বার দিন (01XXXXXXXXX)" : "Enter valid Nagad number (01XXXXXXXXX)";
+      }
+    } else if (methodName === "bank") {
+      if (!currentData.bankName) errors.bankName = language.code === 'bn' ? "ব্যাংকের নাম প্রয়োজন" : "Bank name is required";
+      if (!currentData.accountHolderName) errors.accountHolderName = language.code === 'bn' ? "একাউন্ট হোল্ডারের নাম প্রয়োজন" : "Account holder name is required";
+      if (!currentData.accountNumber) errors.accountNumber = language.code === 'bn' ? "একাউন্ট নাম্বার প্রয়োজন" : "Account number is required";
+      if (!currentData.branchName) errors.branchName = language.code === 'bn' ? "ব্রাঞ্চের নাম প্রয়োজন" : "Branch name is required";
+      if (!currentData.district) errors.district = language.code === 'bn' ? "জেলা প্রয়োজন" : "District is required";
+      if (!currentData.routingNumber) errors.routingNumber = language.code === 'bn' ? "রাউটিং নাম্বার প্রয়োজন" : "Routing number is required";
+      if (currentData.routingNumber && !/^\d{9}$/.test(currentData.routingNumber)) {
+        errors.routingNumber = language.code === 'bn' ? "রাউটিং নাম্বার ৯ ডিজিট হতে হবে" : "Routing number must be 9 digits";
       }
     }
+  }
 
-    // Amount validation
-    if (!amount) {
-      errors.amount = language.code === 'bn' ? "পরিমাণ প্রয়োজন" : "Amount is required";
-    } else if (parseFloat(amount) < parseFloat(activeMethod?.minAmount || 100)) {
-      errors.amount = language.code === 'bn'
-        ? `ন্যূনতম উত্তোলনের পরিমাণ ৳${activeMethod?.minAmount || 100}`
-        : `Minimum withdrawal amount is ৳${activeMethod?.minAmount || 100}`;
-    } else if (parseFloat(amount) > parseFloat(activeMethod?.maxAmount || 30000)) {
-      errors.amount = language.code === 'bn'
-        ? `সর্বোচ্চ উত্তোলনের পরিমাণ ৳${activeMethod?.maxAmount || 30000}`
-        : `Maximum withdrawal amount is ৳${activeMethod?.maxAmount || 30000}`;
-    } else if (parseFloat(amount) > (userData?.balance || 0)) {
-      errors.amount = language.code === 'bn'
-        ? "পর্যাপ্ত ব্যালেন্স নেই"
-        : "Insufficient balance for this withdrawal";
-    } else if (!/^\d+$/.test(amount)) {
-      errors.amount = language.code === 'bn'
-        ? "পরিমাণ অবশ্যই পূর্ণ সংখ্যা হতে হবে"
-        : "Amount must be a whole number";
-    }
+  // Amount validation - UPDATED to enforce minimum 500
+  if (!amount) {
+    errors.amount = language.code === 'bn' ? "পরিমাণ প্রয়োজন" : "Amount is required";
+  } else if (parseFloat(amount) < 500) { // Changed from activeMethod?.minAmount to 500
+    errors.amount = language.code === 'bn'
+      ? `ন্যূনতম উত্তোলনের পরিমাণ ৳500`
+      : `Minimum withdrawal amount is ৳500`;
+  } else if (parseFloat(amount) > parseFloat(activeMethod?.maxAmount || 30000)) {
+    errors.amount = language.code === 'bn'
+      ? `সর্বোচ্চ উত্তোলনের পরিমাণ ৳${activeMethod?.maxAmount || 30000}`
+      : `Maximum withdrawal amount is ৳${activeMethod?.maxAmount || 30000}`;
+  } else if (parseFloat(amount) > (userData?.balance || 0)) {
+    errors.amount = language.code === 'bn'
+      ? "পর্যাপ্ত ব্যালেন্স নেই"
+      : "Insufficient balance for this withdrawal";
+  } else if (!/^\d+$/.test(amount)) {
+    errors.amount = language.code === 'bn'
+      ? "পরিমাণ অবশ্যই পূর্ণ সংখ্যা হতে হবে"
+      : "Amount must be a whole number";
+  }
 
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
+  setFormErrors(errors);
+  return Object.keys(errors).length === 0;
+};
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,

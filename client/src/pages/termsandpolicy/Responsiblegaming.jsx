@@ -58,7 +58,7 @@ const Responsiblegaming = () => {
   };
 
   return (
-    <div className="min-h-screen font-sans bg-[#061e1a] text-white flex flex-col">
+    <div className="min-h-screen font-sans bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white flex flex-col">
       {/* Top Logo Bar */}
       <div className="bg-[#041512] border-b border-white/5 sticky top-0 z-50">
         <NavLink to="/" className="max-w-7xl mx-auto p-4 flex items-center">

@@ -14,12 +14,12 @@ const Vipclub = () => {
     },
     {
       title: "VIP Exclusive Rewards",
-      desc: "Who doesn't like to have something extra? Be on your way to increased casino fun with exclusive rewards! One of the biggest perks of joining our Baji VIP Club is benefiting from the exclusive giveaway. We're giving out generous amounts of bonuses, cash prizes, level up rewards, and mystery gifts all year long.",
+      desc: "Who doesn't like to have something extra? Be on your way to increased casino fun with exclusive rewards! One of the biggest perks of joining our Bir75 VIP Club is benefiting from the exclusive giveaway. We're giving out generous amounts of bonuses, cash prizes, level up rewards, and mystery gifts all year long.",
       img: "https://www.vipdetailspage.com/wp-content/themes/vip/bjvip_v2/img/bl2.png",
     },
     {
       title: "'VIP Points To Cash' Redemption",
-      desc: "You can exchange your VIP Points for cash with no limitation. When you play or bet with Baji, you earn VIP Points, a redeemable currency that can be used to earn additional cash across all of Baji's products!",
+      desc: "You can exchange your VIP Points for cash with no limitation. When you play or bet with Bir75, you earn VIP Points, a redeemable currency that can be used to earn additional cash across all of Bir75's products!",
       img: "https://www.vipdetailspage.com/wp-content/themes/vip/bjvip_v2/img/bl3.png",
     },
     {

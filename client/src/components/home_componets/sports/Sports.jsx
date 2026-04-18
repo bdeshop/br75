@@ -87,7 +87,6 @@ const SportsContent = () => {
 
   const handleMouseLeave = () => setIsDragging(false);
   const handleMouseUp = () => {
-    // Small delay to prevent accidental click triggers after drag
     setTimeout(() => setIsDragging(false), 50);
   };
 
@@ -95,12 +94,12 @@ const SportsContent = () => {
     if (!isDragging) return;
     e.preventDefault();
     const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX) * 2; // Scroll speed
+    const walk = (x - startX) * 2;
     scrollRef.current.scrollLeft = scrollLeftState - walk;
   };
 
   const handleAction = () => {
-    if (isDragging) return; // Prevent navigation if we were just dragging
+    if (isDragging) return;
     if (!user) {
       setShowLoginPopup(true);
     } else {
@@ -125,8 +124,8 @@ const SportsContent = () => {
   );
 
   return (
-    <div className="py-[10px] md:py-[20px] text-white font-inter">
-      <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row bg-[#1a1a1a] rounded-[24px] md:rounded-[28px] overflow-hidden border border-white/5 relative">
+    <div className="py-[6px] md:py-[20px] text-white font-inter">
+      <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row bg-[#1a1a1a] rounded-[16px] md:rounded-[28px] overflow-hidden border border-white/5 relative">
         
         {/* Sidebar Notch (Desktop) */}
         <div className="hidden md:flex w-[85px] flex-col bg-[#1a1a1a] shrink-0 relative">
@@ -141,18 +140,18 @@ const SportsContent = () => {
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center justify-between px-4 md:px-6 py-4 md:py-5">
-            <div className="flex items-center gap-3">
-              <div className="px-5 md:px-6 py-1.5 bg-white text-black rounded-full font-bold text-[10px] uppercase cursor-pointer">All</div>
-              <div onClick={handleAction} className="px-4 md:px-5 py-1.5 border border-white/10 text-gray-400 rounded-full font-bold text-[10px] uppercase cursor-pointer hover:text-white transition-colors">IPL</div>
+          <div className="flex items-center justify-between px-3 md:px-6 py-3 md:py-5">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="px-3 md:px-6 py-1 md:py-1.5 bg-white text-black rounded-full font-bold text-[9px] md:text-[10px] uppercase cursor-pointer">All</div>
+              <div onClick={handleAction} className="px-3 md:px-5 py-1 md:py-1.5 border border-white/10 text-gray-400 rounded-full font-bold text-[9px] md:text-[10px] uppercase cursor-pointer hover:text-white transition-colors">IPL</div>
             </div>
-            <div className="flex items-center gap-2 bg-[#222222] px-3 py-1.5 rounded-lg border border-white/5">
-              <span className="text-[10px] font-bold text-gray-400">{today}</span>
-              <Calendar size={14} className="text-gray-500" />
+            <div className="flex items-center gap-1.5 md:gap-2 bg-[#222222] px-2 md:px-3 py-1 md:py-1.5 rounded-lg border border-white/5">
+              <span className="text-[8px] md:text-[10px] font-bold text-gray-400">{today}</span>
+              <Calendar size={12} className="text-gray-500 md:w-[14px] md:h-[14px]" />
             </div>
           </div>
 
-          <div className="relative group px-4 md:px-6 pb-8 md:pb-10">
+          <div className="relative group px-3 md:px-6 pb-6 md:pb-10">
             <div 
               ref={scrollRef}
               onMouseDown={handleMouseDown}
@@ -160,43 +159,43 @@ const SportsContent = () => {
               onMouseUp={handleMouseUp}
               onMouseMove={handleMouseMove}
               style={{ cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}
-              className="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x"
+              className="flex gap-2 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-start"
             >
               {matches.map((match, index) => (
                 <div 
                   key={index} 
                   onClick={handleAction}
-                  className="match-card snap-start shrink-0 bg-[#212121] rounded-[20px] overflow-hidden border border-white/5 flex flex-col shadow-xl hover:border-white/10 transition-all"
+                  className="match-card snap-start shrink-0 bg-[#212121] rounded-[16px] md:rounded-[20px] overflow-hidden border border-white/5 flex flex-col shadow-xl hover:border-white/10 transition-all"
                 >
-                  <div className="bg-[#2434b5] px-4 py-2 flex justify-between items-center">
-                    <span className="text-[9px] font-black text-white/90 uppercase truncate max-w-[70%]">{match.subtitle || "International | T20"}</span>
-                    <div className="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded-full">
+                  <div className="bg-[#2434b5] px-2 md:px-4 py-1.5 md:py-2 flex justify-between items-center">
+                    <span className="text-[8px] md:text-[9px] font-black text-white/90 uppercase truncate max-w-[70%]">{match.subtitle || "International | T20"}</span>
+                    <div className="flex items-center gap-1 md:gap-1.5 bg-black/20 px-1.5 md:px-2 py-0.5 rounded-full">
                        <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
-                       <span className="text-[8px] font-black">LIVE</span>
+                       <span className="text-[7px] md:text-[8px] font-black">LIVE</span>
                     </div>
                   </div>
-                  <div className="p-4">
-                    <div className="space-y-4 mb-3">
+                  <div className="p-3 md:p-4">
+                    <div className="space-y-3 md:space-y-4 mb-2 md:mb-3">
                       {[match.team1, match.team2].map((team, idx) => (
                         <div key={idx} className="flex justify-between items-center">
-                          <div className="flex items-center gap-3">
-                            <img src={team.flag} alt="" className="w-7 h-7 rounded-full bg-blue-900 border border-white/10 object-cover" />
-                            <span className="text-[13px] font-bold text-gray-200">{team.name}</span>
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <img src={team.flag} alt="" className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-blue-900 border border-white/10 object-cover" />
+                            <span className="text-[11px] md:text-[13px] font-semibold text-gray-200">{team.name}</span>
                           </div>
-                          <span className="text-xl font-black">{team.score || "0/0"}</span>
+                          <span className="text-sm md:text-base font-semibold">{team.score || "0/0"}</span>
                         </div>
                       ))}
                     </div>
-                    <p className="text-[10px] text-gray-500 font-bold mb-4">{match.status || "1 INN, 8.3 OV"}</p>
-                    <div className="border-t border-white/5 pt-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex rounded-lg overflow-hidden h-9 shadow-inner bg-[#2a2a2a]">
-                           <div className="flex-1 bg-[#72bbef] text-black/70 flex items-center justify-center font-black">--</div>
-                           <div className="flex-1 bg-[#f1a1b8] text-black/70 flex items-center justify-center font-black">--</div>
+                    <p className="text-[8px] md:text-[10px] text-gray-500 font-bold mb-3 md:mb-4">{match.status || "1 INN, 8.3 OV"}</p>
+                    <div className="border-t border-white/5 pt-3 md:pt-4">
+                      <div className="grid grid-cols-2 gap-2 md:gap-3">
+                        <div className="flex rounded-lg overflow-hidden h-7 md:h-9 shadow-inner bg-[#2a2a2a]">
+                           <div className="flex-1 bg-[#72bbef] text-black/70 flex items-center justify-center font-black text-[9px] md:text-base">--</div>
+                           <div className="flex-1 bg-[#f1a1b8] text-black/70 flex items-center justify-center font-black text-[9px] md:text-base">--</div>
                         </div>
-                        <div className="flex rounded-lg overflow-hidden h-9 shadow-inner bg-[#2a2a2a]">
-                           <div className="flex-1 bg-[#72bbef] text-black/70 flex items-center justify-center font-black">--</div>
-                           <div className="flex-1 bg-[#f1a1b8] text-black/70 flex items-center justify-center font-black">--</div>
+                        <div className="flex rounded-lg overflow-hidden h-7 md:h-9 shadow-inner bg-[#2a2a2a]">
+                           <div className="flex-1 bg-[#72bbef] text-black/70 flex items-center justify-center font-black text-[9px] md:text-base">--</div>
+                           <div className="flex-1 bg-[#f1a1b8] text-black/70 flex items-center justify-center font-black text-[9px] md:text-base">--</div>
                         </div>
                       </div>
                     </div>
@@ -213,15 +212,15 @@ const SportsContent = () => {
       {/* --- POPUP --- */}
       {showLoginPopup && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[10000] p-4" onClick={() => setShowLoginPopup(false)}>
-          <div ref={popupRef} onClick={e => e.stopPropagation()} className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-6 max-w-md w-full relative">
-            <button onClick={() => setShowLoginPopup(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20} /></button>
-            <div className="flex justify-center mb-6">
-              <img className="h-12 w-auto object-contain" src={dynamicLogo} alt="Logo" onError={(e) => { e.target.src = logo; }} />
+          <div ref={popupRef} onClick={e => e.stopPropagation()} className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-5 md:p-6 max-w-md w-full relative">
+            <button onClick={() => setShowLoginPopup(false)} className="absolute top-3 right-3 md:top-4 md:right-4 text-gray-400 hover:text-white"><X size={18} className="md:w-[20px] md:h-[20px]" /></button>
+            <div className="flex justify-center mb-5 md:mb-6">
+              <img className="h-10 md:h-12 w-auto object-contain" src={dynamicLogo} alt="Logo" onError={(e) => { e.target.src = logo; }} />
             </div>
-            <p className="text-gray-300 text-center mb-6 text-sm">Please log in to play the game. If you don't have an account, sign up for free!</p>
-            <div className="flex flex-col gap-3">
-              <button onClick={() => navigate("/register")} className="bg-theme_color hover:bg-theme_color/90 text-white font-medium py-3 rounded-md transition-colors">Sign up</button>
-              <button onClick={() => navigate("/login")} className="bg-[#333] hover:bg-[#444] text-white font-medium py-3 rounded-md transition-colors">Log in</button>
+            <p className="text-gray-300 text-center mb-5 md:mb-6 text-xs md:text-sm">Please log in to play the game. If you don't have an account, sign up for free!</p>
+            <div className="flex flex-col gap-2.5 md:gap-3">
+              <button onClick={() => navigate("/register")} className="bg-theme_color hover:bg-theme_color/90 text-white font-medium py-2.5 md:py-3 rounded-md transition-colors text-sm md:text-base">Sign up</button>
+              <button onClick={() => navigate("/login")} className="bg-[#333] hover:bg-[#444] text-white font-medium py-2.5 md:py-3 rounded-md transition-colors text-sm md:text-base">Log in</button>
             </div>
           </div>
         </div>
@@ -232,8 +231,9 @@ const SportsContent = () => {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @media (max-width: 767px) {
           .match-card {
-            width: calc(100vw / 1.8 - 14px); /* Show 1.8 boxes */
-            min-width: 190px;
+            width: calc(90vw / 1.1);
+            min-width: calc(90vw / 1.1);
+            max-width: calc(90vw / 1.1);
           }
         }
         @media (min-width: 768px) {

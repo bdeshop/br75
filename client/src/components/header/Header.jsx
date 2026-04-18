@@ -549,12 +549,12 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 
                 {/* Withdraw & Deposit Buttons */}
                 <div className="flex justify-center items-center gap-2">
-                  <NavLink
-                    to="/member/withdraw"
+                  <button
+                   onClick={()=>{navigate("/member/withdraw")}}
                     className="text-white text-[12px] md:text-sm px-5 py-2 border-[1px] bg-[#FF9700] cursor-pointer border-gray-700 rounded hover:bg-[#333] transition-all duration-200"
                   >
                     {t.withdrawal}
-                  </NavLink>
+                  </button>
                   <NavLink
                     to="/member/deposit"
                     className="bg-red-500 text-[12px] md:text-sm px-5 py-2 rounded-[3px] hover:bg-theme_color/80 transition-all duration-200 cursor-pointer font-medium text-white"
@@ -732,10 +732,10 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
 
       {/* Floating Social Buttons */}
       <div className="fixed bottom-32 md:bottom-20 right-4 z-[1000] flex flex-col gap-2">
-        <a href="https://t.me/bajiman" target="_blank" rel="noopener noreferrer" className="transition-all duration-300 animate-bounce hover:animate-pulse" aria-label="Join Telegram Channel" style={{ animationDelay: "0.1s" }}>
+        <a href="https://t.me/+Hv8SAVMZoDU3MmY1" target="_blank" rel="noopener noreferrer" className="transition-all duration-300 animate-bounce hover:animate-pulse" aria-label="Join Telegram Channel" style={{ animationDelay: "0.1s" }}>
           <img src={telegram_icon} className="w-[65px] md:w-[80px]" alt="Telegram" />
         </a>
-        <a href="https://wa.me/+4407386588951" target="_blank" rel="noopener noreferrer" className="transition-all duration-300 animate-bounce hover:animate-pulse" aria-label="Contact Support on WhatsApp" style={{ animationDelay: "0.2s" }}>
+        <a href="https://wa.me/+60134935257" target="_blank" rel="noopener noreferrer" className="transition-all duration-300 animate-bounce hover:animate-pulse" aria-label="Contact Support on WhatsApp" style={{ animationDelay: "0.2s" }}>
           <img src={whatsapp_icon} className="w-[65px] md:w-[80px]" alt="WhatsApp" />
         </a>
       </div>

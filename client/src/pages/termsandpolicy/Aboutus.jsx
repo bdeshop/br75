@@ -68,14 +68,14 @@ const Aboutus = () => {
   const topics = [
     { title: "Account", icon: <FaUserCircle /> },
     { title: "Payment", icon: <FaWallet /> },
-    { title: "Baji Tips", icon: <FaLightbulb /> },
+    { title: "Bir75 Tips", icon: <FaLightbulb /> },
     { title: "Promotions", icon: <FaPercentage /> },
     { title: "Sports", icon: <FaRunning /> },
     { title: "Casino", icon: <FaDice /> },
   ];
 
   return (
-    <div className="min-h-screen font-poppins bg-[#0a0a0a] text-white flex flex-col">
+    <div className="min-h-screen font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white flex flex-col">
       {/* Top Navigation */}
       <div className="bg-[#004d40] p-[20px]">
         <img className="w-[100px]" src={logo} alt="Logo" />

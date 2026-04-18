@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   FaChevronDown,
   FaChevronRight,
@@ -6,43 +6,128 @@ import {
   FaCrown,
   FaUserFriends,
   FaHandshake,
+  FaGlobe,
+  FaMobileAlt,
 } from "react-icons/fa";
 import { MdSupportAgent } from "react-icons/md";
 import { IoClose } from "react-icons/io5";
 import axios from "axios";
+import { LanguageContext } from "../../context/LanguageContext";
+
+// Flag images
+const BD_FLAG = "https://flagcdn.com/w320/bd.png";
+const US_FLAG = "https://flagcdn.com/w320/us.png";
+
+// APK Download URL
+const APK_FILE = "https://bir75.com/Bir75.apk";
 
 const Sidebar = ({ 
   sidebarOpen, 
-  setSidebarOpen,  // ← Make sure this is in props
+  setSidebarOpen,
   onCategorySelect, 
   onExpandAndActivate, 
-  activeCategory 
+  activeCategory,
+  externalActiveMenu
 }) => {
+  const { t, language, changeLanguage } = useContext(LanguageContext);
+  const isBangla = language?.code === "bn";
+  
   const [activeMenu, setActiveMenu] = useState(null);
   const [activeSubMenu, setActiveSubMenu] = useState(null);
   const [categories, setCategories] = useState([]);
   const [providers, setProviders] = useState([]);
   const [exclusiveGames, setExclusiveGames] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [showMobileAppBanner, setShowMobileAppBanner] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_KEY_Base_URL;
 
+  // Check if device is mobile
+  const isMobileDevice = () => window.innerWidth < 768;
+
+  // Check if mobile app banner should be shown
+  const checkBannerVisibility = () => {
+    if (!isMobileDevice()) return false;
+    const bannerHiddenUntil = localStorage.getItem("mobileAppBannerHiddenUntil");
+    const downloadHiddenUntil = localStorage.getItem("mobileAppDownloadHiddenUntil");
+    if (downloadHiddenUntil && Date.now() < parseInt(downloadHiddenUntil)) return false;
+    if (bannerHiddenUntil && Date.now() < parseInt(bannerHiddenUntil)) return false;
+    return true;
+  };
+
+  // Download APK file
+  const downloadFileAtURL = (url) => {
+    const fileName = url.split("/").pop();
+    const aTag = document.createElement("a");
+    aTag.href = url;
+    aTag.setAttribute("download", fileName);
+    document.body.appendChild(aTag);
+    aTag.click();
+    aTag.remove();
+  };
+
+  // Close mobile app banner
+  const handleCloseBanner = () => {
+    const hideUntil = Date.now() + 10 * 60 * 1000; // 10 minutes
+    localStorage.setItem("mobileAppBannerHiddenUntil", hideUntil.toString());
+    setShowMobileAppBanner(false);
+  };
+
+  // Handle Chrome browser opening
+  const handleOpenInChrome = () => {
+    const hideUntil = Date.now() + 10 * 60 * 1000;
+    localStorage.setItem("mobileAppBannerHiddenUntil", hideUntil.toString());
+    setShowMobileAppBanner(false);
+    setTimeout(() => window.location.reload(), 100);
+  };
+
+  const handleSelectEnglish = () => {
+    changeLanguage({ code: "en", name: "English", flag: US_FLAG });
+    localStorage.setItem("language", "en");
+    window.dispatchEvent(new StorageEvent("storage", { key: "language", newValue: "en" }));
+    setLangDropdownOpen(false);
+  };
+
+  const handleSelectBangla = () => {
+    changeLanguage({ code: "bn", name: "বাংলা", flag: BD_FLAG });
+    localStorage.setItem("language", "bn");
+    window.dispatchEvent(new StorageEvent("storage", { key: "language", newValue: "bn" }));
+    setLangDropdownOpen(false);
+  };
+
   // Sync active category from parent to local state AND fetch content
   useEffect(() => {
-    if (activeCategory !== undefined && activeCategory !== null) {
-      setActiveMenu(activeCategory);
-      // Fetch content for the active category when it changes
-      const category = categories.find(cat => cat.name === activeCategory);
+    // Use externalActiveMenu if provided (from Header), otherwise use activeCategory
+    const menuToActivate = externalActiveMenu !== undefined && externalActiveMenu !== null 
+      ? externalActiveMenu 
+      : activeCategory;
+    
+    if (menuToActivate !== undefined && menuToActivate !== null) {
+      setActiveMenu(menuToActivate);
+      const category = categories.find(cat => cat.name === menuToActivate);
       if (category) {
         fetchCategoryContent(category);
       }
     }
-  }, [activeCategory, categories]);
+  }, [activeCategory, categories, externalActiveMenu]);
 
   // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Check banner visibility on mount and when sidebar opens/closes
+  useEffect(() => {
+    if (sidebarOpen && isMobileDevice()) {
+      const timer = setTimeout(() => {
+        if (checkBannerVisibility()) setShowMobileAppBanner(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowMobileAppBanner(false);
+    }
+  }, [sidebarOpen]);
 
   const fetchCategories = async () => {
     try {
@@ -117,7 +202,6 @@ const Sidebar = ({
     }
   };
 
-  // Function to fetch content based on category
   const fetchCategoryContent = async (category) => {
     if (!category) return;
     
@@ -156,7 +240,6 @@ const Sidebar = ({
   const handleCategoryItemClick = async (category) => {
     console.log("Category clicked:", category.name);
     
-    // If sidebar is closed: tell parent to open it and activate this category
     if (!sidebarOpen) {
       console.log("Sidebar closed, calling onExpandAndActivate");
       if (onExpandAndActivate) {
@@ -165,7 +248,6 @@ const Sidebar = ({
       return;
     }
 
-    // Normal behaviour when sidebar is open
     if (activeMenu === category.name) {
       setActiveMenu(null);
       setActiveSubMenu(null);
@@ -202,40 +284,148 @@ const Sidebar = ({
     return `${API_BASE_URL}/${cleanPath}`;
   };
 
-  // Function to close sidebar - with error checking
   const closeSidebar = () => {
-    console.log("Closing sidebar", { setSidebarOpen: typeof setSidebarOpen });
     if (setSidebarOpen && typeof setSidebarOpen === 'function') {
       setSidebarOpen(false);
-    } else {
-      console.error("setSidebarOpen is not a function", setSidebarOpen);
     }
   };
 
+  // Translate category name
+  const translateCategoryName = (name) => {
+    if (!name) return name;
+    const key = name.toLowerCase();
+    return t[key] || name;
+  };
+
+  // Language Switcher Component for Desktop
+  const LanguageSwitcherDesktop = () => (
+    <div className="relative">
+      <button
+        onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+        className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-all duration-200 border border-gray-700/50"
+      >
+        <div className="flex items-center gap-2">
+          <FaGlobe className="text-gray-400 text-sm" />
+          <span className="text-sm text-gray-300">{isBangla ? "বাংলা" : "English"}</span>
+        </div>
+        <FaChevronDown className={`text-xs text-gray-400 transition-transform duration-200 ${langDropdownOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {langDropdownOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setLangDropdownOpen(false)}
+          />
+          <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden">
+            <button
+              onClick={handleSelectEnglish}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 transition-all duration-200 ${
+                !isBangla 
+                  ? "bg-theme_color2/20 text-white" 
+                  : "hover:bg-gray-700 text-gray-300 hover:text-white"
+              }`}
+            >
+              <img src={US_FLAG} alt="English" className="w-5 h-5 rounded-full object-cover" />
+              <span className="text-sm font-medium">English</span>
+              {!isBangla && (
+                <span className="ml-auto text-xs text-green-400">✓</span>
+              )}
+            </button>
+            <button
+              onClick={handleSelectBangla}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 transition-all duration-200 ${
+                isBangla 
+                  ? "bg-theme_color2/20 text-white" 
+                  : "hover:bg-gray-700 text-gray-300 hover:text-white"
+              }`}
+            >
+              <img src={BD_FLAG} alt="বাংলা" className="w-5 h-5 rounded-full object-cover" />
+              <span className="text-sm font-medium">বাংলা</span>
+              {isBangla && (
+                <span className="ml-auto text-xs text-green-400">✓</span>
+              )}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // Language Switcher Component for Mobile
+  const LanguageSwitcherMobile = () => (
+    <div className="flex gap-2">
+      <button
+        onClick={handleSelectEnglish}
+        className={`flex items-center gap-2 px-3 py-2 rounded-[5px] border-[1px] transition-all duration-200 ${
+          !isBangla 
+            ? "bg-theme_color2 text-white shadow-md border-theme_color2" 
+            : "bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-700"
+        }`}
+      >
+        <img src={US_FLAG} alt="English" className="w-5 h-5 rounded-full object-cover" />
+        <span className="text-sm font-medium">EN</span>
+      </button>
+      <button
+        onClick={handleSelectBangla}
+        className={`flex items-center gap-2 px-3 py-2 rounded-[5px] border-[1px] transition-all duration-200 ${
+          isBangla 
+            ? "bg-theme_color2 text-white shadow-md border-theme_color2" 
+            : "bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-700"
+        }`}
+      >
+        <img src={BD_FLAG} alt="বাংলা" className="w-5 h-5 rounded-full object-cover" />
+        <span className="text-sm font-medium">BN</span>
+      </button>
+    </div>
+  );
+
   const secondaryMenuItems = [
     {
-      title: "Promotions",
+      title: t.promotions || "Promotions",
       icon: <FaGift className="w-5 h-5 min-w-[20px]" />,
-      subItems: ["Welcome Bonus", "Reload Bonus", "Cashback"],
+      subItems: [t.welcomeBonus || "Welcome Bonus", t.reloadBonus || "Reload Bonus", t.cashback || "Cashback"],
       path: "/promotions"
     },
     {
-      title: "VIP Club",
+      title: t.vipClub || "VIP Club",
       icon: <FaCrown className="w-5 h-5 min-w-[20px]" />,
-      subItems: ["VIP Levels", "Exclusive Rewards", "Personal Manager"],
+      subItems: [t.vipLevels || "VIP Levels", t.exclusiveRewards || "Exclusive Rewards", t.personalManager || "Personal Manager"],
       path: "/vip-club"
     },
     {
-      title: "Referral program",
+      title: t.referralProgram || "Referral program",
       icon: <FaUserFriends className="w-5 h-5 min-w-[20px]" />,
-      subItems: ["Invite Friends", "Earn Commission", "Bonus Terms"],
+      subItems: [t.inviteFriends || "Invite Friends", t.earnCommission || "Earn Commission", t.bonusTerms || "Bonus Terms"],
       path: "/referral-program"
     },
     {
-      title: "Affiliate",
+      title: t.affiliate || "Affiliate",
       icon: <FaHandshake className="w-5 h-5 min-w-[20px]" />,
-      subItems: ["Join Program", "Marketing Tools", "Commission Rates"],
+      subItems: [t.joinProgram || "Join Program", t.marketingTools || "Marketing Tools", t.commissionRates || "Commission Rates"],
       onClick: () => { window.location.href = "https://m-affiliate.bir75.com"; }
+    },
+    {
+      title: t.lottery || "Lottery",
+      icon: (
+        <svg className="w-5 h-5 min-w-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <path d="M22 21v-2a4 4 0 0 0-4-4" />
+          <path d="M6 3 4 5l2 2" />
+          <path d="M18 3l2 2-2 2" />
+          <path d="M12 3v2" />
+        </svg>
+      ),
+      subItems: [t.lotteryResults || "Lottery Results", t.buyTickets || "Buy Tickets", t.winningHistory || "Winning History"],
+      path: "/lottery"
+    },
+    {
+      title: t.appDownload || "App Download",
+      icon: <FaMobileAlt className="w-5 h-5 min-w-[20px]" />,
+      subItems: [],
+      onClick: () => downloadFileAtURL(APK_FILE)
     },
   ];
 
@@ -243,13 +433,18 @@ const Sidebar = ({
   const DesktopSidebar = () => (
     <div
       className={`fixed md:block hidden md:relative min-h-[calc(100vh-56px)] no-scrollbar border-r border-[#222424] z-20 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white overflow-y-auto
-        transition-all duration-300 ease-in-out px-2
-        ${sidebarOpen ? "w-75" : "w-15 -translate-x-full md:translate-x-0"}`}
+        transition-all duration-300 ease-in-out px-3
+        ${sidebarOpen ? "w-72" : "w-16 -translate-x-full md:translate-x-0"}`}
     >
+      {/* Language Switcher - Desktop */}
+      <div className={`w-full pt-4 pb-3 transition-all duration-300 ${sidebarOpen ? "opacity-100" : "opacity-0 h-0 p-0 mb-0 overflow-hidden"}`}>
+        {sidebarOpen && <LanguageSwitcherDesktop />}
+      </div>
+
       {/* Live Chat button */}
       <div
-        className={`w-full flex justify-start items-center px-4 pt-4 pb-3 transition-all duration-300 ${
-          sidebarOpen ? "opacity-100" : "opacity-0 h-0 p-0 mb-0"
+        className={`w-full flex justify-start items-center transition-all duration-300 ${
+          sidebarOpen ? "px-0 pb-3" : "px-0 pb-3"
         }`}
       >
         {sidebarOpen ? (
@@ -257,17 +452,17 @@ const Sidebar = ({
             href="https://wa.me/+4407386588951" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="bg-theme_gray p-2 rounded-[3px] text-center flex justify-center items-center gap-3 w-full hover:bg-opacity-80 transition"
+            className="bg-theme_color2 p-2.5 rounded-[10px] text-center flex justify-center items-center gap-3 w-full transition-all duration-200 shadow-md"
           >
             <MdSupportAgent className="text-white text-[20px]" />
-            <span className="text-[13px]">24/7 Live Chat</span>
+            <span className="text-[13px] font-medium">{t.liveChat || "24/7 Live Chat"}</span>
           </a>
         ) : (
           <a 
             href="https://wa.me/+4407386588951" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="bg-theme_gray p-2 rounded-[3px] text-center flex justify-center items-center gap-3 w-full"
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 p-2.5 rounded-lg text-center flex justify-center items-center gap-3 w-full transition-all duration-200"
           >
             <MdSupportAgent className="text-white text-[20px]" />
           </a>
@@ -276,22 +471,37 @@ const Sidebar = ({
 
       {/* Banner Image */}
       {sidebarOpen && (
-        <div className="p-[10px]">
+        <div className="py-3">
           <img
-            className="w-full rounded"
+            className="w-full rounded-xl shadow-lg"
             src="https://img.b112j.com/upload/h5Announcement/image_182702.jpg"
             alt="Promotion Banner"
           />
         </div>
       )}
 
+      {/* App Download Button - Desktop */}
+      {sidebarOpen && (
+        <div className="py-2">
+          <button
+            onClick={() => downloadFileAtURL(APK_FILE)}
+            className="flex items-center justify-center gap-3 w-full p-2.5 rounded-[10px] bg-gradient-to-r from-theme_color2/20 to-theme_color2/10 border border-theme_color2/30 hover:bg-theme_color2/30 transition-all duration-200"
+          >
+            <FaMobileAlt className="text-theme_color2 text-[18px]" />
+            <span className="text-[13px] font-medium">{t.downloadAppNow || "Download App Now"}</span>
+          </button>
+        </div>
+      )}
+
       {/* Categories Section */}
-      <div className="space-y-1 mt-[15px]">
+      <div className="space-y-1 mt-2">
         {categories.map((category) => (
           <div key={category._id}>
             <div
-              className={`flex items-center p-3 rounded cursor-pointer hover:text-gray-500 text-gray-400 transition-colors duration-200 ${
-                activeMenu === category.name ? "bg-[#ffffff10] text-white" : ""
+              className={`flex items-center p-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
+                activeMenu === category.name 
+                  ? "bg-gradient-to-r from-theme_color2/20 to-theme_color2/10 text-white shadow-sm" 
+                  : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
               }`}
               onClick={() => handleCategoryItemClick(category)}
             >
@@ -305,7 +515,7 @@ const Sidebar = ({
                   }}
                 />
               ) : (
-                <div className="w-5 h-5 min-w-[20px] bg-gray-700 rounded"></div>
+                <div className="w-5 h-5 min-w-[20px] bg-gray-700 rounded-md"></div>
               )}
               <div
                 className={`flex items-center overflow-hidden transition-all duration-300 ${
@@ -313,7 +523,7 @@ const Sidebar = ({
                 }`}
               >
                 <span className="text-sm flex-grow whitespace-nowrap font-medium">
-                  {category.name}
+                  {translateCategoryName(category.name)}
                 </span>
                 {category.name?.toLowerCase() !== "exclusive" && (
                   activeMenu === category.name ? (
@@ -334,67 +544,70 @@ const Sidebar = ({
               }`}
             >
               {sidebarOpen && activeMenu === category.name && (
-                <div className="ml-8 mt-1 mb-2">
+                <div className="mt-1 mb-2">
                   {isLoading ? (
                     <div className="p-4 text-center text-[12px] text-gray-400">
-                      Loading...
+                      <div className="inline-block w-4 h-4 border-2 border-gray-500 border-t-theme_color2 rounded-full animate-spin mr-2"></div>
+                      {t.loading || "Loading..."}
                     </div>
                   ) : category.name?.toLowerCase() === "exclusive" ? (
-                    <div className="grid grid-cols-2 gap-2 p-2">
-                      {exclusiveGames.length === 0 ? (
-                        <div className="col-span-2 text-center text-gray-400 py-4">
-                          No exclusive games found
-                        </div>
-                      ) : (
-                        exclusiveGames.map((game, gameIndex) => (
-                          <div
-                            key={gameIndex}
-                            className="flex flex-col items-center rounded-[3px] transition-all cursor-pointer group"
-                            onClick={() => handleGameClick(game)}
-                          >
-                            <div className="game-image-container w-full mb-2">
-                              <img
-                                src={getFullImageUrl(game.portraitImage || game.image)}
-                                alt={game.name || game.gameName}
-                                className="game-image rounded-[6px] transition-transform duration-300 group-hover:scale-105"
-                                onError={(e) => { 
-                                  e.target.src = "https://via.placeholder.com/100x133?text=Game"; 
-                                }}
-                              />
-                            </div>
-                            <div className="w-full pt-1">
-                              <span className="text-xs text-gray-400 truncate block text-center">
-                                {game.name || game.gameName || "Game"}
-                              </span>
-                            </div>
+                    <div className="max-h-[400px] overflow-y-auto pr-1">
+                      <div className="grid grid-cols-2 gap-2 p-1">
+                        {exclusiveGames.length === 0 ? (
+                          <div className="col-span-2 text-center text-gray-500 py-4 text-xs">
+                            {t.noExclusiveGames || "No exclusive games found"}
                           </div>
-                        ))
-                      )}
+                        ) : (
+                          exclusiveGames.map((game, gameIndex) => (
+                            <div
+                              key={gameIndex}
+                              className="flex flex-col items-center rounded-lg transition-all cursor-pointer group hover:scale-105"
+                              onClick={() => handleGameClick(game)}
+                            >
+                              <div className="game-image-container w-full mb-1">
+                                <img
+                                  src={getFullImageUrl(game.portraitImage || game.image)}
+                                  alt={game.name || game.gameName}
+                                  className="game-image rounded-lg shadow-md transition-transform duration-300 group-hover:shadow-xl"
+                                  onError={(e) => { 
+                                    e.target.src = "https://via.placeholder.com/100x133?text=Game"; 
+                                  }}
+                                />
+                              </div>
+                              <div className="w-full pt-1">
+                                <span className="text-xs text-gray-400 truncate block text-center group-hover:text-gray-300">
+                                  {game.name || game.gameName || "Game"}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-1">
                       {providers.length === 0 && !isLoading ? (
-                        <div className="text-center text-gray-400 py-4">
-                          No providers found
+                        <div className="text-center text-gray-500 py-3 text-xs">
+                          {t.noProviders || "No providers found"}
                         </div>
                       ) : (
                         providers.map((provider, providerIndex) => (
                           <div
                             key={providerIndex}
-                            className="flex items-center p-2 rounded cursor-pointer hover:bg-[#333] transition-colors duration-200"
+                            className="flex items-center p-2 rounded-lg cursor-pointer hover:bg-white/10 transition-all duration-200"
                             onClick={() => handleProviderClick(provider)}
                           >
                             {provider.image && (
                               <img
                                 src={getFullImageUrl(provider.image)}
                                 alt={provider.name}
-                                className="w-6 h-6 mr-2 object-contain"
+                                className="w-6 h-6 mr-2 object-contain rounded"
                                 onError={(e) => { 
                                   e.target.style.display = "none"; 
                                 }}
                               />
                             )}
-                            <span className="text-xs text-gray-400 hover:text-white">
+                            <span className="text-xs text-gray-400 hover:text-gray-200 transition-colors">
                               {provider.name}
                             </span>
                           </div>
@@ -411,21 +624,21 @@ const Sidebar = ({
 
       {/* Divider */}
       <div
-        className={`border-t border-[#222424] my-4 mx-2 transition-all duration-300 ${
+        className={`border-t border-gray-700/50 my-4 mx-1 transition-all duration-300 ${
           sidebarOpen ? "opacity-100" : "opacity-0"
         }`}
       ></div>
 
       {/* Promotions label */}
       <div
-        className={`px-2 mb-2 transition-all duration-300 overflow-hidden ${
+        className={`px-1 mb-2 transition-all duration-300 overflow-hidden ${
           sidebarOpen ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="flex justify-between items-center p-2">
-          <span className="text-sm font-medium text-gray-300">Promotions</span>
-          <a href="/promotions" className="text-xs text-theme_color2 underline cursor-pointer hover:text-opacity-80">
-            View all
+          <span className="text-sm font-semibold text-gray-300">{t.promotions || "Promotions"}</span>
+          <a href="/promotions" className="text-xs text-theme_color2 hover:text-theme_color2/80 underline cursor-pointer transition-colors">
+            {t.viewAll || "View all"}
           </a>
         </div>
       </div>
@@ -435,8 +648,10 @@ const Sidebar = ({
         {secondaryMenuItems.map((item, index) => (
           <div key={index}>
             <div
-              className={`flex items-center p-3 rounded text-gray-400 cursor-pointer hover:text-gray-300 transition-colors duration-200 ${
-                activeMenu === item.title ? "bg-[#ffffff10] text-white" : ""
+              className={`flex items-center p-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
+                activeMenu === item.title 
+                  ? "bg-gradient-to-r from-theme_color2/20 to-theme_color2/10 text-white shadow-sm" 
+                  : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
               }`}
               onClick={() => {
                 if (item.onClick) {
@@ -476,12 +691,14 @@ const Sidebar = ({
               }`}
             >
               {sidebarOpen && (
-                <div className="ml-8 mt-1 mb-2 space-y-1">
+                <div className="ml-9 mt-1 mb-2 space-y-1">
                   {item.subItems.map((subItem, subIndex) => (
                     <div
                       key={subIndex}
-                      className={`p-2 text-xs rounded cursor-pointer hover:bg-[#333] transition-colors duration-200 ${
-                        activeSubMenu === subItem ? "bg-[#333] text-white" : "text-gray-400"
+                      className={`p-2 text-xs rounded-lg cursor-pointer transition-all duration-200 ${
+                        activeSubMenu === subItem 
+                          ? "bg-theme_color2/20 text-white" 
+                          : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                       }`}
                       onClick={() => toggleSubMenu(subItem)}
                     >
@@ -499,42 +716,45 @@ const Sidebar = ({
     </div>
   );
 
-  // Mobile Sidebar (full width overlay)
+  // Mobile Sidebar - FULL WIDTH (100% of screen)
   const MobileSidebar = () => (
     <>
       {/* Backdrop overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-70 z-40 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
           onClick={closeSidebar}
-        ></div>
+        />
       )}
       
-      {/* Mobile sidebar panel - full width */}
+      {/* Mobile sidebar panel - FULL WIDTH */}
       <div
-        className={`fixed top-0 left-0 h-full w-full md:hidden bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white z-50 transition-transform duration-300 ease-in-out overflow-y-auto ${
+        className={`fixed top-0 left-0 h-full w-full md:hidden bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white z-50 transition-transform duration-300 ease-in-out overflow-y-auto shadow-2xl ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ marginTop: "56px" }}
       >
-        {/* Close button - fixed at top right */}
-        <div className="sticky top-0 z-10 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] px-4 py-3 flex justify-end items-center border-b border-gray-700">
-          <button 
-            onClick={closeSidebar} 
-            className="cursor-pointer p-2 rounded-full bg-red-500 hover:bg-red-600 transition-colors duration-200"
-            aria-label="Close sidebar"
-          >
-            <IoClose size={24} className="text-white" />
-          </button>
+        {/* Header with Language Switcher and Close Button */}
+        <div className="sticky top-0 z-10 bg-gradient-to-br from-[#121212]/95 via-[#1a2344]/95 to-[#1e2b5e]/95 backdrop-blur-sm px-4 py-3 border-b border-gray-700/50">
+          <div className="flex justify-between items-center">
+            <LanguageSwitcherMobile />
+            <button 
+              onClick={closeSidebar} 
+              className="cursor-pointer p-2 rounded-full transition-all duration-200"
+              aria-label="Close sidebar"
+            >
+              <IoClose size={22} className="text-white" />
+            </button>
+          </div>
         </div>
 
         <div className="w-full pb-20">
           {/* Live Chat */}
           <div className="w-full flex justify-start items-center px-4 pt-4 pb-3">
             <a href="https://wa.me/+4407386588951" target="_blank" rel="noopener noreferrer" className="block w-full">
-              <span className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] border-[1px] border-blue-500 text-[16px] px-2 py-2.5 rounded-[3px] text-center flex justify-center items-center gap-3 cursor-pointer hover:bg-[#2a2a2a] transition">
-                <MdSupportAgent className="text-white text-[20px]" />
-                <span className="text-[13px]">24/7 Live Chat</span>
+              <span className="bg-theme_color2 text-[15px] px-4 py-3 rounded-[10px] text-center flex justify-center items-center gap-3 cursor-pointer transition-all duration-200 shadow-md">
+                <MdSupportAgent className="text-white text-[22px]" />
+                <span className="text-[14px] font-medium">{t.liveChat || "24/7 Live Chat"}</span>
               </span>
             </a>
           </div>
@@ -542,22 +762,35 @@ const Sidebar = ({
           {/* Banner */}
           <div className="px-4 py-2">
             <img
-              className="w-full rounded"
+              className="w-full rounded-xl shadow-lg"
               src="https://img.b112j.com/upload/h5Announcement/image_182702.jpg"
               alt="Promotion Banner"
             />
           </div>
 
+          {/* App Download Button - Mobile */}
+          <div className="px-4 py-2">
+            <button
+              onClick={() => downloadFileAtURL(APK_FILE)}
+              className="flex items-center justify-center gap-3 w-full p-3 rounded-[10px] bg-gradient-to-r from-theme_color2/20 to-theme_color2/10 border border-theme_color2/30 hover:bg-theme_color2/30 transition-all duration-200"
+            >
+              <FaMobileAlt className="text-theme_color2 text-[20px]" />
+              <span className="text-[14px] font-medium">{t.downloadAppNow || "Download App Now"}</span>
+            </button>
+          </div>
+
           {/* Categories for Mobile */}
           <div className="space-y-1 px-4 mt-4">
-            <h3 className="text-lg font-semibold text-white mb-3 px-2">Categories</h3>
+            <h3 className="text-base font-bold text-white mb-3 px-1 border-l-3 border-theme_color2 pl-2">
+              {t.categories || "Categories"}
+            </h3>
             {categories.map((category) => (
               <div key={category._id}>
                 <div
-                  className={`flex items-center p-3 rounded cursor-pointer transition-colors duration-200 ${
+                  className={`flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 ${
                     activeMenu === category.name 
-                      ? "bg-[#ffffff10] text-white" 
-                      : "text-gray-400 hover:text-gray-300 hover:bg-[#ffffff05]"
+                      ? "bg-gradient-to-r from-theme_color2/20 to-theme_color2/10 text-white shadow-sm" 
+                      : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                   }`}
                   onClick={() => handleCategoryItemClick(category)}
                 >
@@ -568,11 +801,11 @@ const Sidebar = ({
                       className="w-5 h-5 min-w-[20px] object-contain"
                     />
                   ) : (
-                    <div className="w-5 h-5 min-w-[20px] bg-gray-700 rounded"></div>
+                    <div className="w-5 h-5 min-w-[20px] bg-gray-700 rounded-md"></div>
                   )}
                   <div className="flex items-center justify-between ml-3 w-full">
-                    <span className="text-sm flex-grow font-semibold">
-                      {category.name}
+                    <span className="text-sm flex-grow font-medium">
+                      {translateCategoryName(category.name)}
                     </span>
                     {category.name?.toLowerCase() !== "exclusive" && (
                       activeMenu === category.name ? (
@@ -591,48 +824,67 @@ const Sidebar = ({
                   }`}
                 >
                   {activeMenu === category.name && (
-                    <div className="ml-8 mt-1 mb-2">
+                    <div className="mt-1 mb-2">
                       {isLoading ? (
-                        <div className="p-4 text-center text-[12px] text-gray-400">Loading...</div>
+                        <div className="p-4 text-center text-[12px] text-gray-400">
+                          <div className="inline-block w-4 h-4 border-2 border-gray-500 border-t-theme_color2 rounded-full animate-spin mr-2"></div>
+                          {t.loading || "Loading..."}
+                        </div>
                       ) : category.name?.toLowerCase() === "exclusive" ? (
-                        <div className="grid grid-cols-2 gap-3 p-2">
-                          {exclusiveGames.map((game, gameIndex) => (
-                            <div
-                              key={gameIndex}
-                              className="flex flex-col items-center rounded-[3px] transition-all cursor-pointer group"
-                              onClick={() => handleGameClick(game)}
-                            >
-                              <div className="game-image-container w-full mb-2">
-                                <img
-                                  src={getFullImageUrl(game.portraitImage || game.image)}
-                                  alt={game.name || game.gameName}
-                                  className="game-image rounded-[6px]"
-                                />
+                        <div className="max-h-[500px] overflow-y-auto pr-1">
+                          <div className="grid grid-cols-2 gap-3 p-1">
+                            {exclusiveGames.length === 0 ? (
+                              <div className="col-span-2 text-center text-gray-500 py-4 text-xs">
+                                {t.noExclusiveGames || "No exclusive games found"}
                               </div>
-                              <span className="text-xs text-gray-400 text-center truncate w-full">
-                                {game.name || game.gameName || "Game"}
-                              </span>
-                            </div>
-                          ))}
+                            ) : (
+                              exclusiveGames.map((game, gameIndex) => (
+                                <div
+                                  key={gameIndex}
+                                  className="flex flex-col items-center rounded-xl transition-all cursor-pointer group hover:scale-105"
+                                  onClick={() => handleGameClick(game)}
+                                >
+                                  <div className="game-image-container w-full mb-1">
+                                    <img
+                                      src={getFullImageUrl(game.portraitImage || game.image)}
+                                      alt={game.name || game.gameName}
+                                      className="game-image rounded-xl shadow-md"
+                                    />
+                                  </div>
+                                  <span className="text-xs text-gray-400 text-center truncate w-full group-hover:text-gray-300">
+                                    {game.name || game.gameName || "Game"}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-1">
-                          {providers.map((provider, providerIndex) => (
-                            <div
-                              key={providerIndex}
-                              className="flex items-center p-2 rounded cursor-pointer hover:bg-[#333] transition-colors duration-200"
-                              onClick={() => handleProviderClick(provider)}
-                            >
-                              {provider.image && (
-                                <img
-                                  src={getFullImageUrl(provider.image)}
-                                  alt={provider.name}
-                                  className="w-6 h-6 mr-2 object-contain"
-                                />
-                              )}
-                              <span className="text-xs text-gray-400">{provider.name}</span>
+                          {providers.length === 0 && !isLoading ? (
+                            <div className="text-center text-gray-500 py-3 text-xs">
+                              {t.noProviders || "No providers found"}
                             </div>
-                          ))}
+                          ) : (
+                            providers.map((provider, providerIndex) => (
+                              <div
+                                key={providerIndex}
+                                className="flex items-center p-2.5 rounded-xl cursor-pointer hover:bg-white/10 transition-all duration-200"
+                                onClick={() => handleProviderClick(provider)}
+                              >
+                                {provider.image && (
+                                  <img
+                                    src={getFullImageUrl(provider.image)}
+                                    alt={provider.name}
+                                    className="w-6 h-6 mr-3 object-contain rounded"
+                                  />
+                                )}
+                                <span className="text-xs text-gray-400 hover:text-gray-200">
+                                  {provider.name}
+                                </span>
+                              </div>
+                            ))
+                          )}
                         </div>
                       )}
                     </div>
@@ -643,14 +895,14 @@ const Sidebar = ({
           </div>
 
           {/* Divider */}
-          <div className="border-t border-[#222424] my-4 mx-4"></div>
+          <div className="border-t border-gray-700/50 my-4 mx-4"></div>
           
           {/* Promotions Section */}
           <div className="px-4 mb-2">
             <div className="flex justify-between items-center p-2">
-              <span className="text-sm font-medium text-gray-300">Promotions</span>
-              <a href="/promotions" className="text-xs text-theme_color2 underline cursor-pointer">
-                View all
+              <span className="text-sm font-semibold text-gray-300">{t.promotions || "Promotions"}</span>
+              <a href="/promotions" className="text-xs text-theme_color2 hover:text-theme_color2/80 underline cursor-pointer transition-colors">
+                {t.viewAll || "View all"}
               </a>
             </div>
           </div>
@@ -660,8 +912,10 @@ const Sidebar = ({
             {secondaryMenuItems.map((item, index) => (
               <div key={index}>
                 <div
-                  className={`flex items-center p-3 rounded text-gray-400 cursor-pointer transition-colors duration-200 ${
-                    activeMenu === item.title ? "bg-[#ffffff10] text-white" : "hover:text-gray-300 hover:bg-[#ffffff05]"
+                  className={`flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                    activeMenu === item.title 
+                      ? "bg-gradient-to-r from-theme_color2/20 to-theme_color2/10 text-white shadow-sm" 
+                      : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                   }`}
                   onClick={() => {
                     if (item.onClick) {
@@ -685,6 +939,49 @@ const Sidebar = ({
           </div>
         </div>
       </div>
+
+      {/* Mobile App Download Banner - Bottom Floating */}
+      {showMobileAppBanner && isMobileDevice() && sidebarOpen && (
+        <div className="fixed bottom-0 left-0 right-0 flex justify-center items-end bg-[rgba(0,0,0,0.7)] border-t border-[#333] z-[10001] shadow-lg">
+          <div className="w-full flex flex-col items-center p-4 relative">
+            <button
+              onClick={handleCloseBanner}
+              className="absolute top-2 right-2 text-gray-700 bg-white rounded-full p-1 border border-gray-600 shadow-md"
+            >
+              <IoClose size={18} />
+            </button>
+            <div className="text-center mb-4 pt-2">
+              <h3 className="text-white text-[13px] w-[96%] font-bold leading-tight">
+                {isBangla
+                  ? "২০০ টাকা বোনাস পেতে সর্বশেষ আপডেট APP ডাউনলোড করুন"
+                  : "Download latest APP update to get 200 taka bonus"}
+              </h3>
+            </div>
+            <div className="flex w-full max-w-md space-x-3 items-end pb-2">
+              <div className="relative flex-1">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#ff0000] text-white text-[10px] px-2 py-0.5 rounded-full z-20 border border-white shadow-sm whitespace-nowrap">
+                  {isBangla ? "অধিক সুবিধা" : "More benefits"}
+                </span>
+                <button
+                  onClick={() => downloadFileAtURL(APK_FILE)}
+                  className="w-full py-2.5 rounded-full font-bold text-[#333] text-sm tracking-tight bg-gradient-to-b from-[#ffffff] via-[#e0e0e0] to-[#b8b8b8] shadow-[0_3px_0_rgb(140,140,140),inset_0_1px_0_rgba(255,255,255,1)] active:translate-y-[1px] active:shadow-[0_2px_0_rgb(140,140,140)] transition-all"
+                >
+                  APP
+                </button>
+              </div>
+              <button
+                onClick={handleOpenInChrome}
+                className="flex-1 py-2.5 rounded-full font-bold text-[#222] text-sm bg-gradient-to-b from-[#ffdb4d] via-[#f7b500] to-[#d99e00] shadow-[0_3px_0_rgb(180,130,0),inset_0_1px_0_rgba(255,255,255,0.6)] active:translate-y-[1px] active:shadow-[0_2px_0_rgb(180,130,0)] transition-all"
+              >
+                {isBangla ? "Chrome-এ খুলুন" : "Open in Chrome"}
+              </button>
+            </div>
+            <button onClick={handleCloseBanner} className="mt-2 text-white text-xs underline opacity-80 pb-1">
+              {isBangla ? "H5 ব্যবহার চালিয়ে যান" : "Continue using H5"}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -693,7 +990,7 @@ const Sidebar = ({
       <div
         className={`fixed md:block hidden md:relative min-h-[calc(100vh-56px)] no-scrollbar border-r border-[#222424] z-20 bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white overflow-y-auto
           transition-all duration-300 ease-in-out
-          ${sidebarOpen ? "w-75" : "w-20 -translate-x-full py-4 md:translate-x-0"}`}
+          ${sidebarOpen ? "w-72" : "w-16 -translate-x-full py-4 md:translate-x-0"}`}
       >
         <div className="p-4">
           {[...Array(5)].map((_, i) => (
@@ -716,14 +1013,14 @@ const Sidebar = ({
       <DesktopSidebar />
       <MobileSidebar />
       
-      <style jsx>{`
+      <style>{`
         .game-image-container {
           position: relative;
           width: 100%;
           height: 0;
           padding-bottom: 133.33%;
           overflow: hidden;
-          border-radius: 6px;
+          border-radius: 12px;
         }
         .game-image {
           position: absolute;
@@ -732,6 +1029,21 @@ const Sidebar = ({
           width: 100%;
           height: 100%;
           object-fit: cover;
+        }
+        /* Custom scrollbar for exclusive games section */
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 4px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 10px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
         }
         .no-scrollbar::-webkit-scrollbar {
           display: none;
