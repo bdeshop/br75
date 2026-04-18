@@ -138,7 +138,7 @@ const AffiliateRegister = () => {
 
       <footer className="py-6 text-center z-10 border-t border-white/5">
         <div className="text-[8px] md:text-[10px] text-gray-600 tracking-[0.4em] font-black uppercase">
-          © {new Date().getFullYear()} BAJIMAN AFFILIATE NETWORK
+          © {new Date().getFullYear()} Bir75 AFFILIATE NETWORK
         </div>
       </footer>
     </div>

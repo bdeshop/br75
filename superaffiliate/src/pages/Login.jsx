@@ -178,7 +178,7 @@ const Login = () => {
       {/* --- FOOTER --- */}
       <footer className="py-6 md:py-8 text-center z-10">
         <div className="text-[8px] md:text-[10px] text-gray-600 tracking-[0.3em] md:tracking-[0.5em] font-black uppercase">
-          © {new Date().getFullYear()} BajiMan.
+          © {new Date().getFullYear()} Bir75.
         </div>
       </footer>
     </div>

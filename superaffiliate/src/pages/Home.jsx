@@ -53,7 +53,7 @@ const Home = () => {
 
   const faqData = [
     {
-      question: "How do I join the BajiMan Affiliate Program?",
+      question: "How do I join the Bir75 Affiliate Program?",
       answer: "Simply click 'Join Now', fill out the registration form with your details and preferred payment method. Our team reviews applications within 24-48 hours."
     },
     {
@@ -125,7 +125,7 @@ const Home = () => {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500" ref={el}></span>
             </h1>
             <p className="text-gray-400 text-sm md:text-xl mb-10 max-w-xl mx-auto lg:mx-0">
-              Join Asia's most powerful affiliate network. Transform your traffic into a sustainable revenue stream with BajiMan.
+              Join Asia's most powerful affiliate network. Transform your traffic into a sustainable revenue stream with Bir75.
             </p>
             <button
               onClick={() => navigate("/register")} 
@@ -150,7 +150,7 @@ const Home = () => {
             <h2 className="text-2xl md:text-5xl font-black uppercase mb-6">Who We Are</h2>
             <div className="h-1.5 w-24 bg-cyan-500 mx-auto mb-8"></div>
             <p className="text-gray-400 text-sm md:text-lg leading-relaxed">
-              BajiMan Affiliate is a global leader in performance marketing. We provide a transparent, high-tech platform designed for influencers and marketers to monetize effectively.
+              Bir75 Affiliate is a global leader in performance marketing. We provide a transparent, high-tech platform designed for influencers and marketers to monetize effectively.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -224,7 +224,7 @@ const Home = () => {
           <div className="md:col-span-2">
             <img src={dynamicLogo} alt="LOGO" className="h-10 mb-6 mx-auto md:mx-0" />
             <p className="text-gray-500 max-w-sm mb-6 uppercase text-[9px] md:text-[10px] font-bold tracking-[0.2em] leading-loose text-center md:text-left">
-              The world's most rewarding affiliate network. Join the BojiMan of earners today.
+              The world's most rewarding affiliate network. Join the Bir75 of earners today.
             </p>
             <div className="flex justify-center md:justify-start space-x-4">
               {[FaFacebook, FaTwitter, FaInstagram, FaLinkedin].map((Icon, i) => (
@@ -246,14 +246,14 @@ const Home = () => {
           <div className="text-center md:text-left">
             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] mb-6 text-cyan-400">Support</h4>
             <ul className="space-y-4 text-[10px] font-bold uppercase text-gray-500 tracking-widest">
-              <li className="flex items-center justify-center md:justify-start space-x-2"><FaEnvelope className="text-cyan-400" /> <span>affiliate@bajiman.com</span></li>
-              <li className="flex items-center justify-center md:justify-start space-x-2"><FaPhone className="text-cyan-400" /> <span>+44 731 1133 789</span></li>
+              <li className="flex items-center justify-center md:justify-start space-x-2"><FaEnvelope className="text-cyan-400" /> <span>affiliate@Bir75.com</span></li>
+              <li className="flex items-center justify-center md:justify-start space-x-2"><FaPhone className="text-cyan-400" /> <span>+60134935257</span></li>
             </ul>
           </div>
         </div>
         <div className="container mx-auto px-6 mt-20 pt-8 border-t border-white/5 text-center">
           <p className="text-[8px] md:text-[10px] font-black text-gray-700 tracking-[0.5em] uppercase">
-            © {new Date().getFullYear()} BajiMan Affiliate Network. All Rights Reserved.
+            © {new Date().getFullYear()} Bir75 Affiliate Network. All Rights Reserved.
           </p>
         </div>
       </footer>
