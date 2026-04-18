@@ -14,7 +14,7 @@ const {User} = require("../models/User");
 const mongoose=require("mongoose")
 const jwt=require("jsonwebtoken")
 const CashBonus=require("../models/CashBonusModel");
-
+const bcrypt=require("bcryptjs");
 const adminAuth = async (req, res, next) => {
   try {
     // Get token from header
