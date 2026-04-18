@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { FaCalendarAlt, FaPercentage, FaGift, FaSpinner, FaTimes, FaInfoCircle } from 'react-icons/fa';
+import { FaCalendarAlt, FaPercentage, FaGift, FaSpinner, FaTimes, FaInfoCircle, FaUsers, FaUserCheck, FaSearch } from 'react-icons/fa';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { FaBangladeshiTakaSign } from "react-icons/fa6";
+import axios from 'axios';
 
 const Editbonus = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showUserSelector, setShowUserSelector] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [searchUserTerm, setSearchUserTerm] = useState('');
+  const [assignToAll, setAssignToAll] = useState(true);
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
@@ -18,12 +26,30 @@ const Editbonus = () => {
   const [formData, setFormData] = useState({
     name: '', bonusCode: '', bonusType: 'deposit', amount: 0, percentage: 0,
     minDeposit: 0, maxBonus: null, wageringRequirement: 0, validityDays: 30,
-    status: 'active', applicableTo: 'all', startDate: new Date().toISOString().split('T')[0], endDate: '', createdBy: null,
+    status: 'active', applicableTo: 'all', startDate: new Date().toISOString().split('T')[0], 
+    endDate: '', noEndDate: true, createdBy: null,
   });
   const [errors, setErrors] = useState({});
   const [originalData, setOriginalData] = useState(null);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  // Fetch users for selection
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get(`${base_url}/api/admin/users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setUsers(response.data.users || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   useEffect(() => {
     const fetchBonusData = async () => {
@@ -38,7 +64,32 @@ const Editbonus = () => {
           const bonus = data.bonus;
           const startDate = bonus.startDate ? new Date(bonus.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
           const endDate = bonus.endDate ? new Date(bonus.endDate).toISOString().split('T')[0] : '';
-          setFormData({ name: bonus.name || '', bonusCode: bonus.bonusCode || '', bonusType: bonus.bonusType || 'deposit', amount: bonus.amount || 0, percentage: bonus.percentage || 0, minDeposit: bonus.minDeposit || 0, maxBonus: bonus.maxBonus !== undefined ? bonus.maxBonus : null, wageringRequirement: bonus.wageringRequirement || 0, validityDays: bonus.validityDays || 30, status: bonus.status || 'active', applicableTo: bonus.applicableTo || 'all', startDate, endDate, createdBy: bonus.createdBy || null });
+          const noEndDate = !bonus.endDate;
+          
+          // Determine assignment type
+          const isSpecific = bonus.applicableTo === 'specific';
+          setAssignToAll(!isSpecific);
+          if (isSpecific && bonus.assignedUsers) {
+            setSelectedUsers(bonus.assignedUsers.map(user => user._id || user));
+          }
+          
+          setFormData({
+            name: bonus.name || '',
+            bonusCode: bonus.bonusCode || '',
+            bonusType: bonus.bonusType || 'deposit',
+            amount: bonus.amount || 0,
+            percentage: bonus.percentage || 0,
+            minDeposit: bonus.minDeposit || 0,
+            maxBonus: bonus.maxBonus !== undefined ? bonus.maxBonus : null,
+            wageringRequirement: bonus.wageringRequirement || 0,
+            validityDays: bonus.validityDays || 30,
+            status: bonus.status || 'active',
+            applicableTo: bonus.applicableTo || 'all',
+            startDate,
+            endDate,
+            noEndDate,
+            createdBy: bonus.createdBy || null
+          });
           setOriginalData(bonus);
         }
       } catch (error) {
@@ -51,20 +102,83 @@ const Editbonus = () => {
     if (id) fetchBonusData();
   }, [id, base_url, navigate]);
 
+  // Fetch users when showing selector
+  useEffect(() => {
+    if (showUserSelector && users.length === 0) {
+      fetchUsers();
+    }
+  }, [showUserSelector]);
+
   const handleInputChange = (e) => {
-    const { name, value, type } = e.target;
+    const { name, value, type, checked } = e.target;
+    
+    if (name === 'noEndDate') {
+      setFormData((prev) => ({ 
+        ...prev, 
+        noEndDate: checked,
+        endDate: checked ? '' : prev.endDate 
+      }));
+      if (errors.endDate) setErrors((prev) => ({ ...prev, endDate: '' }));
+      return;
+    }
+    
     let processedValue;
-    if (type === 'number') { processedValue = value === '' ? '' : parseFloat(value); if (isNaN(processedValue)) processedValue = ''; }
-    else processedValue = value;
+    if (type === 'number') { 
+      processedValue = value === '' ? '' : parseFloat(value); 
+      if (isNaN(processedValue)) processedValue = '';
+    } else {
+      processedValue = value;
+    }
     setFormData((prev) => ({ ...prev, [name]: processedValue }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  // User selection handlers
+  const handleUserSelection = (userId) => {
+    setSelectedUsers(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
+  const handleSelectAllUsers = () => {
+    const filteredUsers = getFilteredUsers();
+    if (selectedUsers.length === filteredUsers.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(filteredUsers.map(user => user._id));
+    }
+  };
+
+  const getFilteredUsers = () => {
+    if (!searchUserTerm) return users;
+    return users.filter(user => 
+      user.username?.toLowerCase().includes(searchUserTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchUserTerm.toLowerCase()) ||
+      user.player_id?.toLowerCase().includes(searchUserTerm.toLowerCase())
+    );
+  };
+
+  const removeSelectedUser = (userId) => {
+    setSelectedUsers(prev => prev.filter(id => id !== userId));
+  };
+
+  const getSelectedUserNames = () => {
+    return users.filter(user => selectedUsers.includes(user._id));
   };
 
   const validateForm = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Bonus name is required';
     else if (formData.name.length < 3) newErrors.name = 'Bonus name must be at least 3 characters';
-    if (formData.amount <= 0 && formData.percentage <= 0) { newErrors.amount = 'Either amount or percentage must be greater than 0'; newErrors.percentage = 'Either amount or percentage must be greater than 0'; }
+    
+    if (formData.amount <= 0 && formData.percentage <= 0) { 
+      newErrors.amount = 'Either amount or percentage must be greater than 0'; 
+      newErrors.percentage = 'Either amount or percentage must be greater than 0'; 
+    }
     if (formData.amount < 0) newErrors.amount = 'Amount cannot be negative';
     if (formData.percentage < 0) newErrors.percentage = 'Percentage cannot be negative';
     else if (formData.percentage > 500) newErrors.percentage = 'Percentage cannot exceed 500%';
@@ -74,24 +188,53 @@ const Editbonus = () => {
     else if (formData.wageringRequirement > 100) newErrors.wageringRequirement = 'Wagering requirement cannot exceed 100x';
     if (formData.validityDays <= 0) newErrors.validityDays = 'Validity days must be greater than 0';
     else if (formData.validityDays > 365) newErrors.validityDays = 'Validity days cannot exceed 365 days';
-    if (formData.endDate && new Date(formData.endDate) <= new Date(formData.startDate)) newErrors.endDate = 'End date must be after start date';
+    
+    if (!formData.noEndDate && formData.endDate) {
+      if (new Date(formData.endDate) <= new Date(formData.startDate)) {
+        newErrors.endDate = 'End date must be after start date';
+      }
+    }
+    
+    if (!assignToAll && selectedUsers.length === 0) {
+      newErrors.users = 'Please select at least one user or assign to all users';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) { toast.error('Please fix the form errors before submitting'); return; }
+    if (!validateForm()) { 
+      toast.error('Please fix the form errors before submitting'); 
+      return; 
+    }
+    
     setIsSubmitting(true);
     try {
+      const payload = {
+        ...formData,
+        amount: formData.amount || 0,
+        percentage: formData.percentage || 0,
+        maxBonus: formData.maxBonus === '' ? null : formData.maxBonus,
+        endDate: formData.noEndDate ? null : (formData.endDate || null),
+        assignToAll: assignToAll,
+        selectedUsers: assignToAll ? [] : selectedUsers,
+      };
+      
       const response = await fetch(`${base_url}/api/admin/bonuses/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
-        body: JSON.stringify({ ...formData, amount: formData.amount || 0, percentage: formData.percentage || 0, maxBonus: formData.maxBonus === '' ? null : formData.maxBonus, endDate: formData.endDate === '' ? null : formData.endDate }),
+        headers: { 
+          'Content-Type': 'application/json', 
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}` 
+        },
+        body: JSON.stringify(payload),
       });
+      
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to update bonus');
-      toast.success('Bonus updated successfully!');
+      
+      toast.success(`Bonus updated successfully and assigned to ${assignToAll ? 'all users' : `${selectedUsers.length} user(s)`}!`);
       setOriginalData(data.bonus);
       setTimeout(() => navigate(-1), 2000);
     } catch (error) {
@@ -105,9 +248,36 @@ const Editbonus = () => {
     if (originalData) {
       const startDate = originalData.startDate ? new Date(originalData.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
       const endDate = originalData.endDate ? new Date(originalData.endDate).toISOString().split('T')[0] : '';
-      setFormData({ name: originalData.name || '', bonusCode: originalData.bonusCode || '', bonusType: originalData.bonusType || 'deposit', amount: originalData.amount || 0, percentage: originalData.percentage || 0, minDeposit: originalData.minDeposit || 0, maxBonus: originalData.maxBonus !== undefined ? originalData.maxBonus : null, wageringRequirement: originalData.wageringRequirement || 0, validityDays: originalData.validityDays || 30, status: originalData.status || 'active', applicableTo: originalData.applicableTo || 'all', startDate, endDate, createdBy: originalData.createdBy || null });
+      const noEndDate = !originalData.endDate;
+      const isSpecific = originalData.applicableTo === 'specific';
+      
+      setAssignToAll(!isSpecific);
+      if (isSpecific && originalData.assignedUsers) {
+        setSelectedUsers(originalData.assignedUsers.map(user => user._id || user));
+      } else {
+        setSelectedUsers([]);
+      }
+      
+      setFormData({
+        name: originalData.name || '',
+        bonusCode: originalData.bonusCode || '',
+        bonusType: originalData.bonusType || 'deposit',
+        amount: originalData.amount || 0,
+        percentage: originalData.percentage || 0,
+        minDeposit: originalData.minDeposit || 0,
+        maxBonus: originalData.maxBonus !== undefined ? originalData.maxBonus : null,
+        wageringRequirement: originalData.wageringRequirement || 0,
+        validityDays: originalData.validityDays || 30,
+        status: originalData.status || 'active',
+        applicableTo: originalData.applicableTo || 'all',
+        startDate,
+        endDate,
+        noEndDate,
+        createdBy: originalData.createdBy || null
+      });
     }
     setErrors({});
+    setShowUserSelector(false);
   };
 
   const calculateBonusFromPercentage = () => {
@@ -121,7 +291,6 @@ const Editbonus = () => {
 
   const formatBonusType = (type) => type.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const getBonusTypeIcon = (type) => ({ welcome: '🎉', deposit: '💰', reload: '🔄', cashback: '💸', free_spin: '🎰', special: '⭐', manual: '✏️' }[type] || '🎁');
-  const getApplicableToLabel = (type) => ({ all: 'All Users', new: 'New Users Only', existing: 'Existing Users Only' }[type] || type);
 
   const inputClass = (field) =>
     `w-full bg-[#0F111A] border ${errors[field] ? 'border-rose-500' : 'border-gray-700'} text-gray-200 text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500 placeholder-gray-600 transition-colors`;
@@ -182,7 +351,9 @@ const Editbonus = () => {
                 {/* Basic Info */}
                 <div className="bg-[#161B22] border border-gray-800 rounded-lg p-5">
                   <div className="bg-[#1C2128] -mx-5 -mt-5 px-5 py-3 mb-5 border-b border-gray-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500"></div> Basic Info</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-amber-500"></div> Basic Info
+                    </p>
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -190,29 +361,160 @@ const Editbonus = () => {
                       <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Welcome Bonus 2024" className={inputClass('name')} />
                       {errors.name && <p className="mt-1.5 text-xs text-rose-400 flex items-center gap-1"><FaInfoCircle /> {errors.name}</p>}
                     </div>
+                    
                     <div>
                       <label className={labelClass}>Bonus Code</label>
                       <input type="text" name="bonusCode" value={formData.bonusCode} onChange={handleInputChange} placeholder="WELCOME2024" className={inputClass('bonusCode') + ' uppercase'} maxLength={20} />
                       <p className="mt-1 text-[10px] text-gray-600">Uppercase letters and numbers only</p>
                     </div>
+
+                    {/* Assign Bonus To - Updated for user selection */}
                     <div>
-                      <label className={labelClass}>Applicable To</label>
-                      <div className="flex gap-2">
-                        {['all', 'new', 'existing'].map((opt) => (
-                          <button key={opt} type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, applicableTo: opt }))}
-                            className={`flex-1 py-2 rounded text-xs font-bold border transition-all uppercase tracking-wide ${formData.applicableTo === opt ? 'bg-amber-600 border-amber-500 text-white' : 'bg-[#0F111A] border-gray-700 text-gray-400 hover:border-amber-500/50'}`}
-                          >{opt}</button>
-                        ))}
+                      <label className={labelClass}>Assign Bonus To</label>
+                      <div className="flex gap-2 mb-3">
+                        <button 
+                          type="button"
+                          onClick={() => { setAssignToAll(true); setShowUserSelector(false); }}
+                          className={`flex-1 py-2 rounded text-xs font-bold border transition-all uppercase tracking-wide ${assignToAll ? 'bg-amber-600 border-amber-500 text-white' : 'bg-[#0F111A] border-gray-700 text-gray-400 hover:border-amber-500/50'}`}
+                        >
+                          <FaUsers className="inline mr-1" /> All Users
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => { setAssignToAll(false); setShowUserSelector(true); }}
+                          className={`flex-1 py-2 rounded text-xs font-bold border transition-all uppercase tracking-wide ${!assignToAll ? 'bg-amber-600 border-amber-500 text-white' : 'bg-[#0F111A] border-gray-700 text-gray-400 hover:border-amber-500/50'}`}
+                        >
+                          <FaUserCheck className="inline mr-1" /> Specific Users
+                        </button>
                       </div>
+                      
+                      {!assignToAll && (
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => setShowUserSelector(!showUserSelector)}
+                            className="w-full py-2 bg-[#0F111A] border border-gray-700 rounded text-xs text-gray-400 hover:border-amber-500/50 transition-all flex items-center justify-center gap-2"
+                          >
+                            <FaUsers /> {selectedUsers.length > 0 ? `${selectedUsers.length} User(s) Selected` : 'Select Users'}
+                          </button>
+                          
+                          {/* Selected Users Tags */}
+                          {selectedUsers.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {getSelectedUserNames().map(user => (
+                                <div key={user._id} className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1">
+                                  <span className="text-xs text-amber-400">{user.username}</span>
+                                  <button type="button" onClick={() => removeSelectedUser(user._id)} className="text-gray-500 hover:text-rose-400">
+                                    <FaTimes size={10} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {errors.users && <p className="mt-1.5 text-xs text-rose-400 flex items-center gap-1"><FaInfoCircle /> {errors.users}</p>}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
+                {/* User Selection Modal */}
+                {showUserSelector && !assignToAll && (
+                  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[1000] backdrop-blur-sm p-4">
+                    <div className="bg-[#161B22] border border-gray-700 rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+                      <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#1C2128]">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-400">Select Users</h3>
+                        <button onClick={() => setShowUserSelector(false)} className="text-gray-500 hover:text-gray-300">
+                          <FaTimes />
+                        </button>
+                      </div>
+                      
+                      <div className="p-4 border-b border-gray-800">
+                        <div className="relative">
+                          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs" />
+                          <input
+                            type="text"
+                            value={searchUserTerm}
+                            onChange={(e) => setSearchUserTerm(e.target.value)}
+                            className="w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-xs rounded-lg px-3 py-2 pl-8 focus:outline-none focus:border-amber-500"
+                            placeholder="Search users by name, email or player ID..."
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 overflow-y-auto p-4">
+                        {loadingUsers ? (
+                          <div className="text-center py-8">
+                            <FaSpinner className="animate-spin text-amber-400 mx-auto text-2xl" />
+                            <p className="text-xs text-gray-500 mt-2">Loading users...</p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="mb-3 flex justify-between items-center">
+                              <button
+                                type="button"
+                                onClick={handleSelectAllUsers}
+                                className="text-[10px] text-amber-400 hover:text-amber-300 font-bold uppercase"
+                              >
+                                {selectedUsers.length === getFilteredUsers().length ? 'Deselect All' : 'Select All'}
+                              </button>
+                              <span className="text-[9px] text-gray-500">{selectedUsers.length} selected</span>
+                            </div>
+                            <div className="space-y-2">
+                              {getFilteredUsers().map(user => (
+                                <label key={user._id} className="flex items-center gap-3 p-3 bg-[#0F111A] border border-gray-800 rounded-lg cursor-pointer hover:border-amber-500/30 transition-all">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedUsers.includes(user._id)}
+                                    onChange={() => handleUserSelection(user._id)}
+                                    className="w-4 h-4 rounded border-gray-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-0"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <p className="text-sm font-bold text-white">{user.username}</p>
+                                        <p className="text-[10px] text-gray-500">{user.email}</p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-[10px] font-mono text-gray-400">ID: {user.player_id}</p>
+                                        <p className="text-[9px] text-gray-600 capitalize">{user.role}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      
+                      <div className="px-6 py-4 border-t border-gray-800 bg-[#1C2128] flex justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowUserSelector(false)}
+                          className="px-4 py-2 bg-[#0F111A] border border-gray-700 text-gray-300 rounded text-xs font-bold hover:border-gray-500 transition-all"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowUserSelector(false)}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold transition-all"
+                        >
+                          Done ({selectedUsers.length})
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Bonus Type */}
                 <div className="bg-[#161B22] border border-gray-800 rounded-lg p-5">
                   <div className="bg-[#1C2128] -mx-5 -mt-5 px-5 py-3 mb-5 border-b border-gray-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500"></div> Bonus Type</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-amber-500"></div> Bonus Type
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {bonusTypes.map((type) => (
@@ -230,7 +532,9 @@ const Editbonus = () => {
                 {/* Value Settings */}
                 <div className="bg-[#161B22] border border-gray-800 rounded-lg p-5">
                   <div className="bg-[#1C2128] -mx-5 -mt-5 px-5 py-3 mb-5 border-b border-gray-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500"></div> Value Settings</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-amber-500"></div> Value Settings
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -268,7 +572,9 @@ const Editbonus = () => {
                 {/* Requirements */}
                 <div className="bg-[#161B22] border border-gray-800 rounded-lg p-5">
                   <div className="bg-[#1C2128] -mx-5 -mt-5 px-5 py-3 mb-5 border-b border-gray-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500"></div> Requirements</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-amber-500"></div> Requirements
+                    </p>
                   </div>
                   <div className="space-y-5">
                     <div>
@@ -293,7 +599,9 @@ const Editbonus = () => {
                 {/* Schedule & Status */}
                 <div className="bg-[#161B22] border border-gray-800 rounded-lg p-5">
                   <div className="bg-[#1C2128] -mx-5 -mt-5 px-5 py-3 mb-5 border-b border-gray-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500"></div> Schedule & Status</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-amber-500"></div> Schedule & Status
+                    </p>
                   </div>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -305,13 +613,33 @@ const Editbonus = () => {
                         </div>
                       </div>
                       <div>
-                        <label className={labelClass}>End Date (Optional)</label>
+                        <label className={labelClass}>End Date</label>
                         <div className="relative">
                           <FaCalendarAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs" />
-                          <input type="date" name="endDate" value={formData.endDate} onChange={handleInputChange} min={formData.startDate} className={inputClass('endDate') + ' pl-8'} />
+                          <input 
+                            type="date" 
+                            name="endDate" 
+                            value={formData.endDate} 
+                            onChange={handleInputChange} 
+                            min={formData.startDate} 
+                            disabled={formData.noEndDate}
+                            className={inputClass('endDate') + ' pl-8 ' + (formData.noEndDate ? 'opacity-50 cursor-not-allowed' : '')} 
+                          />
                         </div>
                         {errors.endDate && <p className="mt-1 text-xs text-rose-400">{errors.endDate}</p>}
                       </div>
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          name="noEndDate" 
+                          checked={formData.noEndDate} 
+                          onChange={handleInputChange}
+                          className="w-4 h-4 rounded border-gray-700 text-amber-500 focus:ring-amber-500"
+                        />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">No End Date (Bonus never expires)</span>
+                      </label>
                     </div>
                     <div>
                       <label className={labelClass}>Status</label>
@@ -330,7 +658,9 @@ const Editbonus = () => {
                 {/* Preview */}
                 <div className="bg-[#161B22] border border-gray-800 rounded-lg p-5">
                   <div className="bg-[#1C2128] -mx-5 -mt-5 px-5 py-3 mb-5 border-b border-gray-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500"></div> <FaGift /> Preview</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-amber-500"></div> <FaGift /> Preview
+                    </p>
                   </div>
                   <div className="grid grid-cols-3 gap-3 mb-3">
                     {[
@@ -343,6 +673,20 @@ const Editbonus = () => {
                         <p className={`text-xs font-bold ${item.valueClass || 'text-white'}`}>{item.value}</p>
                       </div>
                     ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-[#0F111A] border border-gray-800 p-3 rounded">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black mb-1">Assignment</p>
+                      <p className="text-xs font-bold text-white">
+                        {assignToAll ? '🎯 All Users' : `👥 ${selectedUsers.length} User(s)`}
+                      </p>
+                    </div>
+                    <div className="bg-[#0F111A] border border-gray-800 p-3 rounded">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black mb-1">Expiry</p>
+                      <p className="text-xs font-bold text-white">
+                        {formData.noEndDate ? '♾️ Never' : formData.endDate ? `📅 ${formData.endDate}` : '❌ Not set'}
+                      </p>
+                    </div>
                   </div>
                   {formData.minDeposit > 0 && formData.percentage > 0 && (
                     <div className="bg-emerald-500/5 border border-emerald-500/20 p-3 rounded">

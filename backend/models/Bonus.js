@@ -51,23 +51,33 @@ const bonusSchema = new mongoose.Schema({
   },
   applicableTo: {
     type: String,
-    enum: ['all', 'new', 'existing'],
+    enum: ['all', 'new', 'existing', 'specific'],
     default: 'all'
   },
+  assignedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   startDate: {
     type: Date,
     default: Date.now
   },
   endDate: {
-    type: Date
+    type: Date,
+    default: null,
+    validate: {
+      validator: function(value) {
+        if (value && this.startDate) {
+          return value > this.startDate;
+        }
+        return true;
+      },
+      message: 'End date must be after start date'
+    }
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
 }, {
   timestamps: true
@@ -83,6 +93,18 @@ bonusSchema.pre('save', function(next) {
     }
     this.bonusCode = code;
   }
+  next();
+});
+
+// Auto-update status based on dates
+bonusSchema.pre('save', function(next) {
+  const now = new Date();
+  
+  // Auto-expire if endDate is passed
+  if (this.endDate && this.endDate < now && this.status === 'active') {
+    this.status = 'expired';
+  }
+  
   next();
 });
 

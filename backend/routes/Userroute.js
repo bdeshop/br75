@@ -3800,29 +3800,87 @@ Userrouter.get("/bonuses/available", authenticateToken, async (req, res) => {
   try {
     const { bonusType } = req.query;
     
+    const now = new Date();
+    
+    // Base query for active bonuses
     const query = {
       status: 'active',
-      endDate: { $gte: new Date() },
-      startDate: { $lte: new Date() }
+      startDate: { $lte: now }
     };
-
-
-    // Check applicableTo criteria
+    
+    // Handle endDate: either null (never expires) or future date
+    query.$or = [
+      { endDate: null }, // No end date (never expires)
+      { endDate: { $gte: now } } // Future end date
+    ];
+    
+    // Filter by bonusType if provided
+    if (bonusType) {
+      query.bonusType = bonusType;
+    }
+    
+    // Get user details
     const user = req.user;
+    const userId = user._id;
     const userCreatedDate = new Date(user.createdAt);
-    const daysSinceRegistration = Math.floor((new Date() - userCreatedDate) / (1000 * 60 * 60 * 24));
+    const daysSinceRegistration = Math.floor((now - userCreatedDate) / (1000 * 60 * 60 * 24));
     
-    // Filter based on applicableTo
-    const applicableBonuses = await Bonus.find(query);
+    // Fetch all active bonuses that match date criteria
+    const applicableBonuses = await Bonus.find(query).lean();
     
-    // Filter manually based on user eligibility
+    // Filter bonuses based on user eligibility
     const eligibleBonuses = applicableBonuses.filter(bonus => {
-      if (bonus.applicableTo === 'all') return true;
-      if (bonus.applicableTo === 'new' && daysSinceRegistration <= 7) return true;
-      if (bonus.applicableTo === 'existing' && daysSinceRegistration > 7) return true;
-      return false;
+      // Check applicableTo field
+      switch (bonus.applicableTo) {
+        case 'all':
+          return true;
+          
+        case 'new':
+          // New users: registered within last 7 days
+          return daysSinceRegistration <= 7;
+          
+        case 'existing':
+          // Existing users: registered more than 7 days ago
+          return daysSinceRegistration > 7;
+          
+        case 'specific':
+          // Specific users: check if user ID is in assignedUsers array
+          if (!bonus.assignedUsers || bonus.assignedUsers.length === 0) {
+            return false;
+          }
+          // Convert ObjectIds to strings for comparison
+          const assignedUserIds = bonus.assignedUsers.map(id => id.toString());
+          return assignedUserIds.includes(userId.toString());
+          
+        default:
+          return false;
+      }
     });
-
+    
+    // Helper function to get bonus description
+    const getBonusDescription = (bonus) => {
+      if (bonus.percentage > 0 && bonus.minDeposit > 0) {
+        let description = `Get ${bonus.percentage}% bonus on minimum deposit of ${bonus.minDeposit} BDT`;
+        if (bonus.maxBonus) {
+          description += ` up to ${bonus.maxBonus} BDT`;
+        }
+        if (bonus.wageringRequirement > 0) {
+          description += ` with ${bonus.wageringRequirement}x wagering requirement`;
+        }
+        return description;
+      } else if (bonus.amount > 0) {
+        let description = `Get ${bonus.amount} BDT bonus`;
+        if (bonus.minDeposit > 0) {
+          description += ` on minimum deposit of ${bonus.minDeposit} BDT`;
+        }
+        if (bonus.wageringRequirement > 0) {
+          description += ` with ${bonus.wageringRequirement}x wagering requirement`;
+        }
+        return description;
+      }
+      return "Special bonus offer";
+    };
+    
     // Format bonuses for user display
     const formattedBonuses = eligibleBonuses.map(bonus => ({
       id: bonus._id,
@@ -3836,18 +3894,24 @@ Userrouter.get("/bonuses/available", authenticateToken, async (req, res) => {
       wageringRequirement: bonus.wageringRequirement,
       validityDays: bonus.validityDays,
       applicableTo: bonus.applicableTo,
+      endDate: bonus.endDate,
+      hasExpiry: !!bonus.endDate,
       description: getBonusDescription(bonus)
     }));
-console.log(formattedBonuses)
+    
+    console.log(`Found ${formattedBonuses.length} eligible bonuses for user ${userId}`);
+    
     res.json({
       success: true,
+      count: formattedBonuses.length,
       data: formattedBonuses
     });
   } catch (error) {
     console.error("Error fetching available bonuses:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch available bonuses"
+      message: "Failed to fetch available bonuses",
+      error: error.message
     });
   }
 });

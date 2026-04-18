@@ -10716,14 +10716,35 @@ Adminrouter.post("/bonuses", async (req, res) => {
       status,
       applicableTo,
       startDate,
-      endDate
+      endDate,
+      assignToAll,
+      selectedUsers,
+      noEndDate
     } = req.body;
 
     // Validation
-    if (!name || (!amount && amount !== 0 && (!percentage || percentage === 0))) {
+    if (!name) {
       return res.status(400).json({
         success: false,
-        error: "Name and either amount or percentage are required"
+        error: "Bonus name is required"
+      });
+    }
+
+    if ((!amount || amount === 0) && (!percentage || percentage === 0)) {
+      return res.status(400).json({
+        success: false,
+        error: "Either amount or percentage must be greater than 0"
+      });
+    }
+
+    // Date validation
+    let parsedStartDate = startDate ? new Date(startDate) : new Date();
+    let parsedEndDate = noEndDate ? null : (endDate ? new Date(endDate) : null);
+
+    if (parsedEndDate && parsedEndDate <= parsedStartDate) {
+      return res.status(400).json({
+        success: false,
+        error: "End date must be after start date"
       });
     }
 
@@ -10740,6 +10761,15 @@ Adminrouter.post("/bonuses", async (req, res) => {
       }
     }
 
+    // Determine applicableTo value
+    let finalApplicableTo = applicableTo || 'all';
+    let assignedUsers = [];
+    
+    if (!assignToAll && selectedUsers && selectedUsers.length > 0) {
+      finalApplicableTo = 'specific';
+      assignedUsers = selectedUsers;
+    }
+
     const bonusData = {
       name,
       bonusCode: bonusCode ? bonusCode.toUpperCase() : undefined,
@@ -10751,17 +10781,28 @@ Adminrouter.post("/bonuses", async (req, res) => {
       wageringRequirement: wageringRequirement || 0,
       validityDays: validityDays || 30,
       status: status || 'active',
-      applicableTo: applicableTo || 'all',
-      startDate: startDate || new Date(),
-      endDate: endDate || null,
+      applicableTo: finalApplicableTo,
+      assignedUsers: assignedUsers,
+      startDate: parsedStartDate,
+      endDate: parsedEndDate,
       createdBy: req.user?._id
     };
 
     const newBonus = new Bonus(bonusData);
     const savedBonus = await newBonus.save();
 
-    // Populate createdBy for response
+    // If assigned to specific users, you might want to create bonus records for each user
+    if (finalApplicableTo === 'specific' && assignedUsers.length > 0) {
+      // You can create a separate UserBonus collection here
+      // Or just store the assignment in the bonus document
+      console.log(`Bonus assigned to ${assignedUsers.length} specific users`);
+    }
+
+    // Populate createdBy and assignedUsers for response
     await savedBonus.populate("createdBy", "username");
+    if (savedBonus.assignedUsers.length > 0) {
+      await savedBonus.populate("assignedUsers", "username email player_id");
+    }
 
     res.status(201).json({
       success: true,
@@ -10789,6 +10830,41 @@ Adminrouter.post("/bonuses", async (req, res) => {
   }
 });
 
+// GET all bonuses (with filtering for specific users)
+Adminrouter.get("/bonuses", async (req, res) => {
+  try {
+    const { applicableTo, status, userId } = req.query;
+    let filter = {};
+    
+    if (status) filter.status = status;
+    if (applicableTo) filter.applicableTo = applicableTo;
+    
+    // If filtering by specific user
+    if (userId) {
+      filter.$or = [
+        { applicableTo: 'all' },
+        { applicableTo: 'specific', assignedUsers: userId }
+      ];
+    }
+    
+    const bonuses = await Bonus.find(filter)
+      .populate("createdBy", "username")
+      .populate("assignedUsers", "username email player_id")
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      bonuses
+    });
+  } catch (error) {
+    console.error("Error fetching bonuses:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch bonuses"
+    });
+  }
+});
+
 // PUT update bonus
 Adminrouter.put("/bonuses/:id", async (req, res) => {
   try {
@@ -10805,7 +10881,10 @@ Adminrouter.put("/bonuses/:id", async (req, res) => {
       status,
       applicableTo,
       startDate,
-      endDate
+      endDate,
+      assignToAll,
+      selectedUsers,
+      noEndDate
     } = req.body;
 
     const bonus = await Bonus.findById(req.params.id);
@@ -10813,6 +10892,17 @@ Adminrouter.put("/bonuses/:id", async (req, res) => {
       return res.status(404).json({
         success: false,
         error: "Bonus not found"
+      });
+    }
+
+    // Date validation
+    let parsedStartDate = startDate !== undefined ? new Date(startDate) : bonus.startDate;
+    let parsedEndDate = noEndDate ? null : (endDate !== undefined ? (endDate ? new Date(endDate) : null) : bonus.endDate);
+
+    if (parsedEndDate && parsedEndDate <= parsedStartDate) {
+      return res.status(400).json({
+        success: false,
+        error: "End date must be after start date"
       });
     }
 
@@ -10831,6 +10921,20 @@ Adminrouter.put("/bonuses/:id", async (req, res) => {
       bonus.bonusCode = bonusCode.toUpperCase();
     }
 
+    // Determine applicableTo value
+    let finalApplicableTo = applicableTo || bonus.applicableTo;
+    let assignedUsers = bonus.assignedUsers;
+    
+    if (assignToAll !== undefined) {
+      if (assignToAll) {
+        finalApplicableTo = 'all';
+        assignedUsers = [];
+      } else if (selectedUsers) {
+        finalApplicableTo = 'specific';
+        assignedUsers = selectedUsers;
+      }
+    }
+
     // Update fields
     if (name !== undefined) bonus.name = name;
     if (bonusType !== undefined) bonus.bonusType = bonusType;
@@ -10841,14 +10945,18 @@ Adminrouter.put("/bonuses/:id", async (req, res) => {
     if (wageringRequirement !== undefined) bonus.wageringRequirement = wageringRequirement;
     if (validityDays !== undefined) bonus.validityDays = validityDays;
     if (status !== undefined) bonus.status = status;
-    if (applicableTo !== undefined) bonus.applicableTo = applicableTo;
-    if (startDate !== undefined) bonus.startDate = startDate;
-    if (endDate !== undefined) bonus.endDate = endDate;
+    if (finalApplicableTo !== undefined) bonus.applicableTo = finalApplicableTo;
+    if (assignedUsers !== undefined) bonus.assignedUsers = assignedUsers;
+    if (startDate !== undefined) bonus.startDate = parsedStartDate;
+    if (endDate !== undefined) bonus.endDate = parsedEndDate;
 
     await bonus.save();
 
-    // Populate createdBy for response
+    // Populate for response
     await bonus.populate("createdBy", "username");
+    if (bonus.assignedUsers.length > 0) {
+      await bonus.populate("assignedUsers", "username email player_id");
+    }
 
     res.json({
       success: true,
@@ -10875,7 +10983,6 @@ Adminrouter.put("/bonuses/:id", async (req, res) => {
     });
   }
 });
-
 // PUT update bonus status
 Adminrouter.put("/bonuses/:id/status", async (req, res) => {
   try {
@@ -12847,8 +12954,8 @@ Adminrouter.post("/admins", async (req, res) => {
     if (existingAdmin) {
       return res.status(400).json({ success: false, error: "Email already exists" });
     }
-    
-    const admin = new Admin({ name, email, password, role, is_active });
+    const haspassword=await bcrypt.hash(password, 10);
+    const admin = new Admin({ name, email, password:haspassword, role, is_active });
     await admin.save();
     
     const adminResponse = admin.toObject();
@@ -12898,7 +13005,7 @@ Adminrouter.post("/admin-login", async (req, res) => {
       return res.status(401).json({ success: false, error: "Invalid credentials" });
     }
     
-    const isPasswordValid = await admin.comparePassword(password);
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
       return res.status(401).json({ success: false, error: "Invalid credentials" });
     }

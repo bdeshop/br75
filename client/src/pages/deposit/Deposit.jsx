@@ -5,13 +5,13 @@ import Footer from "../../components/footer/Footer";
 import axios from "axios";
 import { FaBangladeshiTakaSign } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
-import { LanguageContext } from "../../context/LanguageContext"; // Adjust path as needed
+import { LanguageContext } from "../../context/LanguageContext";
 
 const Deposit = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const API_BASE_URL = import.meta.env.VITE_API_KEY_Base_URL;
   const ORACLEPAY_API_URL = "https://api.oraclepay.org/api/opay-business";
-  const ORACLEPAY_TOKEN = "70b7248fa9ed79cd92cb3b59bf49f6db626768ac0690b0aa"; // Replace with your actual token
+  const ORACLEPAY_TOKEN = "70b7248fa9ed79cd92cb3b59bf49f6db626768ac0690b0aa";
   
   const [activeMethod, setActiveMethod] = useState(null);
   const [amount, setAmount] = useState("");
@@ -28,7 +28,6 @@ const Deposit = () => {
   const [selectedBonus, setSelectedBonus] = useState(null);
   const navigate = useNavigate();
   
-  // Get translation function from context
   const { t } = useContext(LanguageContext);
 
   const quickAmounts = [50, 100, 300, 500, 1000, 25000];
@@ -102,7 +101,6 @@ const Deposit = () => {
         );
 
         if (response.data.success && response.data.data) {
-          // Filter out bonuses that user has already used
           const user = JSON.parse(localStorage.getItem("user"));
           const userResponse = await axios.get(
             `${API_BASE_URL}/api/user/all-information/${user.id}`,
@@ -116,10 +114,8 @@ const Deposit = () => {
           if (userResponse.data.success) {
             const userData = userResponse.data.data;
             
-            // Get all bonus codes that user has already used
             const usedBonusCodes = [];
             
-            // Check bonusActivityLogs for used bonuses
             if (userData.bonusActivityLogs && Array.isArray(userData.bonusActivityLogs)) {
               userData.bonusActivityLogs.forEach(log => {
                 if (log.bonusCode && (log.status === 'active' || log.status === 'completed')) {
@@ -128,7 +124,6 @@ const Deposit = () => {
               });
             }
             
-            // Check activeBonuses for used bonuses
             if (userData.bonusInfo && userData.bonusInfo.activeBonuses && Array.isArray(userData.bonusInfo.activeBonuses)) {
               userData.bonusInfo.activeBonuses.forEach(bonus => {
                 if (bonus.bonusCode) {
@@ -137,19 +132,12 @@ const Deposit = () => {
               });
             }
             
-            // Filter out bonuses that user has already used
             const filteredBonuses = response.data.data.filter(bonus => {
-              // If bonus has no code, show it (generic bonuses)
               if (!bonus.bonusCode) return true;
-              
-              // Check if this bonus code has been used
               const isUsed = usedBonusCodes.includes(bonus.bonusCode);
-              
-              // Special case: first deposit bonus
               if (bonus.bonusType === 'first_deposit' && userData.bonusInfo?.firstDepositBonusClaimed) {
                 return false;
               }
-              
               return !isUsed;
             });
             
@@ -166,7 +154,6 @@ const Deposit = () => {
     fetchAvailableBonuses();
   }, [API_BASE_URL]);
 
-  // Map internal method names to OraclePay method names
   const getOraclePayMethodName = (methodName) => {
     const methodMap = {
       'bKash': 'bkash',
@@ -174,7 +161,6 @@ const Deposit = () => {
       'Rocket': 'rocket',
       'Upay': 'upay'
     };
-    
     return methodMap[methodName] || methodName?.toLowerCase() || 'bkash';
   };
 
@@ -183,10 +169,8 @@ const Deposit = () => {
     e.preventDefault();
     console.log("Payment submitted");
 
-    // Reset previous status
     setTransactionStatus(null);
     
-    // Validate form
     const errors = {};
     if (!activeMethod) {
       errors.method = t.pleaseSelectPaymentMethod || "Please select a payment method";
@@ -195,8 +179,15 @@ const Deposit = () => {
       errors.amount = t.amountRequired || "Amount is required";
     } else if (parseFloat(amount) < 50) {
       errors.amount = t.minDepositAmount || "Minimum deposit amount is ৳50";
-    }else if (parseFloat(amount) > parseFloat(activeMethod?.maxAmount || 50000)) {
+    } else if (parseFloat(amount) > parseFloat(activeMethod?.maxAmount || 50000)) {
       errors.amount = `${t.maxDepositAmount || "Maximum deposit amount is"} ৳${activeMethod?.maxAmount || 50000}`;
+    }
+    
+    // Check minimum deposit requirement for selected bonus
+    if (selectedBonus && selectedBonus.minDeposit > 0) {
+      if (parseFloat(amount) < selectedBonus.minDeposit) {
+        errors.amount = `Minimum deposit of ৳${selectedBonus.minDeposit} required for ${selectedBonus.name} bonus`;
+      }
     }
 
     setFormErrors(errors);
@@ -207,17 +198,14 @@ const Deposit = () => {
     setIsProcessing(true);
 
     try {
-      // Get user data
       const user = JSON.parse(localStorage.getItem("user"));
       const token = localStorage.getItem("usertoken");
       
-      // Create user identity address (unique identifier for this payment)
       const userIdentityAddress = `${user.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      
-      // Generate invoice number
       const invoiceNumber = `INV-${user.id}-${Date.now()}`;
       
-      // Prepare checkout items with bonus information
+      const calculatedBonusAmount = selectedBonus ? calculateBonusAmount(selectedBonus) : 0;
+      
       const checkoutItems = {
         userId: user.id,
         username: user.username,
@@ -229,22 +217,22 @@ const Deposit = () => {
           type: selectedBonus.bonusType,
           percentage: selectedBonus.percentage,
           amount: selectedBonus.amount,
-          calculatedAmount: selectedBonus.calculatedAmount || 0,
-          wageringRequirement: selectedBonus.wageringRequirement
+          calculatedAmount: calculatedBonusAmount,
+          wageringRequirement: selectedBonus.wageringRequirement,
+          minDeposit: selectedBonus.minDeposit
         } : null,
         timestamp: new Date().toISOString()
       };
 
-      // Create payment link with OraclePay
       const oraclePayResponse = await axios.post(
         `${ORACLEPAY_API_URL}/generate-payment-page`,
         {
-          payment_amount: parseInt(amount),                    // Must be integer
-          user_identity_address: userIdentityAddress,           // Unique identifier
-          callback_url: `${API_BASE_URL}/api/opay/oraclepay-callback`, // Your webhook URL
-          success_redirect_url: `${window.location.origin}/deposit/success`, // Success page
-          checkout_items: checkoutItems,                        // Additional data
-          invoice_number: invoiceNumber                         // Your invoice number
+          payment_amount: parseInt(amount),
+          user_identity_address: userIdentityAddress,
+          callback_url: `${API_BASE_URL}/api/opay/oraclepay-callback`,
+          success_redirect_url: `${window.location.origin}/deposit/success`,
+          checkout_items: checkoutItems,
+          invoice_number: invoiceNumber
         },
         {
           headers: { 
@@ -258,34 +246,27 @@ const Deposit = () => {
 
       if (oraclePayResponse.data.success) {
         
-        // Save deposit record to your backend
-        try {
-          const depositRecord = {
-            method: activeMethod.gatewayName,
-            amount: parseFloat(amount),
-            transactionId: `OPAY_${Date.now()}`,
-            phoneNumber: userData?.phone || "",
-            playerbalance: userData?.balance || 0,
-            status: "pending",
-            
-            // OraclePay specific fields
-            oraclePaySessionCode: oraclePayResponse.data.session_code,
-            paymentPageUrl: oraclePayResponse.data.payment_page_url,
-            userIdentityAddress: userIdentityAddress,
-            invoiceNumber: invoiceNumber,
-            
-            // Bonus related fields
-            bonusType: selectedBonus?.bonusType || 'none',
-            bonusAmount: selectedBonus?.calculatedAmount || 0,
-            wageringRequirement: selectedBonus?.wageringRequirement || 0,
-            bonusCode: selectedBonus?.bonusCode || '',
-            
-            // Additional fields
-            checkoutItems: checkoutItems,
-            currency: 'BDT'
-          };
+        const depositRecord = {
+          method: activeMethod.gatewayName,
+          amount: parseFloat(amount),
+          transactionId: `OPAY_${Date.now()}`,
+          phoneNumber: userData?.phone || "",
+          playerbalance: userData?.balance || 0,
+          status: "pending",
+          oraclePaySessionCode: oraclePayResponse.data.session_code,
+          paymentPageUrl: oraclePayResponse.data.payment_page_url,
+          userIdentityAddress: userIdentityAddress,
+          invoiceNumber: invoiceNumber,
+          bonusType: selectedBonus?.bonusType || 'none',
+          bonusAmount: calculatedBonusAmount,
+          wageringRequirement: selectedBonus?.wageringRequirement || 0,
+          bonusCode: selectedBonus?.bonusCode || '',
+          bonusName: selectedBonus?.name || '',
+          checkoutItems: checkoutItems,
+          currency: 'BDT'
+        };
 
-          // Save to your backend
+        try {
           const saveResponse = await axios.post(
             `${API_BASE_URL}/api/user/deposit`,
             depositRecord,
@@ -296,10 +277,8 @@ const Deposit = () => {
               },
             }
           );
-
           console.log("Deposit record saved:", saveResponse.data);
           
-          // Update local state with the saved transaction
           if (saveResponse.data.success) {
             setUserData(prev => ({
               ...prev,
@@ -312,19 +291,15 @@ const Deposit = () => {
               ].slice(0, 10)
             }));
           }
-          
         } catch (err) {
           console.error("Error saving deposit record:", err.response?.data || err.message);
-          // Continue with payment even if saving fails
         }
 
-        // Show success message
         setTransactionStatus({
           success: true,
           message: t.redirectingToPaymentPage || "Redirecting to payment page..."
         });
 
-        // Redirect to OraclePay payment page
         setTimeout(() => {
           window.location.href = oraclePayResponse.data.payment_page_url;
         }, 1500);
@@ -377,6 +352,13 @@ const Deposit = () => {
     return calculatedBonus;
   };
 
+  // Check if amount meets bonus minimum deposit
+  const doesAmountMeetBonusMin = (bonus) => {
+    if (!bonus || !bonus.minDeposit) return true;
+    const currentAmount = parseFloat(amount) || 0;
+    return currentAmount >= bonus.minDeposit;
+  };
+
   const handleRefreshBalance = async () => {
     try {
       const user = JSON.parse(localStorage.getItem("user"));
@@ -410,7 +392,6 @@ const Deposit = () => {
     }
   };
 
-  // Render payment method buttons dynamically
   const renderPaymentMethodButton = (method) => (
     <button
       type="button"
@@ -435,7 +416,6 @@ const Deposit = () => {
     </button>
   );
 
-  // Format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(t.dateFormatLocale || 'en-US', {
@@ -447,7 +427,6 @@ const Deposit = () => {
     });
   };
 
-  // Format time ago
   const timeAgo = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -459,7 +438,6 @@ const Deposit = () => {
     return `${Math.floor(diffInSeconds / 86400)} ${t.daysAgo || 'days ago'}`;
   };
 
-  // Calculate total with selected bonus
   const totalWithBonus = selectedBonus && amount
     ? parseFloat(amount) + calculateBonusAmount(selectedBonus)
     : parseFloat(amount || 0);
@@ -497,12 +475,9 @@ const Deposit = () => {
 
   return (
     <div className="h-screen overflow-hidden bg-[#0a0f0f] text-white font-rubik">
-      {/* Header */}
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      {/* Main Content */}
       <div className="flex h-[calc(100vh-56px)]">
-        {/* Sidebar */}
         <Sidebar isOpen={sidebarOpen} />
 
         <div
@@ -520,7 +495,6 @@ const Deposit = () => {
               </p>
             </div>
 
-            {/* User Info Card */}
             {userData && (
               <div className="bg-[#1a1f1f] rounded-[2px] p-4 md:p-6 mb-6 md:mb-8 border border-[#2a2f2f] shadow-lg">
                 <h2 className="text-base md:text-lg font-semibold mb-3 md:mb-4 text-white">
@@ -549,7 +523,6 @@ const Deposit = () => {
               </div>
             )}
 
-            {/* Balance Card */}
             <div className="bg-gradient-to-r from-[#1a2525] to-[#2a3535] rounded-[2px] p-4 md:p-6 mb-6 md:mb-8 shadow-lg border border-[#2a2f2f]">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0">
                 <div>
@@ -588,7 +561,6 @@ const Deposit = () => {
               </div>
             </div>
 
-            {/* Loading State for Deposit Methods */}
             {loadingMethods ? (
               <div className="bg-[#1a1f1f] rounded-lg p-8 text-center border border-[#2a2f2f]">
                 <div className="flex flex-col items-center justify-center space-y-4">
@@ -620,7 +592,6 @@ const Deposit = () => {
                 <p className="text-[#8a9ba8]">{t.noDepositMethodsAvailable || "No deposit methods available at the moment."}</p>
               </div>
             ) : (
-              /* Payment Methods and Form */
               <div className="bg-[#1a1f1f] rounded-[2px] overflow-hidden mb-6 md:mb-8 border border-[#2a2f2f]">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 md:p-4 border-b border-[#2a2f2f]">
                   {depositMethods.map((method) => renderPaymentMethodButton(method))}
@@ -628,10 +599,8 @@ const Deposit = () => {
 
                 {activeMethod && (
                   <>
-                    {/* Payment Form */}
                     <div className="p-4 md:p-6">
                       <form onSubmit={handleSubmit} noValidate>
-                        {/* Amount Field */}
                         <div className="mb-4 md:mb-6">
                           <label className="block text-[#8a9ba8] text-xs md:text-sm mb-1 md:mb-2 font-medium">
                             {t.amountCurrency || "Amount (৳)"}
@@ -646,7 +615,20 @@ const Deposit = () => {
                             }`}
                             placeholder={t.enterDepositAmount || "Enter deposit amount (minimum ৳50)"}
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            onChange={(e) => {
+                              setAmount(e.target.value);
+                              // Clear amount error when user types
+                              if (formErrors.amount) {
+                                setFormErrors(prev => ({ ...prev, amount: '' }));
+                              }
+                              // If bonus selected, check minimum deposit requirement
+                              if (selectedBonus && selectedBonus.minDeposit > 0) {
+                                const newAmount = parseFloat(e.target.value);
+                                if (newAmount >= selectedBonus.minDeposit) {
+                                  setFormErrors(prev => ({ ...prev, amount: '' }));
+                                }
+                              }
+                            }}
                             required
                             min="50"
                           />
@@ -656,7 +638,6 @@ const Deposit = () => {
                             </p>
                           )}
 
-                          {/* Quick Amounts */}
                           <div className="flex flex-wrap gap-2 mt-3 md:mt-4">
                             {quickAmounts.map((quickAmount) => (
                               <button
@@ -667,7 +648,17 @@ const Deposit = () => {
                                     ? "bg-[#2a5c45] text-white"
                                     : "bg-[#1f2525] text-[#8a9ba8] hover:bg-[#252b2b]"
                                 }`}
-                                onClick={() => setAmount(quickAmount.toString())}
+                                onClick={() => {
+                                  setAmount(quickAmount.toString());
+                                  if (selectedBonus && selectedBonus.minDeposit > 0 && quickAmount < selectedBonus.minDeposit) {
+                                    setFormErrors(prev => ({ 
+                                      ...prev, 
+                                      amount: `Minimum deposit of ৳${selectedBonus.minDeposit} required for ${selectedBonus.name} bonus` 
+                                    }));
+                                  } else {
+                                    setFormErrors(prev => ({ ...prev, amount: '' }));
+                                  }
+                                }}
                               >
                                 ৳ {quickAmount.toLocaleString()}
                               </button>
@@ -688,7 +679,6 @@ const Deposit = () => {
                             </div>
                           ) : availableBonuses.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {/* No Bonus Option */}
                               <button
                                 type="button"
                                 className={`p-3 rounded-[5px] flex flex-col cursor-pointer items-center justify-center transition-all ${
@@ -696,7 +686,10 @@ const Deposit = () => {
                                     ? "bg-[#1a2a2a] border-2 border-[#3a8a6f]"
                                     : "bg-[#1f2525] hover:bg-[#252b2b] border-2 border-transparent"
                                 }`}
-                                onClick={() => setSelectedBonus(null)}
+                                onClick={() => {
+                                  setSelectedBonus(null);
+                                  setFormErrors(prev => ({ ...prev, amount: '' }));
+                                }}
                               >
                                 <span className="text-sm md:text-base font-medium">
                                   {t.noBonus || "No Bonus"}
@@ -706,22 +699,35 @@ const Deposit = () => {
                                 </span>
                               </button>
 
-                              {/* Available Bonuses */}
                               {availableBonuses.map((bonus) => {
                                 const calculatedAmount = calculateBonusAmount(bonus);
+                                const meetsMinDeposit = doesAmountMeetBonusMin(bonus);
+                                const isSelected = selectedBonus?.id === bonus.id;
+                                
                                 return (
                                   <button
                                     type="button"
                                     key={bonus.id}
-                                    className={`p-3 rounded-[5px] flex flex-col cursor-pointer items-center justify-center transition-all ${
-                                      selectedBonus?.id === bonus.id
+                                    className={`p-3 rounded-[5px] flex flex-col cursor-pointer items-center justify-center transition-all relative ${
+                                      isSelected
                                         ? "bg-[#1a2a2a] border-2 border-[#3a8a6f]"
                                         : "bg-[#1f2525] hover:bg-[#252b2b] border-2 border-transparent"
-                                    }`}
-                                    onClick={() => setSelectedBonus({
-                                      ...bonus,
-                                      calculatedAmount
-                                    })}
+                                    } ${!meetsMinDeposit && amount ? "opacity-60" : ""}`}
+                                    onClick={() => {
+                                      if (meetsMinDeposit || !amount) {
+                                        setSelectedBonus({
+                                          ...bonus,
+                                          calculatedAmount
+                                        });
+                                        setFormErrors(prev => ({ ...prev, amount: '' }));
+                                      } else {
+                                        setFormErrors(prev => ({ 
+                                          ...prev, 
+                                          amount: `Minimum deposit of ৳${bonus.minDeposit} required for ${bonus.name} bonus` 
+                                        }));
+                                      }
+                                    }}
+                                    disabled={!meetsMinDeposit && amount}
                                   >
                                     <div className="flex justify-between items-center w-full">
                                       <span className="text-sm md:text-base font-medium text-left">
@@ -736,9 +742,21 @@ const Deposit = () => {
                                     <span className="text-xs text-[#8a9ba8] text-left w-full mt-1">
                                       {t.bonusCode || "Code"}: {bonus.bonusCode}
                                     </span>
+                                    {bonus.minDeposit > 0 && (
+                                      <span className="text-xs text-[#e6db74] text-left w-full">
+                                        Min Deposit: ৳{bonus.minDeposit}
+                                      </span>
+                                    )}
                                     <span className="text-xs text-[#3a8a6f] text-left w-full">
                                       {bonus.description}
                                     </span>
+                                    {!meetsMinDeposit && amount && (
+                                      <div className="absolute inset-0 bg-black/50 rounded-[5px] flex items-center justify-center">
+                                        <span className="text-xs text-[#e6db74] font-medium">
+                                          Need ৳{bonus.minDeposit}
+                                        </span>
+                                      </div>
+                                    )}
                                   </button>
                                 );
                               })}
@@ -768,6 +786,20 @@ const Deposit = () => {
                               </div>
                             )}
                             
+                            {selectedBonus && selectedBonus.minDeposit > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-[#8a9ba8]">{t.minDepositRequired || "Min Deposit Required"}:</span>
+                                <span className="text-[#e6db74]">৳{selectedBonus.minDeposit}</span>
+                              </div>
+                            )}
+                            
+                            {selectedBonus && selectedBonus.wageringRequirement > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-[#8a9ba8]">{t.wageringRequirement || "Wagering"}:</span>
+                                <span className="text-[#e6db74]">{selectedBonus.wageringRequirement}x</span>
+                              </div>
+                            )}
+                            
                             <div className="pt-2 border-t border-[#2a3535]">
                               <div className="flex justify-between font-medium">
                                 <span className="text-white">{t.totalCredit || "Total Credit"}:</span>
@@ -779,7 +811,6 @@ const Deposit = () => {
                           </div>
                         </div>
 
-                        {/* Submit Button */}
                         <div className="mb-4">
                           <button
                             className="w-full bg-gradient-to-r from-[#2a5c45] to-[#3a6c55] hover:from-[#3a6c55] hover:to-[#4a7c65] py-3 md:py-4 rounded-lg text-sm md:text-base text-white font-medium flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer"
@@ -816,7 +847,6 @@ const Deposit = () => {
                           </button>
                         </div>
 
-                        {/* Additional form validation errors */}
                         {formErrors.method && (
                           <div className="mb-4 p-3 bg-[#2a1f1f] border border-[#3a2f2f] rounded-lg">
                             <p className="text-[#ff6b6b] text-sm">
@@ -831,7 +861,6 @@ const Deposit = () => {
               </div>
             )}
 
-            {/* Transaction Status Message */}
             {transactionStatus && (
               <div
                 className={`mb-6 p-4 rounded-lg ${
@@ -875,7 +904,6 @@ const Deposit = () => {
               </div>
             )}
 
-            {/* Instructions */}
             {activeMethod && (
               <div className="bg-[#1a1f1f] rounded-[2px] p-4 md:p-6 border border-[#2a2f2f] mb-6 md:mb-8">
                 <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4 text-white flex items-center">
@@ -908,7 +936,6 @@ const Deposit = () => {
               </div>
             )}
 
-            {/* Enhanced Transaction History */}
             <div className="bg-[#1a1f1f] rounded-[2px] overflow-hidden border border-[#2a2f2f]">
               <div className="p-4 md:p-6 border-b border-[#2a2f2f] flex justify-between items-center">
                 <h3 className="text-base md:text-lg font-semibold text-white">
@@ -1029,7 +1056,6 @@ const Deposit = () => {
                           </div>
                         </div>
                         
-                        {/* Bonus Details Section */}
                         {(transaction.bonusApplied || (transaction.bonusType && transaction.bonusType !== 'none')) && (
                           <div className="p-4 bg-[#1a2a2a] border-b border-[#2a3535]">
                             <h4 className="text-sm font-medium text-white mb-2 flex items-center">
@@ -1082,7 +1108,6 @@ const Deposit = () => {
                           </div>
                         )}
                         
-                        {/* Total Credit Section */}
                         <div className="p-4">
                           <div className="flex justify-between items-center">
                             <div>
