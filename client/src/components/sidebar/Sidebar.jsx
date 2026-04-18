@@ -403,7 +403,7 @@ const Sidebar = ({
       title: t.affiliate || "Affiliate",
       icon: <FaHandshake className="w-5 h-5 min-w-[20px]" />,
       subItems: [t.joinProgram || "Join Program", t.marketingTools || "Marketing Tools", t.commissionRates || "Commission Rates"],
-      onClick: () => { window.location.href = "https://m-affiliate.bir75.com"; }
+      onClick: () => { window.location.href = "https://affiliate.bir75.com"; }
     },
     {
       title: t.lottery || "Lottery",
@@ -449,7 +449,7 @@ const Sidebar = ({
       >
         {sidebarOpen ? (
           <a 
-            href="https://wa.me/+4407386588951" 
+            href="https://wa.me/+60134935257" 
             target="_blank" 
             rel="noopener noreferrer"
             className="bg-theme_color2 p-2.5 rounded-[10px] text-center flex justify-center items-center gap-3 w-full transition-all duration-200 shadow-md"
@@ -459,7 +459,7 @@ const Sidebar = ({
           </a>
         ) : (
           <a 
-            href="https://wa.me/+4407386588951" 
+            href="https://wa.me/+60134935257" 
             target="_blank" 
             rel="noopener noreferrer"
             className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 p-2.5 rounded-lg text-center flex justify-center items-center gap-3 w-full transition-all duration-200"
