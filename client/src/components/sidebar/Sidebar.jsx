@@ -522,7 +522,7 @@ const Sidebar = ({
                   sidebarOpen ? "ml-3 w-full" : "w-0"
                 }`}
               >
-                <span className="text-sm flex-grow whitespace-nowrap font-medium">
+                <span className="text-sm text-yellow_theme flex-grow whitespace-nowrap font-medium">
                   {translateCategoryName(category.name)}
                 </span>
                 {category.name?.toLowerCase() !== "exclusive" && (
@@ -669,7 +669,7 @@ const Sidebar = ({
                   sidebarOpen ? "ml-3 w-full" : "w-0"
                 }`}
               >
-                <span className="text-sm flex-grow whitespace-nowrap font-medium">
+                <span className="text-sm flex-grow whitespace-nowrap text-yellow_theme font-medium">
                   {item.title}
                 </span>
                 {item.subItems.length > 0 && (
@@ -804,7 +804,7 @@ const Sidebar = ({
                     <div className="w-5 h-5 min-w-[20px] bg-gray-700 rounded-md"></div>
                   )}
                   <div className="flex items-center justify-between ml-3 w-full">
-                    <span className="text-sm flex-grow font-medium">
+                    <span className="text-sm flex-grow font-medium text-yellow_theme">
                       {translateCategoryName(category.name)}
                     </span>
                     {category.name?.toLowerCase() !== "exclusive" && (
@@ -929,7 +929,7 @@ const Sidebar = ({
                 >
                   <span className="text-yellow_theme">{item.icon}</span>
                   <div className="flex items-center ml-3 w-full">
-                    <span className="text-sm flex-grow whitespace-nowrap font-medium">
+                    <span className="text-sm flex-grow text-yellow_theme whitespace-nowrap font-medium">
                       {item.title}
                     </span>
                   </div>

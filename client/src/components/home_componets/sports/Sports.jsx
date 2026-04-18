@@ -99,7 +99,6 @@ const SportsContent = () => {
   };
 
   const handleAction = () => {
-    if (isDragging) return;
     if (!user) {
       setShowLoginPopup(true);
     } else {
