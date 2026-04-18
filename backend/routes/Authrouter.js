@@ -514,7 +514,7 @@ Authrouter.post("/login", async (req, res) => {
         message: "Username/Mobile number and password are required" 
       });
     }
-
+ console.log("body",req.body)
     // Check if input is mobile number (starts with + or digit and contains only numbers, +, -)
     const isMobileNumber = /^[\+]?[0-9\-]+$/.test(username);
     
@@ -525,6 +525,7 @@ Authrouter.post("/login", async (req, res) => {
       // Search by phone number
       user = await User.findOne({ phone: username }).select("+password");
       loginIdentifier = `phone: ${username}`;
+     
     } else {
       // Search by username
       user = await User.findOne({ username }).select("+password");
@@ -573,8 +574,8 @@ Authrouter.post("/login", async (req, res) => {
       });
     }
 
-    const isPasswordValid = await user.verifyPassword(password);
-    
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log(`Password validation for ${loginIdentifier}:`, isPasswordValid);
     if (!isPasswordValid) {
       const loginLog = new LoginLog({
         userId: user._id,
