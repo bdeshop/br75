@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Sidebar from "../../components/sidebar/Sidebar";
 import { Header } from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
-
+import logo from '../../assets/logo.png'
 const Vipclub = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -10,7 +10,7 @@ const Vipclub = () => {
     {
       title: "24/7 Personal VIP Manager",
       desc: "Our Personal VIP Manager's number one goal is to make your experience second-to-none by offering prompt and personal service that is unrivalled. You'll be able to reach your 24/7 Personal VIP Manager via VIP LiveChat, Telegram, or Email.",
-      img: "https://www.vipdetailspage.com/wp-content/themes/vip/bjvip_v2/img/bl1.png",
+      img: logo,
     },
     {
       title: "VIP Exclusive Rewards",
