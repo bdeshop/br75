@@ -327,7 +327,7 @@ Adminrouter.put("/update-password", adminAuth, async (req, res) => {
     }
 
     // Verify current password
-    const isPasswordValid = await admin.comparePassword(currentPassword);
+    const isPasswordValid = await bcrypt.compare(currentPassword, admin.password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,

@@ -15,7 +15,8 @@ Adminauth.post("/signup", async (req, res) => {
     }
 
     // Create new admin
-    const admin = new Admin({name, email, password });
+    const haspas=await bcrypt.hash(password, 10);
+    const admin = new Admin({name, email, password:haspas });
     await admin.save();
 
     // Generate JWT token
