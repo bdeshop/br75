@@ -121,14 +121,14 @@ const Mprofile = () => {
             <div className="flex justify-start items-center gap-[50px]">
              {userData?.fullName && (
                 <div>
-                  <p className="text-orange-200 text-[11px] mb-0.5">{t.fullLegalName || "সম্পূর্ণ লিগ্যাল নাম"}</p>
+                  <p className="text-orange-200 text-[13px] mb-0.5">{t.fullLegalName || "সম্পূর্ণ লিগ্যাল নাম"}</p>
                   <h2 className="text-sm font-medium flex items-center gap-1.5">
                     {userData?.fullName} <FiCopy className="text-gray-500 text-[10px]" />
                   </h2>
                 </div>
               )}
            <div>
-               <p className="text-gray-500 text-[11px] mb-0.5">{t.username || "ব্যবহারকারীর নাম"}</p>
+               <p className="text-orange-200 text-[13px] mb-0.5">{t.username || "ব্যবহারকারীর নাম"}</p>
               <p className="text-sm font-medium flex items-center justify-end gap-1.5">
                 {userData?.username} <FiCopy className="text-gray-500 text-[10px]" />
               </p>
