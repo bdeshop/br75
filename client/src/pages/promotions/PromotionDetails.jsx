@@ -75,16 +75,7 @@ const PromotionDetails = () => {
         <div className="flex h-[calc(100vh-56px)]">
           <Sidebar sidebarOpen={sidebarOpen} />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
-            <div className="text-center">
-              <h2 className="text-lg sm:text-xl font-bold text-red-400 mb-3">Promotion Not Found</h2>
-              <p className="text-xs sm:text-sm text-gray-400 mb-4">{error || "The promotion you're looking for doesn't exist."}</p>
-              <button
-                onClick={() => navigate('/promotions')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 sm:px-5 sm:py-2 rounded-lg transition-colors text-sm sm:text-base"
-              >
-                Back to Promotions
-              </button>
-            </div>
+         
           </div>
         </div>
       </div>
@@ -139,15 +130,10 @@ const PromotionDetails = () => {
               </h1>
 
               {/* Date Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 bg-[#0f0f1a] rounded-xl">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FaCalendarAlt className="text-blue-400 text-xs sm:text-sm" />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3  rounded-xl">
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] sm:text-xs text-gray-500">Start Date</p>
                     <p className="text-xs sm:text-sm font-medium text-white truncate">{formatDateTime(promotion.startDate)}</p>
-                  </div>
                 </div>
                 {promotion.endDate && (
                   <div className="flex items-center gap-2 sm:gap-3">
@@ -163,8 +149,7 @@ const PromotionDetails = () => {
               </div>
 
               {/* Description with Rich Text Support */}
-              <div className="bg-[#0f0f1a] rounded-xl p-4 sm:p-6">
-                <h2 className="text-base sm:text-lg md:text-xl font-semibold text-white mb-3 sm:mb-4">Description</h2>
+              <div className=" rounded-xl">
                 <div 
                   className="prose prose-invert max-w-none text-gray-300 prose-sm sm:prose-base"
                   dangerouslySetInnerHTML={{ 
@@ -174,14 +159,6 @@ const PromotionDetails = () => {
                     })
                   }}
                 />
-              </div>
-
-              {/* Terms and Conditions */}
-              <div className="p-3 sm:p-4 bg-[#0f0f1a] rounded-xl">
-                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-1.5 sm:mb-2">Terms & Conditions Apply</h4>
-                <p className="text-[10px] sm:text-xs text-gray-500">
-                  Please read the terms and conditions carefully before participating in this promotion.
-                </p>
               </div>
             </div>
           </div>
