@@ -37,6 +37,7 @@ import Sports from "./pages/sports/Sports";
 import ResetTransactionPassword from "./pages/password/ResetTransactionPassword";
 import TransactionPassword from "./pages/password/TransactionPassword";
 import UpdatePassword from "./pages/password/UpdatePassword";
+import PromotionDetails from "./pages/promotions/PromotionDetails";
 
 const AuthContext = createContext();
 
@@ -304,6 +305,15 @@ const App = () => {
                 </PublicRoute>
               }
             />
+   <Route
+              path="/promotion-details/:id"
+              element={
+                <PublicRoute>
+                  <PromotionDetails />
+                </PublicRoute>
+              }
+            />
+
             <Route
               path="/slots"
               element={

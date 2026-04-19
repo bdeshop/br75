@@ -697,7 +697,7 @@ const AllGamesContent = () => {
     handleOpenGame(game);
   };
 
-  // Handle opening the game
+// Handle opening the game
   const handleOpenGame = async (game) => {
     // Check if user is logged in
     if (!user) {
@@ -731,8 +731,9 @@ const AllGamesContent = () => {
         }
       }
 
-      // Navigate with provider and category as query parameters
-      navigate(`/game/${gameData?.data?.gameApiID}?provider=${encodeURIComponent(game.provider || '')}&category=${encodeURIComponent(categoryValue)}`);
+      // Open game in new window/tab
+      const gameUrl = `/game/${gameData?.data?.gameApiID}?provider=${encodeURIComponent(game.provider || '')}&category=${encodeURIComponent(categoryValue)}`;
+      window.open(gameUrl, '_blank');
     } catch (err) {
       console.error("Error:", err);
       toast.error("Error connecting to game server");

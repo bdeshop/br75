@@ -462,7 +462,7 @@ const SlotsContent = () => {
   };
 
   // Handle opening the game
-  const handleOpenGame = async (game) => {
+const handleOpenGame = async (game) => {
     console.log("Attempting to open game:", game);
 
     // Check if user is logged in
@@ -491,8 +491,9 @@ const SlotsContent = () => {
 
       console.log("Game data:", gameData?.data?.gameApiID);
 
-      // Navigate with provider and category as query parameters
-      navigate(`/game/${gameData?.data?.gameApiID}?provider=${encodeURIComponent(game.provider || '')}&category=${encodeURIComponent(Array.isArray(game.category) ? game.category[0] : game.category || 'slots')}`);
+      // Open game in new window/tab
+      const gameUrl = `/game/${gameData?.data?.gameApiID}?provider=${encodeURIComponent(game.provider || '')}&category=${encodeURIComponent(Array.isArray(game.category) ? game.category[0] : game.category || 'slots')}`;
+      window.open(gameUrl, '_blank');
     } catch (err) {
       console.error("Error:", err);
       toast.error("Error connecting to game server");

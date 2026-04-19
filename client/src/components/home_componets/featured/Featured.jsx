@@ -187,7 +187,7 @@ const FeaturedContent = () => {
     handleOpenGame(game);
   };
 
-  const handleOpenGame = async (game) => {
+const handleOpenGame = async (game) => {
     try {
       setGameLoading(true);
       const gameId = game.gameId || game.gameApiID;
@@ -205,7 +205,8 @@ const FeaturedContent = () => {
           }
         }
         
-        navigate(`/game/${gameData.data.gameApiID}?provider=${encodeURIComponent(game.provider || '')}&category=${encodeURIComponent(categoryValue)}`);
+        const gameUrl = `/game/${gameData.data.gameApiID}?provider=${encodeURIComponent(game.provider || '')}&category=${encodeURIComponent(categoryValue)}`;
+        window.open(gameUrl, '_blank');
       } else {
         throw new Error("Failed to load game");
       }

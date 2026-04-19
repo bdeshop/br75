@@ -346,7 +346,7 @@ const translateCategoryName = (name) => {
   };
 
   // Handle game click - Direct navigation to game page
-  const handleGameClick = (game) => {
+const handleGameClick = (game) => {
     setSelectedGame(game);
     console.log("Selected game:", game);
     console.log("game",game)
@@ -357,15 +357,14 @@ const translateCategoryName = (name) => {
       return;
     }
     
-    // If user is logged in, navigate directly to game
+    // If user is logged in, open game in new window
     if (game.gameApiID || game.gameId) {
-      navigate(`/game/${game.gameApiID || game.gameId}?provider=${game.provider}&category=${game.categoryname}`);
-      
+      const gameUrl = `/game/${game.gameApiID || game.gameId}?provider=${game.provider}&category=${game.categoryname}`;
+      window.open(gameUrl, '_blank');
     } else {
       toast.error("Game ID not found");
     }
   };
-
   // Handle opening the game
   const handleOpenGame = async (game) => {
     console.log("Attempting to open game:", game);

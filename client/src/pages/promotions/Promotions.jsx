@@ -4,6 +4,7 @@ import { Header } from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
 import axios from "axios";
 import { FaRegEdit, FaTrashAlt, FaCircle } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 const Promotions = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -13,7 +14,7 @@ const Promotions = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
-
+ const navigator=useNavigate();
   // Categories from the image
   const categories = [
     "ALL",
@@ -141,6 +142,7 @@ const Promotions = () => {
                 {filteredPromotions.map((promo) => (
                   <div
                     key={promo._id}
+                    onClick={()=>{navigator(`/promotion-details/${promo._id}`)}}
                     className="relative bg-[#2a2a2a] rounded-[5px] overflow-hidden flex flex-col items-center transition-all duration-300 transform hover:scale-105"
                   >
                     {/* Tag system */}

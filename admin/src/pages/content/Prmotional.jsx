@@ -3,6 +3,8 @@ import { FaUpload, FaTimes, FaEdit, FaTrash, FaPlus, FaCalendarAlt, FaLink, FaSe
 import { FiRefreshCw, FiTrendingUp } from 'react-icons/fi';
 import { FaRegFileImage } from "react-icons/fa6";
 import { toast, Toaster } from 'react-hot-toast';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 
@@ -29,6 +31,35 @@ const Promotional = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
+  // Quill modules configuration
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      [{ 'align': [] }],
+      ['blockquote', 'code-block'],
+      ['link', 'image', 'video'],
+      ['clean']
+    ],
+    clipboard: {
+      matchVisual: false,
+    },
+  };
+
+  const quillFormats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'color', 'background',
+    'list', 'bullet', 'check',
+    'indent',
+    'align',
+    'blockquote', 'code-block',
+    'link', 'image', 'video'
+  ];
+
   // Fetch promotions on component mount
   useEffect(() => {
     fetchPromotions();
@@ -60,6 +91,13 @@ const Promotional = () => {
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const handleDescriptionChange = (value) => {
+    setFormData({
+      ...formData,
+      description: value
     });
   };
 
@@ -297,6 +335,14 @@ const Promotional = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  // Strip HTML tags for preview display
+  const stripHtmlTags = (html) => {
+    if (!html) return '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
   // Sorting logic
   const requestSort = (key) => {
     let direction = 'ascending';
@@ -317,7 +363,7 @@ const Promotional = () => {
     if (searchTerm) {
       filtered = filtered.filter(promo => 
         promo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        promo.description.toLowerCase().includes(searchTerm.toLowerCase())
+        stripHtmlTags(promo.description).toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -364,8 +410,8 @@ const Promotional = () => {
     setCurrentPage(1);
   };
 
-  const inputClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-xs rounded px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder-gray-600';
-  const selectClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-xs rounded px-3 py-2 focus:outline-none focus:border-indigo-500';
+  const inputClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 rounded px-3 py-3 text-sm focus:outline-none focus:border-indigo-500 placeholder-gray-600';
+  const selectClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200  rounded px-3 py-2 focus:outline-none focus:border-indigo-500';
 
   if (loading && promotions.length === 0) {
     return (
@@ -497,18 +543,21 @@ const Promotional = () => {
                 </div>
               </div>
               
-              {/* Description Field */}
+              {/* Description Field with Rich Text Editor - INCREASED HEIGHT */}
               <div className="mb-5">
                 <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Description *</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows="3"
-                  className={inputClass}
-                  placeholder="Enter promotion description"
-                  required
-                ></textarea>
+                <div className="quill-wrapper">
+                  <ReactQuill
+                    theme="snow"
+                    value={formData.description}
+                    onChange={handleDescriptionChange}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    placeholder="Write a detailed promotion description with rich formatting..."
+                    className="bg-[#0F111A] text-gray-200 rounded-lg"
+                    style={{ height: '400px', marginBottom: '60px' }}
+                  />
+                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
@@ -646,44 +695,6 @@ const Promotional = () => {
             </form>
           </div>
 
-          {/* Filter Section */}
-          <div className="bg-[#161B22] border border-gray-800 rounded-lg p-5 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
-                <div className="w-1 h-4 bg-indigo-500"></div> Filters & Search
-              </h2>
-              <button
-                onClick={clearFilters}
-                className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider"
-              >
-                Clear All
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`${inputClass} pl-8`}
-                  placeholder="Search by title or description..."
-                />
-              </div>
-              <select
-                value={sortConfig.key || ''}
-                onChange={(e) => requestSort(e.target.value)}
-                className={selectClass}
-              >
-                <option value="">Sort By</option>
-                <option value="title">Title</option>
-                <option value="startDate">Start Date</option>
-                <option value="endDate">End Date</option>
-              </select>
-            </div>
-          </div>
-
           {/* Promotions Table */}
           <div className="bg-[#161B22] border border-gray-800 rounded-lg overflow-hidden shadow-2xl">
             <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-indigo-400 uppercase tracking-widest flex justify-between items-center">
@@ -726,7 +737,10 @@ const Promotional = () => {
                           )}
                         </td>
                         <td className="px-5 py-4">
-                          <div className="text-[10px] text-gray-400 max-w-xs line-clamp-2">{promotion.description}</div>
+                          <div 
+                            className="text-[10px] text-gray-400 max-w-xs line-clamp-3 overflow-hidden"
+                            dangerouslySetInnerHTML={{ __html: stripHtmlTags(promotion.description).substring(0, 150) + (stripHtmlTags(promotion.description).length > 150 ? '...' : '') }}
+                          />
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="text-[10px] text-gray-400">
@@ -845,6 +859,73 @@ const Promotional = () => {
           )}
         </main>
       </div>
+
+      {/* Custom CSS for Quill Editor to match dark theme and increased height */}
+      <style jsx>{`
+        .quill-wrapper .ql-toolbar.ql-snow {
+          border-color: #374151;
+          background-color: #0F111A;
+          border-top-left-radius: 0.5rem;
+          border-top-right-radius: 0.5rem;
+        }
+        .quill-wrapper .ql-container.ql-snow {
+          border-color: #374151;
+          background-color: #0F111A;
+          border-bottom-left-radius: 0.5rem;
+          border-bottom-right-radius: 0.5rem;
+          color: #E5E7EB;
+          min-height: 350px;
+        }
+        .quill-wrapper .ql-editor {
+          min-height: 350px;
+          max-height: 500px;
+          color: #E5E7EB;
+          font-size: 14px;
+          line-height: 1.6;
+        }
+        .quill-wrapper .ql-editor.ql-blank::before {
+          color: #6B7280;
+          font-style: normal;
+        }
+        .quill-wrapper .ql-snow .ql-stroke {
+          stroke: #9CA3AF;
+        }
+        .quill-wrapper .ql-snow .ql-fill {
+          fill: #9CA3AF;
+        }
+        .quill-wrapper .ql-snow .ql-picker {
+          color: #9CA3AF;
+        }
+        .quill-wrapper .ql-snow .ql-picker-options {
+          background-color: #1F2937;
+          border-color: #374151;
+        }
+        .quill-wrapper .ql-snow .ql-tooltip {
+          background-color: #1F2937;
+          border-color: #374151;
+          color: #E5E7EB;
+        }
+        .quill-wrapper .ql-snow .ql-tooltip input[type=text] {
+          background-color: #0F111A;
+          border-color: #374151;
+          color: #E5E7EB;
+        }
+        /* Scrollbar styling for the editor */
+        .quill-wrapper .ql-editor::-webkit-scrollbar {
+          width: 8px;
+        }
+        .quill-wrapper .ql-editor::-webkit-scrollbar-track {
+          background: #0F111A;
+          border-radius: 4px;
+        }
+        .quill-wrapper .ql-editor::-webkit-scrollbar-thumb {
+          background: #374151;
+          border-radius: 4px;
+        }
+        .quill-wrapper .ql-editor::-webkit-scrollbar-thumb:hover {
+          background: #4B5563;
+        }
+      `}</style>
     </section>
   );
 };

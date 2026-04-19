@@ -466,9 +466,7 @@ const SlotsContent = () => {
   };
 
   // Handle opening the game
-  const handleOpenGame = async (game) => {
-    console.log("Attempting to open game:", game);
-
+const handleOpenGame = async (game) => {
     // Check if user is logged in
     if (!user) {
       toast.error("Please login to play games");
@@ -480,8 +478,6 @@ const SlotsContent = () => {
       setGameLoading(true);
 
       const gameId = game.gameId || game.gameApiID;
-
-      console.log("Game ID:", gameId);
 
       const response = await fetch(`${base_url}/api/games/${gameId}`);
       if (!response.ok) {
@@ -495,8 +491,9 @@ const SlotsContent = () => {
 
       console.log("Game data:", gameData?.data?.gameApiID);
 
-      // Navigate with provider and category as query parameters
-      navigate(`/game/${gameData?.data?.gameApiID}?provider=${encodeURIComponent(game.provider || '')}&category=${encodeURIComponent(Array.isArray(game.category) ? game.category[0] : game.category || 'sports')}`);
+      // Open game in new window/tab
+      const gameUrl = `/game/${gameData?.data?.gameApiID}?provider=${encodeURIComponent(game.provider || '')}&category=${encodeURIComponent(Array.isArray(game.category) ? game.category[0] : game.category || 'sports')}`;
+      window.open(gameUrl, '_blank');
     } catch (err) {
       console.error("Error:", err);
       toast.error("Error connecting to game server");

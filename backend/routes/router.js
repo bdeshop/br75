@@ -243,6 +243,33 @@ router.get("/promotions",async(req,res)=>{
   }
 })
 
+
+// GET single promotional content by ID
+router.get("/promotions/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const promotion = await Promotional.findById(id);
+    
+    if (!promotion) {
+      return res.status(404).json({
+        success: false,
+        message: "Promotion not found"
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: promotion
+    });
+  } catch (error) {
+    console.error("Error fetching promotion:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching promotion",
+      error: error.message
+    });
+  }
+});
 const BettingHistory = require("../models/BettingHistory"); // Add this import at the top
 const User = require("../models/User");
 const Event = require("../models/Event");

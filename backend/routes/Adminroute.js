@@ -1915,8 +1915,6 @@ Adminrouter.get("/promotionals/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch promotional content" });
   }
 });
-
-// POST create new promotional content
 Adminrouter.post(
   "/promotionals",
   uploadPromotional.single("image"),
@@ -1932,94 +1930,201 @@ Adminrouter.post(
           .json({ error: "Title and description are required" });
       }
 
+      // Optional: Sanitize HTML content to prevent XSS attacks
+      const sanitizedDescription = req.body.description;
+      // If you have a sanitization library like DOMPurify on backend:
+      // const sanitizedDescription = DOMPurify.sanitize(req.body.description, {
+      //   ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'strike', 'ul', 'ol', 'li', 'a', 'img', 'div', 'span', 'blockquote', 'code', 'pre', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+      //   ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'width', 'height', 'class', 'style', 'rel', 'title']
+      // });
+
       const promotionalData = {
-        title: req.body.title,
-        description: req.body.description,
+        title: req.body.title.trim(),
+        description: sanitizedDescription,
         targetUrl: req.body.targetUrl || "",
         image: `/uploads/promotionals/${req.file.filename}`,
         status: req.body.status === "true" || req.body.status === true,
-        startDate: req.body.startDate || new Date(),
-        endDate: req.body.endDate || null,
+        startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
+        endDate: req.body.endDate ? new Date(req.body.endDate) : null,
       };
+
+      // Validate dates
+      if (promotionalData.endDate && promotionalData.endDate < promotionalData.startDate) {
+        return res.status(400).json({ 
+          error: "End date cannot be earlier than start date" 
+        });
+      }
 
       const newPromotional = new Promotional(promotionalData);
       const savedPromotional = await newPromotional.save();
 
       res.status(201).json({
+        success: true,
         message: "Promotional content created successfully",
         promotional: savedPromotional,
       });
     } catch (error) {
-      console.log(error);
-      res.status(500).json({ error: "Failed to create promotional content" });
+      console.error("Error creating promotional content:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to create promotional content",
+        details: error.message 
+      });
     }
   }
 );
 
+
 // PUT update promotional content status
 Adminrouter.put("/promotionals/:id/status", async (req, res) => {
   try {
-    const promotional = await Promotional.findById(req.params.id);
-    if (!promotional) {
-      return res.status(404).json({ error: "Promotional content not found" });
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (typeof status !== 'boolean') {
+      return res.status(400).json({ 
+        success: false,
+        error: "Status must be a boolean value" 
+      });
     }
 
-    promotional.status = req.body.status;
+    const promotional = await Promotional.findById(id);
+    if (!promotional) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Promotional content not found" 
+      });
+    }
+
+    promotional.status = status;
     await promotional.save();
 
     res.json({
+      success: true,
       message: "Promotional content status updated successfully",
-      promotional: promotional,
+      promotional,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Failed to update promotional content status" });
+    console.error("Error updating status:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to update promotional content status" 
+    });
   }
 });
 
-// PUT update promotional content
+// PUT update promotional content (full update)
 Adminrouter.put(
   "/promotionals/:id",
   uploadPromotional.single("image"),
   async (req, res) => {
     try {
-      const promotional = await Promotional.findById(req.params.id);
+      const { id } = req.params;
+      const promotional = await Promotional.findById(id);
+      
       if (!promotional) {
-        return res.status(404).json({ error: "Promotional content not found" });
+        return res.status(404).json({ 
+          success: false,
+          error: "Promotional content not found" 
+        });
       }
 
-      // Update fields
-      if (req.body.title) promotional.title = req.body.title;
-      if (req.body.description) promotional.description = req.body.description;
-      if (req.body.targetUrl !== undefined)
-        promotional.targetUrl = req.body.targetUrl;
-      if (req.body.startDate) promotional.startDate = req.body.startDate;
-      if (req.body.endDate) promotional.endDate = req.body.endDate;
-      if (req.body.status !== undefined) promotional.status = req.body.status;
+      // Update fields with validation
+      if (req.body.title !== undefined) {
+        if (!req.body.title.trim()) {
+          return res.status(400).json({ 
+            success: false,
+            error: "Title cannot be empty" 
+          });
+        }
+        promotional.title = req.body.title.trim();
+      }
 
+      if (req.body.description !== undefined) {
+        if (!req.body.description.trim()) {
+          return res.status(400).json({ 
+            success: false,
+            error: "Description cannot be empty" 
+          });
+        }
+        // Optional: Sanitize HTML content
+        // promotional.description = DOMPurify.sanitize(req.body.description);
+        promotional.description = req.body.description;
+      }
+
+      if (req.body.targetUrl !== undefined) {
+        promotional.targetUrl = req.body.targetUrl;
+      }
+
+      if (req.body.startDate !== undefined) {
+        const startDate = new Date(req.body.startDate);
+        if (isNaN(startDate.getTime())) {
+          return res.status(400).json({ 
+            success: false,
+            error: "Invalid start date format" 
+          });
+        }
+        promotional.startDate = startDate;
+      }
+
+      if (req.body.endDate !== undefined) {
+        const endDate = req.body.endDate ? new Date(req.body.endDate) : null;
+        if (endDate && isNaN(endDate.getTime())) {
+          return res.status(400).json({ 
+            success: false,
+            error: "Invalid end date format" 
+          });
+        }
+        promotional.endDate = endDate;
+      }
+
+      if (req.body.status !== undefined) {
+        promotional.status = req.body.status === "true" || req.body.status === true;
+      }
+
+      // Validate date range
+      if (promotional.endDate && promotional.endDate < promotional.startDate) {
+        return res.status(400).json({ 
+          success: false,
+          error: "End date cannot be earlier than start date" 
+        });
+      }
+
+      // Handle image update
       if (req.file) {
         // Delete old image file
         if (promotional.image) {
           const oldImagePath = path.join(__dirname, "..", promotional.image);
           if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
+            try {
+              fs.unlinkSync(oldImagePath);
+            } catch (unlinkError) {
+              console.error("Error deleting old image:", unlinkError);
+              // Continue even if old image deletion fails
+            }
           }
         }
         promotional.image = `/uploads/promotionals/${req.file.filename}`;
       }
 
-      await promotional.save();
+      const updatedPromotional = await promotional.save();
 
       res.json({
+        success: true,
         message: "Promotional content updated successfully",
-        promotional: promotional,
+        promotional: updatedPromotional,
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to update promotional content" });
+      console.error("Error updating promotion:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to update promotional content",
+        details: error.message 
+      });
     }
   }
 );
+
 
 // DELETE promotional content
 Adminrouter.delete("/promotionals/:id", async (req, res) => {
