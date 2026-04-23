@@ -34,10 +34,10 @@ const RichTextModal = ({ isOpen, onClose, banner }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm transition-all duration-300"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(0,0,0,0.4)] backdrop-blur-sm transition-all duration-300"
       onClick={handleBackdropClick}
     >
-      <div className="relative bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl animate-modal-slide-in">
+      <div className="relative bg-[#161C2F] rounded-[2px] max-w-xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl animate-modal-slide-in">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -61,9 +61,9 @@ const RichTextModal = ({ isOpen, onClose, banner }) => {
         </button>
 
         {/* Modal Content */}
-        <div className="p-6 md:p-8">
+        <div className="">
           {/* Banner Image */}
-          <div className="mb-6 rounded-xl overflow-hidden shadow-lg">
+          <div className="mb-6 overflow-hidden shadow-lg">
             <img
               src={banner.fullImageUrl}
               alt={banner.alt}
@@ -74,7 +74,7 @@ const RichTextModal = ({ isOpen, onClose, banner }) => {
           {/* Banner Title */}
           {banner.name && (
             <div className="mb-4 text-center">
-              <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+              <h2 className="text-2xl md:text-2xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
                 {banner.name}
               </h2>
             </div>
@@ -82,13 +82,12 @@ const RichTextModal = ({ isOpen, onClose, banner }) => {
 
           {/* Rich Text Content */}
           {banner.richText && (
-            <div className="mt-6 p-6 bg-black/30 rounded-xl border border-gray-700">
+            <div className="mt-6 p-6 ">
               <div
-                className="rich-text-content prose prose-invert max-w-none"
+                className="w-full text-left"
                 dangerouslySetInnerHTML={{ __html: banner.richText }}
                 style={{
                   color: banner.richTextConfig?.textColor || '#ffffff',
-                  textAlign: banner.richTextAlignment || 'center'
                 }}
               />
             </div>
@@ -292,45 +291,6 @@ export const Slider = memo(() => {
                 className="w-full h-[180px] md:h-[400px] lg:h-[500px] xl:h-[600px] object-cover"
                 loading="lazy"
               />
-              
-              {/* Overlay effect for banners with rich text */}
-              {slide.richText && (
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <div className="bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                    Click to view details
-                  </div>
-                </div>
-              )}
-              
-              {/* Rich text overlay on banner (if position is overlay) */}
-              {slide.richText && slide.richTextPosition === 'overlay' && (
-                <div 
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  style={{
-                    alignItems: slide.richTextAlignment?.includes('top') ? 'flex-start' : 
-                               slide.richTextAlignment?.includes('bottom') ? 'flex-end' : 'center',
-                    justifyContent: slide.richTextAlignment?.includes('left') ? 'flex-start' :
-                                   slide.richTextAlignment?.includes('right') ? 'flex-end' : 'center',
-                    padding: slide.richTextConfig?.padding || '20px'
-                  }}
-                >
-                  <div 
-                    className="rich-text-preview max-w-[80%] pointer-events-none"
-                    style={{
-                      backgroundColor: slide.richTextConfig?.backgroundColor || 'rgba(0,0,0,0.6)',
-                      color: slide.richTextConfig?.textColor || '#ffffff',
-                      padding: slide.richTextConfig?.padding || '20px',
-                      borderRadius: '10px',
-                      textAlign: slide.richTextAlignment || 'center'
-                    }}
-                    dangerouslySetInnerHTML={{ 
-                      __html: slide.richText.length > 200 
-                        ? slide.richText.substring(0, 200) + '...' 
-                        : slide.richText 
-                    }}
-                  />
-                </div>
-              )}
             </div>
           ))}
         </div>

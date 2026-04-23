@@ -672,7 +672,6 @@ router.get("/banners/mobile", async (req, res) => {
       deviceCategory: { $in: ['mobile', 'both'] }
     })
       .sort({ createdAt: -1 })
-      .select("name image deviceCategory createdAt updatedAt");
     
     res.json({
       success: true,
