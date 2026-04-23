@@ -67,7 +67,7 @@ const RichTextModal = ({ isOpen, onClose, banner }) => {
             <img
               src={banner.fullImageUrl}
               alt={banner.alt}
-              className="w-full h-auto max-h-[400px] object-contain bg-[#0F111A]"
+              className="w-full h-auto min-h-[250px] object-contain bg-[#0F111A]"
             />
           </div>
 
