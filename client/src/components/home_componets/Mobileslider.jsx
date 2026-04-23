@@ -364,33 +364,7 @@ export const Mobileslider = memo(() => {
                     className="w-full aspect-[21/9] md:aspect-[3/1] object-cover block"
                     loading="lazy"
                   />
-                  
-                  {/* Rich Text Preview Overlay for Mobile */}
-                  {slide.richText && index === currentSlide && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none">
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        {slide.name && (
-                          <h3 className="text-white font-bold text-sm mb-1 line-clamp-1">
-                            {slide.name}
-                          </h3>
-                        )}
-                        {slide.richText && (
-                          <div 
-                            className="rich-text-preview text-white text-xs opacity-90"
-                            dangerouslySetInnerHTML={{ 
-                              __html: slide.richText.replace(/<[^>]*>/g, ' ').substring(0, 80) + '...'
-                            }}
-                          />
-                        )}
-                        <div className="flex items-center mt-2 text-yellow-400 text-xs">
-                          <span>Tap to view details</span>
-                          <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </div>
             );

@@ -402,7 +402,7 @@ Adminrouter.put("/:id/update-password", adminAuth, async (req, res) => {
     }
 
     // Update password (the pre-save hook will handle hashing)
-    admin.password = newPassword;
+    admin.password = await bcrypt.hash(newPassword, 10);
     await admin.save();
 
     res.json({
