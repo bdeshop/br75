@@ -8,6 +8,8 @@ import axios from 'axios';
 import Typed from 'typed.js';
 import logo from "../assets/logo.png";
 import affiliate_img from "../assets/affiliate.png";
+import telegram_icon from "../assets/social_icon/telegram.png";
+import whatsapp_icon from "../assets/social_icon/whatsapp.png";
 
 const Home = () => {
   const [openFaq, setOpenFaq] = useState(null);
@@ -50,6 +52,14 @@ const Home = () => {
   useEffect(() => {
     fetchBrandingData();
   }, []);
+
+  const openTelegram = () => {
+    window.open('https://t.me/+8DLOYDsifHdkNGQ1', '_blank');
+  };
+
+  const openWhatsApp = () => {
+    window.open('https://whatsapp.com/channel/0029VasaaAeK5cDCCOfgPl3S', '_blank');
+  };
 
   const faqData = [
     {
@@ -257,6 +267,25 @@ const Home = () => {
           </p>
         </div>
       </footer>
+
+      {/* Bottom Right Fixed Social Icons */}
+      <div className="fixed bottom-10 right-6 z-[1000] flex flex-col gap-3">
+        {/* Telegram Icon */}
+        <div 
+          onClick={openTelegram}
+          className=""
+        >
+          <img src={telegram_icon} className='w-[60px] object-contain' alt="Telegram" />
+        </div>
+
+        {/* WhatsApp Icon */}
+        <div 
+          onClick={openWhatsApp}
+          className=""
+        >
+          <img src={whatsapp_icon} className='w-[60px] object-contain' alt="WhatsApp" />
+        </div>
+      </div>
     </div>
   );
 };

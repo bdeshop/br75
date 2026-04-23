@@ -8,6 +8,10 @@ import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import toast,{Toaster} from "react-hot-toast"
 import boy_img from "../assets/boy.png"
+
+import telegram_icon from "../assets/social_icon/telegram.png";
+import whatsapp_icon from "../assets/social_icon/whatsapp.png";
+
 const Header = ({ toggleSidebar }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [dynamicLogo, setDynamicLogo] = useState(logo);
@@ -75,6 +79,14 @@ const Header = ({ toggleSidebar }) => {
     });
   };
 
+  const openTelegram = () => {
+    window.open('https://t.me/+8DLOYDsifHdkNGQ1', '_blank');
+  };
+
+  const openWhatsApp = () => {
+    window.open('https://whatsapp.com/channel/0029VasaaAeK5cDCCOfgPl3S', '_blank');
+  };
+
   return (
     <header className='w-full h-[9vh] bg-[#000514] fixed top-0 left-0 z-[1000] px-[20px] py-[10px] flex justify-between items-center shadow-sm border-b border-white/10 backdrop-blur-md'>
      <Toaster
@@ -117,7 +129,7 @@ const Header = ({ toggleSidebar }) => {
           >
             <span className="hidden md:block text-sm md:text-base font-bold text-gray-300 hover:text-white">Affiliate</span>
 
-            <div className=" rounded-full border-[2px] border-cyan-500 bg-gradient-to-r from-cyan-500 to-blue-600 flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform duration-200">
+            <div className="rounded-full border-[2px] border-cyan-500 bg-gradient-to-r from-cyan-500 to-blue-600 flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform duration-200">
               <img src={boy_img} className='w-[45px]' alt="" />
             </div>
           </button>
@@ -141,6 +153,25 @@ const Header = ({ toggleSidebar }) => {
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Bottom Right Fixed Social Icons */}
+      <div className="fixed bottom-6 right-6 z-[1000] flex flex-col gap-3">
+        {/* Telegram Icon */}
+        <div 
+          onClick={openTelegram}
+          className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform duration-300 hover:shadow-cyan-500/50"
+        >
+          <img src={telegram_icon} className='w-7 h-7 object-contain' alt="Telegram" />
+        </div>
+
+        {/* WhatsApp Icon */}
+        <div 
+          onClick={openWhatsApp}
+          className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform duration-300 hover:shadow-green-500/50"
+        >
+          <img src={whatsapp_icon} className='w-7 h-7 object-contain' alt="WhatsApp" />
         </div>
       </div>
     </header>
