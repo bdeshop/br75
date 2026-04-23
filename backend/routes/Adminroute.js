@@ -1766,15 +1766,70 @@ Adminrouter.post(
         }
       }
 
+      // Validate richTextPosition if provided
+      if (req.body.richTextPosition) {
+        const validPositions = ['overlay', 'below', 'above', 'left', 'right'];
+        if (!validPositions.includes(req.body.richTextPosition)) {
+          return res.status(400).json({
+            error: "Invalid rich text position. Must be 'overlay', 'below', 'above', 'left', or 'right'"
+          });
+        }
+      }
+
+      // Validate richTextAlignment if provided
+      if (req.body.richTextAlignment) {
+        const validAlignments = ['left', 'center', 'right', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
+        if (!validAlignments.includes(req.body.richTextAlignment)) {
+          return res.status(400).json({
+            error: "Invalid rich text alignment"
+          });
+        }
+      }
+
+      // Validate linkTarget if provided
+      if (req.body.linkTarget) {
+        const validTargets = ['_self', '_blank', '_parent', '_top'];
+        if (!validTargets.includes(req.body.linkTarget)) {
+          return res.status(400).json({
+            error: "Invalid link target. Must be '_self', '_blank', '_parent', or '_top'"
+          });
+        }
+      }
+
       const banners = [];
 
       for (const file of req.files) {
         const bannerData = {
           name: req.body.name || `Banner ${Date.now()}`,
           image: `/uploads/banners/${file.filename}`,
-          deviceCategory: req.body.deviceCategory || 'both', // Default to 'both'
+          deviceCategory: req.body.deviceCategory || 'both',
           status: req.body.status !== undefined ? req.body.status : true,
+          // Rich text fields
+          richText: req.body.richText || null,
+          richTextPosition: req.body.richTextPosition || 'overlay',
+          richTextAlignment: req.body.richTextAlignment || 'center',
+          link: req.body.link || null,
+          linkTarget: req.body.linkTarget || '_self',
+          order: req.body.order !== undefined ? parseInt(req.body.order) : 0,
         };
+
+        // Handle structured rich text blocks if sent as JSON
+        if (req.body.richTextBlocks) {
+          try {
+            bannerData.richTextBlocks = JSON.parse(req.body.richTextBlocks);
+          } catch (e) {
+            console.error("Error parsing richTextBlocks:", e);
+          }
+        }
+
+        // Handle rich text config if sent as JSON
+        if (req.body.richTextConfig) {
+          try {
+            bannerData.richTextConfig = JSON.parse(req.body.richTextConfig);
+          } catch (e) {
+            console.error("Error parsing richTextConfig:", e);
+          }
+        }
 
         const newBanner = new Banner(bannerData);
         const savedBanner = await newBanner.save();
@@ -1836,10 +1891,68 @@ Adminrouter.put(
         banner.deviceCategory = req.body.deviceCategory;
       }
 
-      // Update fields
+      // Validate richTextPosition if provided
+      if (req.body.richTextPosition) {
+        const validPositions = ['overlay', 'below', 'above', 'left', 'right'];
+        if (!validPositions.includes(req.body.richTextPosition)) {
+          return res.status(400).json({
+            error: "Invalid rich text position. Must be 'overlay', 'below', 'above', 'left', or 'right'"
+          });
+        }
+        banner.richTextPosition = req.body.richTextPosition;
+      }
+
+      // Validate richTextAlignment if provided
+      if (req.body.richTextAlignment) {
+        const validAlignments = ['left', 'center', 'right', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
+        if (!validAlignments.includes(req.body.richTextAlignment)) {
+          return res.status(400).json({
+            error: "Invalid rich text alignment"
+          });
+        }
+        banner.richTextAlignment = req.body.richTextAlignment;
+      }
+
+      // Validate linkTarget if provided
+      if (req.body.linkTarget) {
+        const validTargets = ['_self', '_blank', '_parent', '_top'];
+        if (!validTargets.includes(req.body.linkTarget)) {
+          return res.status(400).json({
+            error: "Invalid link target. Must be '_self', '_blank', '_parent', or '_top'"
+          });
+        }
+        banner.linkTarget = req.body.linkTarget;
+      }
+
+      // Update basic fields
       if (req.body.name !== undefined) banner.name = req.body.name;
       if (req.body.status !== undefined) banner.status = req.body.status;
+      if (req.body.link !== undefined) banner.link = req.body.link;
+      if (req.body.order !== undefined) banner.order = parseInt(req.body.order);
       
+      // Update rich text fields
+      if (req.body.richText !== undefined) banner.richText = req.body.richText;
+      if (req.body.richTextHtml !== undefined) banner.richTextHtml = req.body.richTextHtml;
+      
+      // Handle structured rich text blocks
+      if (req.body.richTextBlocks) {
+        try {
+          banner.richTextBlocks = JSON.parse(req.body.richTextBlocks);
+        } catch (e) {
+          console.error("Error parsing richTextBlocks:", e);
+        }
+      }
+      
+      // Handle rich text config
+      if (req.body.richTextConfig) {
+        try {
+          banner.richTextConfig = JSON.parse(req.body.richTextConfig);
+        } catch (e) {
+          console.error("Error parsing richTextConfig:", e);
+        }
+      }
+      
+      // Handle image update
       if (req.file) {
         // Delete old image file
         if (banner.image) {
@@ -1864,6 +1977,7 @@ Adminrouter.put(
     }
   }
 );
+
 
 // DELETE banner
 Adminrouter.delete("/banners/:id", async (req, res) => {

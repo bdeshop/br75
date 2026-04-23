@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { FaUpload, FaTimes, FaEdit, FaTrash, FaPlus, FaEye, FaSearch, FaFilter, FaSort, FaSortUp, FaSortDown, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle, FaSpinner } from 'react-icons/fa';
+import { FaUpload, FaTimes, FaEdit, FaTrash, FaPlus, FaEye, FaSearch, FaFilter, FaSort, FaSortUp, FaSortDown, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle, FaSpinner, FaCode, FaPalette, FaLink, FaAlignLeft, FaAlignCenter, FaAlignRight } from 'react-icons/fa';
 import { FiRefreshCw, FiTrendingUp, FiDownload } from 'react-icons/fi';
 import { FaRegFileImage } from "react-icons/fa6";
 import { toast, Toaster } from 'react-hot-toast';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import { FaCalendarAlt } from "react-icons/fa";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const Banner = () => {
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
@@ -13,7 +15,20 @@ const Banner = () => {
   const [formData, setFormData] = useState({
     name: '',
     deviceCategory: 'both',
-    images: []
+    images: [],
+    richText: '',
+    richTextPosition: 'overlay',
+    richTextAlignment: 'center',
+    link: '',
+    linkTarget: '_self',
+    order: 0,
+    richTextConfig: {
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      textColor: '#ffffff',
+      padding: '30px',
+      maxWidth: '90%',
+      animation: 'fade'
+    }
   });
   const [imagePreviews, setImagePreviews] = useState([]);
   const [banners, setBanners] = useState([]);
@@ -28,7 +43,31 @@ const Banner = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
   const [currentPage, setCurrentPage] = useState(1);
+  const [showRichTextEditor, setShowRichTextEditor] = useState(true); // Changed to true by default
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const itemsPerPage = 10;
+  
+  // Quill modules configuration
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'align': [] }],
+      ['link', 'image'],
+      ['clean']
+    ],
+  };
+  
+  const quillFormats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'color', 'background',
+    'list', 'bullet',
+    'align',
+    'link', 'image'
+  ];
   
   // Fetch banners on component mount
   useEffect(() => {
@@ -71,6 +110,16 @@ const Banner = () => {
       [name]: value
     });
   };
+  
+  const handleRichTextConfigChange = (key, value) => {
+    setFormData({
+      ...formData,
+      richTextConfig: {
+        ...formData.richTextConfig,
+        [key]: value
+      }
+    });
+  };
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -101,7 +150,6 @@ const Banner = () => {
     
     files.forEach(file => {
       if (file) {
-        // Validate file size (max 10MB)
         if (file.size > 10 * 1024 * 1024) {
           toast.error(`File ${file.name} is too large. Maximum size is 10MB`);
           return;
@@ -112,7 +160,6 @@ const Banner = () => {
           newPreviews.push(reader.result);
           newImages.push(file);
           
-          // When all files are processed
           if (newPreviews.length === files.length) {
             setFormData({
               ...formData,
@@ -150,6 +197,13 @@ const Banner = () => {
       const uploadData = new FormData();
       uploadData.append('name', formData.name);
       uploadData.append('deviceCategory', formData.deviceCategory);
+      uploadData.append('richText', formData.richText);
+      uploadData.append('richTextPosition', formData.richTextPosition);
+      uploadData.append('richTextAlignment', formData.richTextAlignment);
+      uploadData.append('link', formData.link);
+      uploadData.append('linkTarget', formData.linkTarget);
+      uploadData.append('order', formData.order);
+      uploadData.append('richTextConfig', JSON.stringify(formData.richTextConfig));
       
       formData.images.forEach((image) => {
         uploadData.append('images', image);
@@ -164,11 +218,23 @@ const Banner = () => {
         const result = await response.json();
         console.log('Banners created:', result);
         
-        // Reset form and refresh banners
         setFormData({ 
           name: '', 
           deviceCategory: 'both', 
-          images: [] 
+          images: [],
+          richText: '<h1><strong>Welcome to Our Store!</strong></h1><p>Discover amazing deals and exclusive offers just for you.</p><p><br></p><ul><li>Free Shipping on orders over $50</li><li>24/7 Customer Support</li><li>30-Day Money Back Guarantee</li></ul><p><br></p><p><strong style="color: rgb(255, 255, 255);">Shop Now and Save Big! 🔥</strong></p>',
+          richTextPosition: 'overlay',
+          richTextAlignment: 'center',
+          link: '',
+          linkTarget: '_self',
+          order: 0,
+          richTextConfig: {
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            textColor: '#ffffff',
+            padding: '30px',
+            maxWidth: '90%',
+            animation: 'fade'
+          }
         });
         setImagePreviews([]);
         fetchBanners();
@@ -196,7 +262,7 @@ const Banner = () => {
       });
       
       if (response.ok) {
-        fetchBanners(filter); // Refresh with current filters
+        fetchBanners(filter);
         toast.success('Banner status updated successfully');
       } else {
         toast.error('Failed to update banner status');
@@ -226,7 +292,7 @@ const Banner = () => {
       });
       
       if (response.ok) {
-        fetchBanners(filter); // Refresh with current filters
+        fetchBanners(filter);
         toast.success('Banner deleted successfully');
       } else {
         toast.error('Failed to delete banner');
@@ -245,9 +311,23 @@ const Banner = () => {
     setFormData({ 
       name: banner.name, 
       deviceCategory: banner.deviceCategory || 'both',
-      images: [] 
+      images: [],
+      richText: banner.richText || '<h1><strong>Welcome to Our Store!</strong></h1><p>Discover amazing deals and exclusive offers just for you.</p><p><br></p><ul><li>Free Shipping on orders over $50</li><li>24/7 Customer Support</li><li>30-Day Money Back Guarantee</li></ul><p><br></p><p><strong style="color: rgb(255, 255, 255);">Shop Now and Save Big! 🔥</strong></p>',
+      richTextPosition: banner.richTextPosition || 'overlay',
+      richTextAlignment: banner.richTextAlignment || 'center',
+      link: banner.link || '',
+      linkTarget: banner.linkTarget || '_self',
+      order: banner.order || 0,
+      richTextConfig: banner.richTextConfig || {
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        textColor: '#ffffff',
+        padding: '30px',
+        maxWidth: '90%',
+        animation: 'fade'
+      }
     });
     setImagePreviews([]);
+    setShowRichTextEditor(true);
   };
 
   const cancelEdit = () => {
@@ -255,9 +335,23 @@ const Banner = () => {
     setFormData({ 
       name: '', 
       deviceCategory: 'both',
-      images: [] 
+      images: [],
+      richText: '<h1><strong>Welcome to Our Store!</strong></h1><p>Discover amazing deals and exclusive offers just for you.</p><p><br></p><ul><li>Free Shipping on orders over $50</li><li>24/7 Customer Support</li><li>30-Day Money Back Guarantee</li></ul><p><br></p><p><strong style="color: rgb(255, 255, 255);">Shop Now and Save Big! 🔥</strong></p>',
+      richTextPosition: 'overlay',
+      richTextAlignment: 'center',
+      link: '',
+      linkTarget: '_self',
+      order: 0,
+      richTextConfig: {
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        textColor: '#ffffff',
+        padding: '30px',
+        maxWidth: '90%',
+        animation: 'fade'
+      }
     });
     setImagePreviews([]);
+    setShowRichTextEditor(true);
   };
 
   const handleEditSubmit = async (e) => {
@@ -268,9 +362,15 @@ const Banner = () => {
       const editData = new FormData();
       editData.append('name', formData.name);
       editData.append('deviceCategory', formData.deviceCategory);
+      editData.append('richText', formData.richText);
+      editData.append('richTextPosition', formData.richTextPosition);
+      editData.append('richTextAlignment', formData.richTextAlignment);
+      editData.append('link', formData.link);
+      editData.append('linkTarget', formData.linkTarget);
+      editData.append('order', formData.order);
+      editData.append('richTextConfig', JSON.stringify(formData.richTextConfig));
       
       if (formData.images.length > 0) {
-        // Validate file size (max 10MB)
         if (formData.images[0].size > 10 * 1024 * 1024) {
           toast.error('Image is too large. Maximum size is 10MB');
           setLoading(false);
@@ -288,12 +388,24 @@ const Banner = () => {
         const result = await response.json();
         console.log('Banner updated:', result);
         
-        // Reset form and refresh banners
         setEditingBanner(null);
         setFormData({ 
           name: '', 
           deviceCategory: 'both',
-          images: [] 
+          images: [],
+          richText: '<h1><strong>Welcome to Our Store!</strong></h1><p>Discover amazing deals and exclusive offers just for you.</p><p><br></p><ul><li>Free Shipping on orders over $50</li><li>24/7 Customer Support</li><li>30-Day Money Back Guarantee</li></ul><p><br></p><p><strong style="color: rgb(255, 255, 255);">Shop Now and Save Big! 🔥</strong></p>',
+          richTextPosition: 'overlay',
+          richTextAlignment: 'center',
+          link: '',
+          linkTarget: '_self',
+          order: 0,
+          richTextConfig: {
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            textColor: '#ffffff',
+            padding: '30px',
+            maxWidth: '90%',
+            animation: 'fade'
+          }
         });
         setImagePreviews([]);
         fetchBanners(filter);
@@ -380,8 +492,8 @@ const Banner = () => {
     }
   };
 
-  const inputClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-xs rounded px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder-gray-600';
-  const selectClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-xs rounded px-3 py-2 focus:outline-none focus:border-indigo-500';
+  const inputClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-sm rounded px-3 py-3 focus:outline-none focus:border-indigo-500 placeholder-gray-600';
+  const selectClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-sm rounded px-3 py-3 focus:outline-none focus:border-indigo-500';
 
   if (loading && banners.length === 0) {
     return (
@@ -402,6 +514,7 @@ const Banner = () => {
   return (
     <section className="min-h-screen bg-[#0F111A] text-gray-200 font-poppins">
       <Header toggleSidebar={toggleSidebar} />
+      <Toaster position="top-right" />
 
       {/* Delete Confirmation Popup */}
       {showDeletePopup && (
@@ -442,7 +555,7 @@ const Banner = () => {
             <div>
               <h1 className="text-2xl font-semibold text-white tracking-tighter uppercase">Banner Management</h1>
               <p className="text-xs font-bold text-gray-500 mt-1 flex items-center gap-2">
-                <FaCalendarAlt className="text-indigo-500" /> Manage promotional banners across devices
+                <FaCalendarAlt className="text-indigo-500" /> Manage promotional banners with rich text support
               </p>
             </div>
             <div className="flex gap-3 mt-4 md:mt-0">
@@ -461,7 +574,7 @@ const Banner = () => {
               { label: 'TOTAL BANNERS', value: banners.length, color: 'border-indigo-500', valueClass: 'text-white' },
               { label: 'ACTIVE', value: banners.filter(b => b.status).length, color: 'border-emerald-500', valueClass: 'text-emerald-400' },
               { label: 'INACTIVE', value: banners.filter(b => !b.status).length, color: 'border-amber-500', valueClass: 'text-amber-400' },
-              { label: 'DEVICES SUPPORTED', value: `${banners.filter(b => b.deviceCategory === 'both').length} both`, color: 'border-rose-500', valueClass: 'text-rose-400' },
+              { label: 'WITH RICH TEXT', value: banners.filter(b => b.richText).length, color: 'border-rose-500', valueClass: 'text-rose-400' },
             ].map((card, i) => (
               <div key={i} className={`bg-[#161B22] border-l-4 ${card.color} p-5 rounded shadow-lg border-y border-r border-gray-800`}>
                 <div className="flex justify-between items-start mb-3">
@@ -529,59 +642,174 @@ const Banner = () => {
               <div className="w-1 h-4 bg-indigo-500"></div> {editingBanner ? 'Edit Banner' : 'Add New Banners'}
             </h2>
             <form onSubmit={editingBanner ? handleEditSubmit : handleSubmit}>
-              {/* Banner Name Field */}
-              <div className="mb-6">
-                <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Banner Name {!editingBanner && '(Optional)'}</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className={inputClass}
-                  placeholder="Enter banner name"
-                  required={!!editingBanner}
-                />
-              </div>
-              
-              {/* Device Category Field */}
-              <div className="mb-6">
-                <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Device Category *</label>
-                <div className="flex space-x-6">
-                  <label className="inline-flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="deviceCategory"
-                      value="mobile"
-                      checked={formData.deviceCategory === 'mobile'}
-                      onChange={handleInputChange}
-                      className="form-radio h-4 w-4 text-indigo-600 bg-[#0F111A] border-gray-700 focus:ring-indigo-500"
-                    />
-                    <span className="ml-2 text-xs text-gray-300">Mobile</span>
-                  </label>
-                  <label className="inline-flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="deviceCategory"
-                      value="computer"
-                      checked={formData.deviceCategory === 'computer'}
-                      onChange={handleInputChange}
-                      className="form-radio h-4 w-4 text-indigo-600 bg-[#0F111A] border-gray-700 focus:ring-indigo-500"
-                    />
-                    <span className="ml-2 text-xs text-gray-300">Computer</span>
-                  </label>
-                  <label className="inline-flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="deviceCategory"
-                      value="both"
-                      checked={formData.deviceCategory === 'both'}
-                      onChange={handleInputChange}
-                      className="form-radio h-4 w-4 text-indigo-600 bg-[#0F111A] border-gray-700 focus:ring-indigo-500"
-                    />
-                    <span className="ml-2 text-xs text-gray-300">Both</span>
-                  </label>
+              {/* Basic Information Section */}
+              <div className="mb-6 border-b border-gray-800 pb-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">Basic Information</h3>
+                
+                {/* Banner Name Field */}
+                <div className="mb-4">
+                  <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Banner Name {!editingBanner && '(Optional)'}</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className={inputClass}
+                    placeholder="Enter banner name"
+                    required={!!editingBanner}
+                  />
+                </div>
+                
+                {/* Device Category Field */}
+                <div className="mb-4">
+                  <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Device Category *</label>
+                  <div className="flex space-x-6">
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deviceCategory"
+                        value="mobile"
+                        checked={formData.deviceCategory === 'mobile'}
+                        onChange={handleInputChange}
+                        className="form-radio h-4 w-4 text-indigo-600 bg-[#0F111A] border-gray-700 focus:ring-indigo-500"
+                      />
+                      <span className="ml-2 text-xs text-gray-300">Mobile</span>
+                    </label>
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deviceCategory"
+                        value="computer"
+                        checked={formData.deviceCategory === 'computer'}
+                        onChange={handleInputChange}
+                        className="form-radio h-4 w-4 text-indigo-600 bg-[#0F111A] border-gray-700 focus:ring-indigo-500"
+                      />
+                      <span className="ml-2 text-xs text-gray-300">Computer</span>
+                    </label>
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deviceCategory"
+                        value="both"
+                        checked={formData.deviceCategory === 'both'}
+                        onChange={handleInputChange}
+                        className="form-radio h-4 w-4 text-indigo-600 bg-[#0F111A] border-gray-700 focus:ring-indigo-500"
+                      />
+                      <span className="ml-2 text-xs text-gray-300">Both</span>
+                    </label>
+                  </div>
                 </div>
               </div>
+
+              {/* Rich Text Section - Always Visible */}
+              <div className="mb-6 border-b border-gray-800 pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
+                    <FaCode /> Rich Text Content
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowRichTextEditor(!showRichTextEditor)}
+                    className="text-[9px] text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider"
+                  >
+                    {showRichTextEditor ? 'Hide Editor' : 'Show Editor'}
+                  </button>
+                </div>
+                
+                {showRichTextEditor && (
+                  <>
+                    <div className="mt-2">
+                      <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Rich Text Content</label>
+                      <div className="bg-white rounded-lg" style={{ minHeight: '400px' }}>
+                        <ReactQuill
+                          theme="snow"
+                          value={formData.richText}
+                          onChange={(value) => setFormData({...formData, richText: value})}
+                          modules={quillModules}
+                          formats={quillFormats}
+                          placeholder="Add rich text content here..."
+                          className="text-black"
+                          style={{ height: '350px', marginBottom: '50px' }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Advanced Settings Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                      className="mt-4 flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-400"
+                    >
+                      <FaPalette /> {showAdvancedSettings ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
+                    </button>
+                    
+                    {showAdvancedSettings && (
+                      <div className="mt-4 p-4 bg-[#0F111A] rounded-lg border border-gray-700">
+                        <h4 className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-3">Rich Text Styling</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Background Color</label>
+                            <input
+                              type="color"
+                              value={formData.richTextConfig.backgroundColor}
+                              onChange={(e) => handleRichTextConfigChange('backgroundColor', e.target.value)}
+                              className="w-full h-10 bg-[#0F111A] border border-gray-700 rounded cursor-pointer"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Text Color</label>
+                            <input
+                              type="color"
+                              value={formData.richTextConfig.textColor}
+                              onChange={(e) => handleRichTextConfigChange('textColor', e.target.value)}
+                              className="w-full h-10 bg-[#0F111A] border border-gray-700 rounded cursor-pointer"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Padding (px)</label>
+                            <input
+                              type="text"
+                              value={formData.richTextConfig.padding}
+                              onChange={(e) => handleRichTextConfigChange('padding', e.target.value)}
+                              className={inputClass}
+                              placeholder="20px"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Max Width (%)</label>
+                            <input
+                              type="text"
+                              value={formData.richTextConfig.maxWidth}
+                              onChange={(e) => handleRichTextConfigChange('maxWidth', e.target.value)}
+                              className={inputClass}
+                              placeholder="80%"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Animation Effect</label>
+                            <select
+                              value={formData.richTextConfig.animation}
+                              onChange={(e) => handleRichTextConfigChange('animation', e.target.value)}
+                              className={selectClass}
+                            >
+                              <option value="none">None</option>
+                              <option value="fade">Fade</option>
+                              <option value="slide">Slide</option>
+                              <option value="zoom">Zoom</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              
               
               {/* Image Upload Section */}
               <div className="mb-8">
@@ -625,9 +853,9 @@ const Banner = () => {
                       <img 
                         src={`${base_url}/${editingBanner.image}`} 
                         alt={editingBanner.name} 
-                        className="h-32 w-48 object-cover rounded-md"
+                        className="h-40 w-64 object-cover rounded-md"
                       />
-                      <div className="text-[10px] text-gray-500 mt-1">
+                      <div className="text-[10px] text-gray-500 mt-2">
                         Device: {editingBanner.deviceCategory === 'both' ? 'All Devices' : editingBanner.deviceCategory}
                       </div>
                     </div>
@@ -636,10 +864,10 @@ const Banner = () => {
                 
                 {/* Upload area */}
                 <div className="flex items-center justify-center w-full">
-                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:bg-[#1F2937] transition-colors">
+                  <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:bg-[#1F2937] transition-colors">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <FaRegFileImage className="w-10 h-10 mb-3 text-gray-600" />
-                      <p className="mb-2 text-xs text-gray-500">
+                      <FaRegFileImage className="w-12 h-12 mb-3 text-gray-600" />
+                      <p className="mb-2 text-sm text-gray-500">
                         <span className="font-semibold">Click to upload</span> or drag and drop
                       </p>
                       <p className="text-[10px] text-gray-600">
@@ -722,6 +950,7 @@ const Banner = () => {
                             Name {getSortIcon('name')}
                           </th>
                           <th className="px-5 py-3">Device Category</th>
+                          <th className="px-5 py-3">Rich Text</th>
                           <th className="px-5 py-3">Status</th>
                           <th className="px-5 py-3 cursor-pointer" onClick={() => requestSort('createdAt')}>
                             Created {getSortIcon('createdAt')}
@@ -735,9 +964,9 @@ const Banner = () => {
                           return (
                             <tr key={banner._id} className="hover:bg-[#1F2937] transition-colors">
                               <td className="px-5 py-4 whitespace-nowrap">
-                                <div className="h-12 w-20 flex-shrink-0">
+                                <div className="h-16 w-24 flex-shrink-0">
                                   <img 
-                                    className="h-12 w-20 rounded-md object-cover border border-gray-700" 
+                                    className="h-16 w-24 rounded-md object-cover border border-gray-700" 
                                     src={`${base_url}/${banner.image}`} 
                                     alt={banner.name} 
                                   />
@@ -745,12 +974,29 @@ const Banner = () => {
                                </td>
                               <td className="px-5 py-4 whitespace-nowrap">
                                 <div className="text-xs font-medium text-gray-200">{banner.name || 'Unnamed Banner'}</div>
+                                {banner.link && (
+                                  <div className="text-[9px] text-indigo-400 mt-1">🔗 Has Link</div>
+                                )}
+                                {banner.order > 0 && (
+                                  <div className="text-[8px] text-gray-600 mt-1">Order: {banner.order}</div>
+                                )}
                                </td>
                               <td className="px-5 py-4 whitespace-nowrap">
                                 <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase border ${deviceBadge.color}`}>
                                   {deviceBadge.text}
                                 </span>
                                </td>
+                              <td className="px-5 py-4 whitespace-nowrap">
+                                {banner.richText ? (
+                                  <span className="text-[9px] px-2 py-1 rounded font-bold uppercase border border-rose-500 text-rose-400 bg-rose-500/10">
+                                    <FaCode className="inline mr-1" /> Rich Text
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] px-2 py-1 rounded font-bold uppercase border border-gray-700 text-gray-500 bg-gray-500/10">
+                                    No Content
+                                  </span>
+                                )}
+                                </td>
                               <td className="px-5 py-4 whitespace-nowrap">
                                 <label className="relative inline-flex items-center cursor-pointer">
                                   <input 
@@ -768,10 +1014,10 @@ const Banner = () => {
                                     )}
                                   </span>
                                 </label>
-                               </td>
+                                </td>
                               <td className="px-5 py-4 whitespace-nowrap text-[10px] text-gray-400">
                                 {formatDate(banner.createdAt)}
-                               </td>
+                                </td>
                               <td className="px-5 py-4 whitespace-nowrap">
                                 <div className="flex gap-2">
                                   <button 
@@ -789,7 +1035,7 @@ const Banner = () => {
                                     <FaTrash />
                                   </button>
                                 </div>
-                               </td>
+                                </td>
                             </tr>
                           );
                         })}

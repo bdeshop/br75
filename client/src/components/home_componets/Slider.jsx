@@ -135,11 +135,11 @@ export const Slider = memo(() => {
         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
       >
         {slides.map((slide) => (
-          <div key={slide.id} className="w-full flex-shrink-0">
+          <div key={slide.id} className="w-full flex-shrink-0 ">
             <img
               src={slide.src.startsWith('http') ? slide.src : `${base_url}/${slide.src}`}
               alt={slide.alt}
-              className="w-full object-cover h-[200px] md:h-full"
+              className="w-full  h-[400px]"
               loading="lazy" // Add lazy loading for images
             />
           </div>
