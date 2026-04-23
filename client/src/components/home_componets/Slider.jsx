@@ -288,7 +288,7 @@ export const Slider = memo(() => {
               <img
                 src={slide.src.startsWith('http') ? slide.src : `${base_url}/${slide.src}`}
                 alt={slide.alt}
-                className="w-full h-[180px] md:h-[400px] lg:h-[500px] xl:h-[600px] object-cover"
+                className="w-full h-auto object-cover"
                 loading="lazy"
               />
             </div>
