@@ -253,6 +253,13 @@ Authrouter.post("/signup", async (req, res) => {
 
     // Validate phone number (Bangladeshi format)
     const phoneRegex = /^01[3-9]\d{8}$/;
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid phone number format. Must be a valid Bangladeshi number (e.g., 01XXXXXXXXX)"
+      });
+    }
+
     // Validate username
     if (!/^[a-z0-9_]+$/.test(username)) {
       return res.status(400).json({ 
@@ -285,28 +292,29 @@ Authrouter.post("/signup", async (req, res) => {
     // Format phone number with country code
     const formattedPhone = `${phone}`;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({
-      $or: [{ username }, { phone: formattedPhone }, { email }]
-    });
+    // Check if user already exists - SPECIFIC CHECKS
+    const existingPhoneUser = await User.findOne({ phone: formattedPhone });
+    if (existingPhoneUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Phone number already exists. Please use a different phone number or login."
+      });
+    }
 
-    if (existingUser) {
-      if (existingUser.username === username) {
+    const existingUsernameUser = await User.findOne({ username });
+    if (existingUsernameUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Username already exists. Please choose a different username."
+      });
+    }
+
+    if (email) {
+      const existingEmailUser = await User.findOne({ email });
+      if (existingEmailUser) {
         return res.status(400).json({ 
           success: false,
-          message: "Username already exists." 
-        });
-      }
-      if (existingUser.phone === formattedPhone) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Phone number already registered." 
-        });
-      }
-      if (email && existingUser.email === email) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Email already registered." 
+          message: "Email already registered. Please use a different email or login."
         });
       }
     }
@@ -500,7 +508,6 @@ Authrouter.post("/signup", async (req, res) => {
     });
   }
 });
-
 // ==================== DIRECT LOGIN ROUTE (No OTP) ====================
 Authrouter.post("/login", async (req, res) => {
   try {

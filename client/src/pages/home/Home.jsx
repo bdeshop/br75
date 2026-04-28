@@ -320,7 +320,7 @@ const HomeContent = () => {
         {/* Sidebar - Pass active category and handlers */}
 <Sidebar
   sidebarOpen={sidebarOpen}
-  setSidebarOpen={setSidebarOpen}  // ← This must be passed
+  setSidebarOpen={setSidebarOpen} 
   onCategorySelect={handleCategorySelect}
   onExpandAndActivate={handleExpandAndActivate}
   activeCategory={activeCategory}

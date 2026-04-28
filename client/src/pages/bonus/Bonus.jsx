@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import Sidebar from "../../components/sidebar/Sidebar";
 import { Header } from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
-import { FiChevronDown, FiBell, FiExternalLink, FiClock, FiGift, FiCheckCircle, FiXCircle, FiAlertCircle, FiCalendar } from "react-icons/fi";
-import { FaMoneyBillWave, FaCalendarAlt, FaTag, FaInfoCircle, FaCalendarWeek, FaChartLine } from "react-icons/fa";
-import { MdCalendarMonth } from "react-icons/md";
+import { FiChevronDown, FiBell, FiExternalLink, FiClock, FiGift, FiCheckCircle, FiXCircle, FiAlertCircle, FiCalendar, FiStar, FiAward, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FaMoneyBillWave, FaCalendarAlt, FaTag, FaInfoCircle, FaCalendarWeek, FaChartLine, FaCoins, FaExchangeAlt, FaCrown, FaMedal, FaGem, FaRocket, FaGift as FaGiftIcon } from "react-icons/fa";
+import { MdCalendarMonth, MdEmojiEvents } from "react-icons/md";
 import axios from "axios";
 import logo from "../../assets/logo.png";
 import { LanguageContext } from "../../context/LanguageContext";
 import toast, { Toaster } from 'react-hot-toast';
+import { GoTrophy } from "react-icons/go";
 
 const Bonus = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,6 +31,19 @@ const Bonus = () => {
     totalBetAmount: 0
   });
   const [loadingBetting, setLoadingBetting] = useState(true);
+  
+  // Level Up Bonus States
+  const [levelData, setLevelData] = useState(null);
+  const [loadingLevel, setLoadingLevel] = useState(true);
+  const [claimingLevelBonus, setClaimingLevelBonus] = useState(null);
+  const [claimingAllLevels, setClaimingAllLevels] = useState(false);
+  
+  // Carousel/slide state for levels
+  const [levelCarouselIndex, setLevelCarouselIndex] = useState(0);
+  const carouselRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
   
   // Get language context
   const { language, t } = useContext(LanguageContext);
@@ -112,6 +126,131 @@ const Bonus = () => {
     }
   };
 
+  // Fetch level up bonus status
+  const fetchLevelBonusStatus = async () => {
+    try {
+      if (!token) {
+        setLoadingLevel(false);
+        return;
+      }
+      
+      setLoadingLevel(true);
+      
+      console.log("Fetching level bonus status...");
+      const response = await axios.get(`${base_url}/api/user/level-bonus/status`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      console.log("Level bonus status response:", response.data);
+      
+      if (response.data.success) {
+        setLevelData(response.data.data);
+        console.log("Level data set:", response.data.data);
+        console.log("Pending bonuses:", response.data.data.pendingBonuses);
+        console.log("Has pending bonuses:", response.data.data.pendingBonuses?.length > 0);
+        
+        // Set carousel index to current level position
+        if (response.data.data.allLevels && response.data.data.currentLevel) {
+          const currentLevelObj = response.data.data.allLevels.find(l => l.isCurrent);
+          if (currentLevelObj) {
+            const currentIndex = response.data.data.allLevels.findIndex(l => l.level === currentLevelObj.level);
+            if (currentIndex !== -1) {
+              // Set index so current level is in the middle for desktop, visible for mobile
+              setLevelCarouselIndex(Math.max(0, currentIndex - 1));
+            }
+          }
+        }
+      } else {
+        console.log("Level bonus API returned success false:", response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching level bonus status:", err);
+      console.error("Error details:", err.response?.data);
+    } finally {
+      setLoadingLevel(false);
+    }
+  };
+
+  // Claim level up bonus
+  const claimLevelBonus = async (level) => {
+    setClaimingLevelBonus(level);
+    try {
+      const response = await axios.post(
+        `${base_url}/api/user/level-bonus/claim/${level}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+        // Refresh all data
+        await fetchLevelBonusStatus();
+        await fetchBonuses();
+        await fetchBettingBonuses();
+        
+        // Update user balance in localStorage
+        if (response.data.data.balanceAfter) {
+          const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
+          updatedUser.balance = response.data.data.balanceAfter;
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+      } else {
+        toast.error(response.data.message || "Failed to claim level bonus");
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Failed to claim level bonus";
+      toast.error(errorMessage);
+      console.error("Error claiming level bonus:", err);
+    } finally {
+      setClaimingLevelBonus(null);
+    }
+  };
+
+  // Claim all pending level bonuses
+  const claimAllLevelBonuses = async () => {
+    setClaimingAllLevels(true);
+    try {
+      const response = await axios.post(
+        `${base_url}/api/user/level-bonus/claim-all`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+        // Refresh all data
+        await fetchLevelBonusStatus();
+        await fetchBonuses();
+        await fetchBettingBonuses();
+        
+        // Update user balance in localStorage
+        if (response.data.data.balanceAfter) {
+          const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
+          updatedUser.balance = response.data.data.balanceAfter;
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+      } else {
+        toast.error(response.data.message || "Failed to claim level bonuses");
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Failed to claim level bonuses";
+      toast.error(errorMessage);
+      console.error("Error claiming all level bonuses:", err);
+    } finally {
+      setClaimingAllLevels(false);
+    }
+  };
+
   // Claim a cash bonus directly
   const claimBonus = async (bonusId, bonusTitle, bonusAmount) => {
     setClaimingBonusId(bonusId);
@@ -189,14 +328,67 @@ const Bonus = () => {
     }));
   };
 
+  // Mouse/Touch drag handlers for carousel
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - carouselRef.current.offsetLeft);
+    setScrollLeft(carouselRef.current.scrollLeft);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - carouselRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed multiplier
+    carouselRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e) => {
+    setIsDragging(true);
+    setStartX(e.touches[0].pageX - carouselRef.current.offsetLeft);
+    setScrollLeft(carouselRef.current.scrollLeft);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.touches[0].pageX - carouselRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    carouselRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  // Scroll to specific position
+  const scrollCarousel = (direction) => {
+    if (!carouselRef.current) return;
+    const scrollAmount = 220; // Width of one card + gap
+    const newScrollLeft = direction === 'left' 
+      ? carouselRef.current.scrollLeft - scrollAmount
+      : carouselRef.current.scrollLeft + scrollAmount;
+    
+    carouselRef.current.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth'
+    });
+  };
+
   // Load bonuses on component mount
   useEffect(() => {
     if (token) {
       fetchBonuses();
       fetchBettingBonuses();
+      fetchLevelBonusStatus();
     } else {
       setLoading(false);
       setLoadingBetting(false);
+      setLoadingLevel(false);
       setError(t?.pleaseLoginToViewBonuses || "Please login to view bonuses");
     }
   }, [token]);
@@ -303,12 +495,22 @@ const Bonus = () => {
     return type === 'weekly' ? "Weekly Betting Bonus" : "Monthly Betting Bonus";
   };
 
-  const isLoading = loading || loadingBetting;
+  const isLoading = loading || loadingBetting || loadingLevel;
 
   // Check if there are no bonuses at all
-  const hasNoBonuses = bonuses.length === 0 && bettingBonuses.length === 0 && !isLoading && token;
+  const hasNoBonuses = bonuses.length === 0 && bettingBonuses.length === 0 && (!levelData || levelData.pendingBonuses?.length === 0) && !isLoading && token;
 
-  if (isLoading && bonuses.length === 0 && bettingBonuses.length === 0) {
+  // Debug log for level data
+  console.log("Debug - Level Data State:", {
+    token: !!token,
+    levelData: levelData,
+    hasLevelData: !!levelData,
+    pendingBonuses: levelData?.pendingBonuses,
+    pendingCount: levelData?.pendingBonuses?.length,
+    showLevelSection: token && levelData
+  });
+
+  if (isLoading && bonuses.length === 0 && bettingBonuses.length === 0 && !levelData) {
     return (
       <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -331,7 +533,6 @@ const Bonus = () => {
   return (
     <div className="h-screen overflow-hidden w-full font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       <Toaster 
-        position="top-right" 
         toastOptions={{ 
           style: { 
             background: '#1a1a1a', 
@@ -353,6 +554,261 @@ const Bonus = () => {
         <div className="flex-1 overflow-auto w-full transition-all duration-300">
           {/* Main Content Area */}
           <div className="mx-auto overflow-y-auto pb-[100px] w-full max-w-screen-xl px-4 md:px-[50px] py-6">
+            
+            {/* ==================== LEVEL UP BONUS SECTION ==================== */}
+            {/* ALWAYS SHOW level section if user is logged in and we have level data */}
+            {token && (
+              <div className="mb-6 rounded-xl bg-gradient-to-br from-[#1a1a1a] to-[#151515] border border-[#2a2a2a] overflow-hidden">
+                <div className="p-4 sm:p-5">
+                  {/* Loading state for level data */}
+                  {loadingLevel ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="ml-2 text-gray-400">Loading level data...</span>
+                    </div>
+                  ) : levelData ? (
+                    <>
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                            <GoTrophy className="text-yellow-500 text-2xl" />
+                          </div>
+                          <div>
+                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                              Level Up Bonuses
+                            </h2>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Reach higher levels to unlock bigger bonuses
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {levelData.pendingBonuses && levelData.pendingBonuses.length > 0 && (
+                          <button
+                            onClick={claimAllLevelBonuses}
+                            disabled={claimingAllLevels}
+                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 rounded-lg text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          >
+                            {claimingAllLevels ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <FaGiftIcon className="text-sm" />
+                            )}
+                            Claim All ({levelData.pendingBonuses.length})
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* No Level Data Message */}
+                      {!levelData && !loadingLevel && (
+                        <div className="text-center py-8">
+                          <p className="text-gray-400">No level data available. Start betting to earn level bonuses!</p>
+                        </div>
+                      )}
+                      
+                      {/* Current Level Card */}
+                      {levelData && (
+                        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg p-4 mb-4">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="text-4xl">{levelData.currentLevel?.icon || "🎯"}</div>
+                              <div>
+                                <p className="text-xs text-gray-400">Current Level</p>
+                                <h3 className="text-xl font-bold text-white">
+                                  {levelData.currentLevel?.name || "Bronze"} <span className="text-sm text-gray-400">(Level {levelData.currentLevel?.level || 1})</span>
+                                </h3>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Total Lifetime Bet: ৳{levelData.stats?.totalLifetimeBet?.toLocaleString() || 0}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {levelData.nextLevel && (
+                              <div className="flex-1 w-full md:max-w-md ">
+                                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                                  <span>Progress to {levelData.nextLevel.name}</span>
+                                  <span className="text-yellow-400">{Math.floor(levelData.nextLevel.progress)}%</span>
+                                </div>
+                                <div className="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 transition-all duration-500"
+                                    style={{ width: `${levelData.nextLevel.progress}%` }}
+                                  ></div>
+                                </div>
+                                <div className="flex justify-between text-xs mt-1">
+                                  <span className="text-gray-500">Need: ৳{levelData.nextLevel.remainingBet?.toLocaleString()}</span>
+                                  <span className="text-green-400">Next Bonus: ৳{levelData.nextLevel.bonusAmount?.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Pending Level Bonuses */}
+                      {levelData && levelData.pendingBonuses && levelData.pendingBonuses.length > 0 && (
+                        <div className="mb-4">
+                          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                            <FiAward className="text-yellow-500" />
+                            Unclaimed Level Bonuses ({levelData.pendingBonuses.length})
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {levelData.pendingBonuses.map((bonus) => (
+                              <div 
+                                key={bonus.id || bonus.level}
+                                className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-lg p-3"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-2xl">{bonus.levelIcon || "🎁"}</span>
+                                    <div>
+                                      <p className="text-sm font-medium text-white">
+                                        Level {bonus.level}: {bonus.levelName}
+                                      </p>
+                                      <p className="text-xs text-yellow-400">
+                                        ৳{bonus.bonusAmount?.toLocaleString()} Bonus
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => claimLevelBonus(bonus.level)}
+                                    disabled={claimingLevelBonus === bonus.level}
+                                    className="px-3 py-1.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 rounded-lg text-xs font-medium transition-all duration-300 disabled:opacity-50"
+                                  >
+                                    {claimingLevelBonus === bonus.level ? (
+                                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    ) : (
+                                      "Claim"
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* All Levels Grid - Draggable Carousel */}
+                      {levelData && levelData.allLevels && (
+                        <div className="">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                              <FaCrown className="text-yellow-500" />
+                              All Level Requirements
+                            </h3>
+                            
+                            {/* Navigation Arrows - only show on desktop */}
+                            <div className="hidden md:flex gap-2">
+                              <button
+                                onClick={() => scrollCarousel('left')}
+                                className="p-1 rounded-full bg-[#2a2a2a] hover:bg-[#3a3a3a] transition-all"
+                              >
+                                <FiChevronLeft className="text-white text-sm" />
+                              </button>
+                              <button
+                                onClick={() => scrollCarousel('right')}
+                                className="p-1 rounded-full bg-[#2a2a2a] hover:bg-[#3a3a3a] transition-all"
+                              >
+                                <FiChevronRight className="text-white text-sm" />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* Draggable Horizontal Scroll Carousel */}
+                          <div className="relative">
+                            <div 
+                              ref={carouselRef}
+                              className="flex gap-2 py-[20px] overflow-x-auto scroll-smooth pb-2 hide-scrollbar cursor-grab active:cursor-grabbing"
+                              style={{ 
+                                scrollbarWidth: 'none', 
+                                msOverflowStyle: 'none',
+                                userSelect: 'none'
+                              }}
+                              onMouseDown={handleMouseDown}
+                              onMouseMove={handleMouseMove}
+                              onMouseUp={handleMouseUp}
+                              onMouseLeave={handleMouseUp}
+                              onTouchStart={handleTouchStart}
+                              onTouchMove={handleTouchMove}
+                              onTouchEnd={handleTouchEnd}
+                            >
+                              {levelData.allLevels?.map((level, idx) => {
+                                const isClaimed = level.status === 'claimed';
+                                const isPending = level.status === 'pending';
+                                const isCurrent = level.isCurrent;
+                                const isLocked = level.status === 'locked';
+                                const isAvailable = level.status === 'available';
+                                
+                                return (
+                                  <div 
+                                    key={level.level}
+                                    className={`flex-shrink-0 w-[140px] p-3 rounded-lg text-center transition-all ${
+                                      isCurrent 
+                                        ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/70 scale-105 shadow-lg shadow-yellow-500/20' 
+                                        : isClaimed 
+                                          ? 'bg-green-500/10 border border-green-500/30'
+                                          : isPending
+                                            ? 'bg-yellow-500/10 border border-yellow-500/30 animate-pulse'
+                                            : isAvailable
+                                              ? 'bg-blue-500/10 border border-blue-500/30'
+                                              : 'bg-[#1a1a1a] border border-[#2a2a2a] opacity-60'
+                                    }`}
+                                  >
+                                    <div className="text-3xl">{level.icon}</div>
+                                    <p className="text-sm font-medium mt-2">{level.name}</p>
+                                    <p className="text-[10px] text-gray-400 mt-1">৳{level.minBet?.toLocaleString()}</p>
+                                    <p className="text-[11px] text-yellow-400 font-semibold">+৳{level.bonusAmount?.toLocaleString()}</p>
+                                    <div className="mt-2">
+                                      {isClaimed && (
+                                        <span className="text-[10px] text-green-400 flex items-center justify-center gap-1">
+                                          <FiCheckCircle className="text-[10px]" /> Claimed
+                                        </span>
+                                      )}
+                                      {isPending && (
+                                        <span className="text-[10px] text-yellow-400 flex items-center justify-center gap-1">
+                                          <FiAward className="text-[10px]" /> Ready!
+                                        </span>
+                                      )}
+                                      {isCurrent && (
+                                        <span className="text-[10px] text-orange-400 flex items-center justify-center gap-1">
+                                          <FaCrown className="text-[10px]" /> Current
+                                        </span>
+                                      )}
+                                      {isLocked && (
+                                        <span className="text-[10px] text-gray-500">Locked</span>
+                                      )}
+                                      {isAvailable && !isClaimed && !isPending && !isCurrent && (
+                                        <span className="text-[10px] text-blue-400">Available</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            
+                            {/* Gradient fade edges for carousel - hide on mobile */}
+                            <div className="hidden md:block absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#1a1a1a] to-transparent pointer-events-none"></div>
+                            <div className="hidden md:block absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#1a1a1a] to-transparent pointer-events-none"></div>
+                          </div>
+                          
+                          {/* Scroll hint - shows on mobile */}
+                          <div className="md:hidden text-center mt-2">
+                            <p className="text-[10px] text-gray-500 flex items-center justify-center gap-1">
+                              <FiChevronLeft className="text-xs" /> Swipe to see more <FiChevronRight className="text-xs" />
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400">No level data available. Start betting to earn level bonuses!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Header Section */}
             <div className="flex flex-col pt-[25px] lg:pt-[50px] sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
               <div>
@@ -384,7 +840,7 @@ const Bonus = () => {
               <>
                 {/* Show No Bonus Message when both are empty */}
                 {hasNoBonuses ? (
-                  <div className=" rounded-lg p-6 sm:p-10 text-center max-w-md mx-auto">
+                  <div className="rounded-lg p-6 sm:p-10 text-center max-w-md mx-auto">
                     <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#222] mb-4">
                       <FiGift className="text-2xl sm:text-3xl text-gray-500" />
                     </div>

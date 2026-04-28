@@ -7731,4 +7731,392 @@ Userrouter.get("/transaction-reset-status-mobile", async (req, res) => {
         });
     }
 });
+
+
+
+// ==================== LEVEL UP BONUS SYSTEM (Based on lifetime_bet) ====================
+
+// Level configuration - based on lifetime_bet (in BDT)
+const LEVEL_CONFIG = {
+    1: { minBet: 0, bonusAmount: 0, name: "Bronze", icon: "🥉", color: "#CD7F32" },
+    2: { minBet: 10000, bonusAmount: 100, name: "Silver", icon: "🥈", color: "#C0C0C0" },
+    3: { minBet: 25000, bonusAmount: 300, name: "Gold", icon: "🥇", color: "#FFD700" },
+    4: { minBet: 50000, bonusAmount: 700, name: "Platinum", icon: "💎", color: "#E5E4E2" },
+    5: { minBet: 100000, bonusAmount: 1500, name: "Diamond", icon: "💠", color: "#B9F2FF" },
+    6: { minBet: 200000, bonusAmount: 3000, name: "Ruby", icon: "🔴", color: "#E0115F" },
+    7: { minBet: 350000, bonusAmount: 6000, name: "Sapphire", icon: "🔵", color: "#0F52BA" },
+    8: { minBet: 500000, bonusAmount: 10000, name: "Emerald", icon: "🟢", color: "#50C878" },
+    9: { minBet: 750000, bonusAmount: 15000, name: "Pearl", icon: "⚪", color: "#F8F8F8" },
+    10: { minBet: 1000000, bonusAmount: 20000, name: "Crown", icon: "👑", color: "#FFD700" }
+};
+
+// Helper function to get user's current level based on lifetime_bet
+function getUserCurrentLevel(lifetimeBet) {
+    let currentLevel = 1;
+    for (let level = 10; level >= 1; level--) {
+        if (lifetimeBet >= LEVEL_CONFIG[level].minBet) {
+            currentLevel = level;
+            break;
+        }
+    }
+    return currentLevel;
+}
+
+// Helper function to get next level info
+function getNextLevelInfo(currentLevel, lifetimeBet) {
+    if (currentLevel >= 10) {
+        return { 
+            hasNext: false, 
+            nextLevel: null, 
+            requiredBet: null, 
+            remainingBet: null, 
+            bonusAmount: null,
+            progress: 100
+        };
+    }
+    
+    const nextLevel = currentLevel + 1;
+    const requiredBet = LEVEL_CONFIG[nextLevel].minBet;
+    const currentLevelMinBet = LEVEL_CONFIG[currentLevel].minBet;
+    const betInCurrentLevel = lifetimeBet - currentLevelMinBet;
+    const requiredForNextLevel = requiredBet - currentLevelMinBet;
+    const progress = Math.min(100, Math.max(0, (betInCurrentLevel / requiredForNextLevel) * 100));
+    const remainingBet = Math.max(0, requiredBet - lifetimeBet);
+    const bonusAmount = LEVEL_CONFIG[nextLevel].bonusAmount;
+    
+    return {
+        hasNext: true,
+        nextLevel: nextLevel,
+        nextLevelName: LEVEL_CONFIG[nextLevel].name,
+        nextLevelIcon: LEVEL_CONFIG[nextLevel].icon,
+        nextLevelColor: LEVEL_CONFIG[nextLevel].color,
+        requiredBet: requiredBet,
+        remainingBet: remainingBet,
+        bonusAmount: bonusAmount,
+        progress: progress
+    };
+}
+
+// GET user's level bonus status
+Userrouter.get("/level-bonus/status", authenticateToken, async (req, res) => {
+    try {
+        const user = req.user;
+        
+        // Initialize level bonuses if not exists
+        if (!user.levelInfo) {
+            user.levelInfo = {
+                currentLevel: 1,
+                levelBonuses: [],
+                totalBonusClaimed: 0,
+                totalBonusAmount: 0
+            };
+            await user.save();
+        }
+        
+        const lifetimeBet = user.lifetime_bet || 0;
+        const currentLevel = getUserCurrentLevel(lifetimeBet);
+        const currentLevelInfo = LEVEL_CONFIG[currentLevel];
+        
+        // Update current level in user data
+        user.levelInfo.currentLevel = currentLevel;
+        
+        // Check for newly reached levels and add pending bonuses
+        const claimedLevels = (user.levelInfo.levelBonuses || [])
+            .filter(b => b.status === 'claimed')
+            .map(b => b.level);
+        
+        // Add pending bonuses for levels that are reached but not claimed
+        for (let level = 2; level <= currentLevel; level++) {
+            const alreadyClaimed = claimedLevels.includes(level);
+            const alreadyPending = (user.levelInfo.levelBonuses || [])
+                .some(b => b.level === level && b.status === 'pending');
+            
+            if (!alreadyClaimed && !alreadyPending && LEVEL_CONFIG[level].bonusAmount > 0) {
+                user.levelInfo.levelBonuses.push({
+                    level: level,
+                    bonusAmount: LEVEL_CONFIG[level].bonusAmount,
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+            }
+        }
+        
+        await user.save();
+        
+        // Get pending bonuses
+        const pendingBonuses = (user.levelInfo.levelBonuses || [])
+            .filter(b => b.status === 'pending')
+            .map(b => ({
+                level: b.level,
+                levelName: LEVEL_CONFIG[b.level].name,
+                levelIcon: LEVEL_CONFIG[b.level].icon,
+                bonusAmount: b.bonusAmount,
+                minBetRequired: LEVEL_CONFIG[b.level].minBet
+            }));
+        
+        // Get claimed bonuses
+        const claimedBonuses = (user.levelInfo.levelBonuses || [])
+            .filter(b => b.status === 'claimed')
+            .map(b => ({
+                level: b.level,
+                levelName: LEVEL_CONFIG[b.level].name,
+                levelIcon: LEVEL_CONFIG[b.level].icon,
+                bonusAmount: b.bonusAmount,
+                claimedAt: b.claimedAt
+            }));
+        
+        // Get next level info
+        const nextLevelInfo = getNextLevelInfo(currentLevel, lifetimeBet);
+        
+        // Build all levels array
+        const allLevels = [];
+        for (let level = 1; level <= 10; level++) {
+            const levelInfo = LEVEL_CONFIG[level];
+            const isClaimed = claimedLevels.includes(level);
+            const isPending = pendingBonuses.some(p => p.level === level);
+            const isReached = lifetimeBet >= levelInfo.minBet;
+            
+            let status = 'locked';
+            if (isClaimed) status = 'claimed';
+            else if (isPending) status = 'pending';
+            else if (isReached) status = 'available';
+            else if (level === currentLevel) status = 'current';
+            
+            allLevels.push({
+                level: level,
+                name: levelInfo.name,
+                icon: levelInfo.icon,
+                color: levelInfo.color,
+                minBet: levelInfo.minBet,
+                bonusAmount: levelInfo.bonusAmount,
+                status: status,
+                isCurrent: level === currentLevel
+            });
+        }
+        
+        // Calculate stats
+        const totalBonusClaimed = user.levelInfo.totalBonusAmount || 0;
+        const totalAvailableBonus = pendingBonuses.reduce((sum, b) => sum + b.bonusAmount, 0);
+        const pendingCount = pendingBonuses.length;
+        
+        res.json({
+            success: true,
+            data: {
+                lifetimeBet: lifetimeBet,
+                currentLevel: {
+                    level: currentLevel,
+                    name: currentLevelInfo.name,
+                    icon: currentLevelInfo.icon,
+                    color: currentLevelInfo.color,
+                    minBet: currentLevelInfo.minBet
+                },
+                nextLevel: nextLevelInfo,
+                pendingBonuses: pendingBonuses,
+                claimedBonuses: claimedBonuses,
+                allLevels: allLevels,
+                stats: {
+                    totalLifetimeBet: lifetimeBet,
+                    totalBonusClaimed: totalBonusClaimed,
+                    totalAvailableBonus: totalAvailableBonus,
+                    pendingCount: pendingCount,
+                    claimedCount: claimedBonuses.length,
+                    maxLevelReached: currentLevel === 10
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error("Error fetching level bonus status:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch level bonus status"
+        });
+    }
+});
+
+// POST claim level up bonus
+Userrouter.post("/level-bonus/claim/:level", authenticateToken, async (req, res) => {
+    try {
+        const { level } = req.params;
+        const user = req.user;
+        const levelNum = parseInt(level);
+        
+        if (levelNum < 2 || levelNum > 10) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid level"
+            });
+        }
+        
+        // Initialize levelInfo if needed
+        if (!user.levelInfo) {
+            user.levelInfo = {
+                currentLevel: 1,
+                levelBonuses: [],
+                totalBonusClaimed: 0,
+                totalBonusAmount: 0
+            };
+        }
+        
+        // Check if user has reached this level
+        const requiredBet = LEVEL_CONFIG[levelNum].minBet;
+        if ((user.lifetime_bet || 0) < requiredBet) {
+            return res.status(400).json({
+                success: false,
+                message: `You haven't reached Level ${levelNum} yet. Need ${requiredBet.toLocaleString()} BDT total lifetime bet.`
+            });
+        }
+        
+        // Find pending bonus
+        const bonusIndex = user.levelInfo.levelBonuses.findIndex(b => b.level === levelNum && b.status === 'pending');
+        
+        if (bonusIndex === -1) {
+            // Check if already claimed
+            const alreadyClaimed = user.levelInfo.levelBonuses.find(b => b.level === levelNum && b.status === 'claimed');
+            if (alreadyClaimed) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Level ${levelNum} bonus already claimed`
+                });
+            }
+            
+            // Add as pending and claim
+            user.levelInfo.levelBonuses.push({
+                level: levelNum,
+                bonusAmount: LEVEL_CONFIG[levelNum].bonusAmount,
+                status: 'pending',
+                createdAt: new Date()
+            });
+            await user.save();
+            
+            // Recursive call to claim
+            return await exports.claimLevelBonus(user, levelNum, res);
+        }
+        
+        const bonus = user.levelInfo.levelBonuses[bonusIndex];
+        const bonusAmount = bonus.bonusAmount;
+        const balanceBefore = user.balance;
+        
+        // Add bonus to balance
+        user.balance += bonusAmount;
+        
+        // Update bonus status
+        user.levelInfo.levelBonuses[bonusIndex].status = 'claimed';
+        user.levelInfo.levelBonuses[bonusIndex].claimedAt = new Date();
+        user.levelInfo.totalBonusAmount = (user.levelInfo.totalBonusAmount || 0) + bonusAmount;
+        user.levelInfo.totalBonusClaimed = (user.levelInfo.totalBonusClaimed || 0) + 1;
+        
+        // Add transaction history
+        user.transactionHistory = user.transactionHistory || [];
+        user.transactionHistory.push({
+            type: "level_up_bonus",
+            amount: bonusAmount,
+            balanceBefore: balanceBefore,
+            balanceAfter: user.balance,
+            description: `Level ${levelNum} (${LEVEL_CONFIG[levelNum].name}) up bonus of ${bonusAmount.toLocaleString()} BDT`,
+            referenceId: `LEVEL-${levelNum}-${Date.now()}`,
+            createdAt: new Date()
+        });
+        
+        await user.save();
+        
+        res.json({
+            success: true,
+            message: `🎉 Congratulations! You've claimed ${bonusAmount.toLocaleString()} BDT for reaching Level ${levelNum} (${LEVEL_CONFIG[levelNum].name})!`,
+            data: {
+                level: levelNum,
+                levelName: LEVEL_CONFIG[levelNum].name,
+                levelIcon: LEVEL_CONFIG[levelNum].icon,
+                bonusAmount: bonusAmount,
+                balanceBefore: balanceBefore,
+                balanceAfter: user.balance,
+                claimedAt: new Date()
+            }
+        });
+        
+    } catch (error) {
+        console.error("Error claiming level bonus:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to claim level bonus"
+        });
+    }
+});
+
+// POST claim all pending level bonuses
+Userrouter.post("/level-bonus/claim-all", authenticateToken, async (req, res) => {
+    try {
+        const user = req.user;
+        
+        if (!user.levelInfo || !user.levelInfo.levelBonuses) {
+            return res.status(400).json({
+                success: false,
+                message: "No pending bonuses found"
+            });
+        }
+        
+        const pendingBonuses = user.levelInfo.levelBonuses.filter(b => b.status === 'pending');
+        
+        if (pendingBonuses.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No pending bonuses to claim"
+            });
+        }
+        
+        let totalBonusAmount = 0;
+        const balanceBefore = user.balance;
+        const claimedLevels = [];
+        
+        for (const bonus of pendingBonuses) {
+            const bonusAmount = bonus.bonusAmount;
+            totalBonusAmount += bonusAmount;
+            bonus.status = 'claimed';
+            bonus.claimedAt = new Date();
+            claimedLevels.push({
+                level: bonus.level,
+                name: LEVEL_CONFIG[bonus.level].name,
+                amount: bonusAmount
+            });
+        }
+        
+        // Add all bonuses to balance
+        user.balance += totalBonusAmount;
+        user.levelInfo.totalBonusAmount = (user.levelInfo.totalBonusAmount || 0) + totalBonusAmount;
+        user.levelInfo.totalBonusClaimed = (user.levelInfo.totalBonusClaimed || 0) + pendingBonuses.length;
+        
+        // Add transaction history
+        user.transactionHistory = user.transactionHistory || [];
+        user.transactionHistory.push({
+            type: "level_up_bonus_batch",
+            amount: totalBonusAmount,
+            balanceBefore: balanceBefore,
+            balanceAfter: user.balance,
+            description: `Batch claim of ${pendingBonuses.length} level bonuses totaling ${totalBonusAmount.toLocaleString()} BDT`,
+            referenceId: `LEVEL-BATCH-${Date.now()}`,
+            createdAt: new Date()
+        });
+        
+        await user.save();
+        
+        res.json({
+            success: true,
+            message: `🎉 Successfully claimed ${pendingBonuses.length} level bonuses totaling ${totalBonusAmount.toLocaleString()} BDT!`,
+            data: {
+                claimedCount: pendingBonuses.length,
+                totalBonusAmount: totalBonusAmount,
+                balanceBefore: balanceBefore,
+                balanceAfter: user.balance,
+                claimedLevels: claimedLevels
+            }
+        });
+        
+    } catch (error) {
+        console.error("Error claiming all level bonuses:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to claim level bonuses"
+        });
+    }
+});
 module.exports = Userrouter;

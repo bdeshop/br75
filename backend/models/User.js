@@ -417,7 +417,18 @@ dailybet: { type: Number, default: 0 },
             cancelledAt: Date
         }]
     },
-
+levelInfo: {
+    currentLevel: { type: Number, default: 1 },
+    levelBonuses: [{
+        level: { type: Number, required: true },
+        bonusAmount: { type: Number, required: true },
+        status: { type: String, enum: ['pending', 'claimed', 'expired'], default: 'pending' },
+        createdAt: { type: Date, default: Date.now },
+        claimedAt: Date
+    }],
+    totalBonusClaimed: { type: Number, default: 0 },
+    totalBonusAmount: { type: Number, default: 0 }
+},
     // ========== SECURITY ==========
     transactionPassword: {
         type: String,
