@@ -6638,7 +6638,7 @@ Userrouter.post("/set-transaction-password", authenticateToken, async (req, res)
     try {
         const { transactionPassword, confirmTransactionPassword } = req.body;
         // IMPORTANT: Select the transactionPassword field
-        const user = await User.findById(req.user._id).select("+transactionPassword");
+        const user = await User.findById(req.user._id).select("+transactionPassword +password");
         
         // Validate inputs
         if (!transactionPassword || !confirmTransactionPassword) {
@@ -6667,6 +6667,15 @@ Userrouter.post("/set-transaction-password", authenticateToken, async (req, res)
             return res.status(400).json({
                 success: false,
                 message: "Transaction password cannot exceed 20 characters"
+            });
+        }
+        
+        // *** ADD THIS VALIDATION: Check if transaction password is same as account password ***
+        const isSameAsAccountPassword = await bcrypt.compare(transactionPassword, user.password);
+        if (isSameAsAccountPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password cannot be the same as your account password. Please choose a different password."
             });
         }
         
@@ -6718,8 +6727,8 @@ Userrouter.post("/set-transaction-password", authenticateToken, async (req, res)
 Userrouter.post("/update-transaction-password", authenticateToken, async (req, res) => {
     try {
         const { currentPassword, newPassword, confirmNewPassword } = req.body;
-        // IMPORTANT: Select the transactionPassword field
-        const user = await User.findById(req.user._id).select("+transactionPassword");
+        // IMPORTANT: Select the transactionPassword field AND password field
+        const user = await User.findById(req.user._id).select("+transactionPassword +password");
         
         // Validate inputs
         if (!currentPassword) {
@@ -6758,6 +6767,15 @@ Userrouter.post("/update-transaction-password", authenticateToken, async (req, r
             });
         }
         
+        // *** ADD THIS VALIDATION: Check if new transaction password is same as account password ***
+        const isSameAsAccountPassword = await bcrypt.compare(newPassword, user.password);
+        if (isSameAsAccountPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction password cannot be the same as your account password. Please choose a different password."
+            });
+        }
+        
         // Check if transaction password exists - FIXED
         if (!user.transactionPassword || user.transactionPassword === "") {
             return res.status(400).json({
@@ -6780,7 +6798,7 @@ Userrouter.post("/update-transaction-password", authenticateToken, async (req, r
         if (isSameAsCurrent) {
             return res.status(400).json({
                 success: false,
-                message: "New password must be different from current password"
+                message: "New password must be different from current transaction password"
             });
         }
         
