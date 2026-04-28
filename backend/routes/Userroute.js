@@ -6458,7 +6458,7 @@ Userrouter.post("/verify-mobile-otp", authenticateToken, async (req, res) => {
         const oldPhone = user.phone;
 
         // Update user's phone and verification status
-        user.phone = pendingPhone;
+        user.phone = oldPhone;
         user.isPhoneVerified = true;
         user.phoneVerifiedAt = new Date();
         
