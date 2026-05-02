@@ -297,7 +297,7 @@ Authrouter.post("/signup", async (req, res) => {
     if (existingPhoneUser) {
       return res.status(400).json({ 
         success: false,
-        message: "Phone number already exists. Please use a different phone number or login."
+        message: "This number is already verified in our system."
       });
     }
 

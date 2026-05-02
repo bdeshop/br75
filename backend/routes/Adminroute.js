@@ -14573,14 +14573,49 @@ function getWeekNumber(date) {
   return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
 }
 
-// POST route for weekly bonus - Automatically adds bonus to user balance
+// Helper function to get month name
+function getMonthName(month) {
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return monthNames[month - 1];
+}
+// Add this to your admin router (adminRoutes.js)
+
+// ==================== WEEKLY & MONTHLY BONUS WITH CUSTOM PERCENTAGE ====================
+
+// POST route for weekly bonus with custom percentage
 Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
   try {
-    const { processedBy, notes } = req.body;
-    // Find all users with weeklybetamount > 0
-    const users = await User.find({
-      weeklybetamount: { $gt: 0 }
-    });
+    const { 
+      processedBy, 
+      notes, 
+      bonusPercentage,  // New: Custom percentage from frontend
+      minBetAmount,     // New: Minimum bet amount filter
+      maxBonusAmount    // New: Maximum bonus limit
+    } = req.body;
+
+    // Validate bonus percentage
+    if (!bonusPercentage || bonusPercentage <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Bonus percentage is required and must be greater than 0"
+      });
+    }
+
+    const bonusRateDecimal = bonusPercentage / 100;
+
+    // Build query for eligible users
+    let query = { weeklybetamount: { $gt: 0 } };
+    
+    // Add min bet filter if provided
+    if (minBetAmount && minBetAmount > 0) {
+      query.weeklybetamount = { $gt: minBetAmount };
+    }
+
+    // Find eligible users
+    const users = await User.find(query);
     
     if (users.length === 0) {
       return res.status(400).json({
@@ -14601,17 +14636,36 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
       totalBonusAmount: 0
     };
     
-    // Process each user - ADD BONUS DIRECTLY TO BALANCE
+    // Process each user
     for (const user of users) {
       try {
-        // Calculate bonus amount (0.8% = 0.008 of weeklybetamount)
-        const bonusAmount = 0.008 * user.weeklybetamount;
+        // Calculate bonus amount with custom percentage
+        let bonusAmount = bonusRateDecimal * user.weeklybetamount;
+        
+        // Apply max bonus limit if provided
+        if (maxBonusAmount && bonusAmount > maxBonusAmount) {
+          bonusAmount = maxBonusAmount;
+        }
+        
+        // Round to 2 decimal places
+        bonusAmount = parseFloat(bonusAmount.toFixed(2));
+        
+        if (bonusAmount <= 0) {
+          results.failed.push({
+            userId: user._id,
+            username: user.username,
+            betAmount: user.weeklybetamount,
+            reason: "Calculated bonus amount is zero or negative"
+          });
+          continue;
+        }
+
         const balanceBefore = user.balance;
         
-        // ADD BONUS DIRECTLY TO USER BALANCE
+        // Add bonus to user balance
         user.balance += bonusAmount;
         
-        // Add to bonus history in user model
+        // Add to bonus history
         if (!user.bonusHistory) {
           user.bonusHistory = [];
         }
@@ -14620,12 +14674,16 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           type: 'weekly',
           amount: bonusAmount,
           totalBet: user.weeklybetamount,
-          bonusRate: '0.8%',
-          bonusPercentage: '0.8%',
+          bonusRate: `${bonusPercentage}%`,
+          bonusPercentage: `${bonusPercentage}%`,
           status: 'claimed',
           createdAt: new Date(),
           claimedAt: new Date(),
-          processedBy: processedBy || req.user?.username || 'admin'
+          processedBy: processedBy || req.user?.username || 'admin',
+          metadata: {
+            minBetAmount: minBetAmount || null,
+            maxBonusAmount: maxBonusAmount || null
+          }
         });
         
         // Add transaction history
@@ -14634,26 +14692,31 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           amount: bonusAmount,
           balanceBefore: balanceBefore,
           balanceAfter: user.balance,
-          description: `Weekly bonus (0.8% of ${user.weeklybetamount} bet amount)`,
+          description: `Weekly bonus (${bonusPercentage}% of ${user.weeklybetamount} bet amount)`,
           referenceId: `WEEKLY-BONUS-${Date.now()}-${user._id}`,
           createdAt: new Date()
         });
         
-        // Create bonus record for tracking
+        // Create tracking record
         const bettingBonus = new BettingBonus({
           userId: user._id,
           username: user.username,
           bonusType: 'weekly',
           amount: bonusAmount,
           betAmount: user.weeklybetamount,
-          status: 'unclaimed',
+          status: 'claimed',
           processedBy: processedBy || req.user?.username || 'admin',
           weekNumber: weekNumber,
           year: year,
           distributionDate: new Date(),
           claimedAt: new Date(),
           claimedBy: processedBy || req.user?.username || 'admin',
-          notes: notes || 'Weekly bonus distribution'
+          notes: notes || 'Weekly bonus distribution',
+          metadata: {
+            bonusPercentage: bonusPercentage,
+            minBetAmount: minBetAmount,
+            maxBonusAmount: maxBonusAmount
+          }
         });
         
         await bettingBonus.save();
@@ -14686,10 +14749,12 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: `Weekly bonus successfully added to ${results.successful.length} users`,
+      message: `Weekly bonus (${bonusPercentage}%) successfully added to ${results.successful.length} users`,
       data: {
         bonusType: 'weekly',
-        bonusRate: '0.8%',
+        bonusPercentage: `${bonusPercentage}%`,
+        minBetAmount: minBetAmount || null,
+        maxBonusAmount: maxBonusAmount || null,
         weekNumber: weekNumber,
         year: year,
         totalUsers: results.totalUsers,
@@ -14711,15 +14776,39 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
   }
 });
 
-// POST route for monthly bonus - Automatically adds bonus to user balance
+// POST route for monthly bonus with custom percentage
 Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
   try {
-    const { processedBy, notes, month, year } = req.body;
+    const { 
+      processedBy, 
+      notes, 
+      bonusPercentage,  // New: Custom percentage from frontend
+      minBetAmount,     // New: Minimum bet amount filter
+      maxBonusAmount,   // New: Maximum bonus limit
+      month, 
+      year 
+    } = req.body;
+
+    // Validate bonus percentage
+    if (!bonusPercentage || bonusPercentage <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Bonus percentage is required and must be greater than 0"
+      });
+    }
+
+    const bonusRateDecimal = bonusPercentage / 100;
+
+    // Build query for eligible users
+    let query = { monthlybetamount: { $gt: 0 } };
     
-    // Find all users with monthlybetamount > 0
-    const users = await User.find({
-      monthlybetamount: { $gt: 0 }
-    });
+    // Add min bet filter if provided
+    if (minBetAmount && minBetAmount > 0) {
+      query.monthlybetamount = { $gt: minBetAmount };
+    }
+
+    // Find eligible users
+    const users = await User.find(query);
     
     if (users.length === 0) {
       return res.status(400).json({
@@ -14740,17 +14829,36 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
       totalBonusAmount: 0
     };
     
-    // Process each user - ADD BONUS DIRECTLY TO BALANCE
+    // Process each user
     for (const user of users) {
       try {
-        // Calculate bonus amount (0.5% = 0.005 of monthlybetamount)
-        const bonusAmount = 0.005 * user.monthlybetamount;
+        // Calculate bonus amount with custom percentage
+        let bonusAmount = bonusRateDecimal * user.monthlybetamount;
+        
+        // Apply max bonus limit if provided
+        if (maxBonusAmount && bonusAmount > maxBonusAmount) {
+          bonusAmount = maxBonusAmount;
+        }
+        
+        // Round to 2 decimal places
+        bonusAmount = parseFloat(bonusAmount.toFixed(2));
+        
+        if (bonusAmount <= 0) {
+          results.failed.push({
+            userId: user._id,
+            username: user.username,
+            betAmount: user.monthlybetamount,
+            reason: "Calculated bonus amount is zero or negative"
+          });
+          continue;
+        }
+
         const balanceBefore = user.balance;
         
-        // ADD BONUS DIRECTLY TO USER BALANCE
+        // Add bonus to user balance
         user.balance += bonusAmount;
         
-        // Add to bonus history in user model
+        // Add to bonus history
         if (!user.bonusHistory) {
           user.bonusHistory = [];
         }
@@ -14759,12 +14867,16 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
           type: 'monthly',
           amount: bonusAmount,
           totalBet: user.monthlybetamount,
-          bonusRate: '0.5%',
-          bonusPercentage: '0.5%',
+          bonusRate: `${bonusPercentage}%`,
+          bonusPercentage: `${bonusPercentage}%`,
           status: 'claimed',
           createdAt: new Date(),
           claimedAt: new Date(),
-          processedBy: processedBy || req.user?.username || 'admin'
+          processedBy: processedBy || req.user?.username || 'admin',
+          metadata: {
+            minBetAmount: minBetAmount || null,
+            maxBonusAmount: maxBonusAmount || null
+          }
         });
         
         // Add transaction history
@@ -14773,26 +14885,31 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
           amount: bonusAmount,
           balanceBefore: balanceBefore,
           balanceAfter: user.balance,
-          description: `Monthly bonus (0.5% of ${user.monthlybetamount} bet amount)`,
+          description: `Monthly bonus (${bonusPercentage}% of ${user.monthlybetamount} bet amount)`,
           referenceId: `MONTHLY-BONUS-${Date.now()}-${user._id}`,
           createdAt: new Date()
         });
         
-        // Create bonus record for tracking
+        // Create tracking record
         const bettingBonus = new BettingBonus({
           userId: user._id,
           username: user.username,
           bonusType: 'monthly',
           amount: bonusAmount,
           betAmount: user.monthlybetamount,
-          status: 'unclaimed', // Already claimed since added directly
+          status: 'claimed',
           processedBy: processedBy || req.user?.username || 'admin',
           month: targetMonth,
           year: targetYear,
           distributionDate: new Date(),
           claimedAt: new Date(),
           claimedBy: processedBy || req.user?.username || 'admin',
-          notes: notes || 'Monthly bonus distribution'
+          notes: notes || 'Monthly bonus distribution',
+          metadata: {
+            bonusPercentage: bonusPercentage,
+            minBetAmount: minBetAmount,
+            maxBonusAmount: maxBonusAmount
+          }
         });
         
         await bettingBonus.save();
@@ -14825,10 +14942,12 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: `Monthly bonus successfully added to ${results.successful.length} users`,
+      message: `Monthly bonus (${bonusPercentage}%) successfully added to ${results.successful.length} users`,
       data: {
         bonusType: 'monthly',
-        bonusRate: '0.5%',
+        bonusPercentage: `${bonusPercentage}%`,
+        minBetAmount: minBetAmount || null,
+        maxBonusAmount: maxBonusAmount || null,
         month: targetMonth,
         monthName: getMonthName(targetMonth),
         year: targetYear,
@@ -14851,55 +14970,69 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
   }
 });
 
-// Helper function to get month name
-function getMonthName(month) {
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  return monthNames[month - 1];
-}
-
-// GET route to fetch eligible users (with weekly/monthly bet amounts)
+// GET route to fetch eligible users with custom parameters
 Adminrouter.get("/bonus/eligible-users", adminAuth, async (req, res) => {
   try {
-    const { bonusType = 'weekly' } = req.query;
+    const { 
+      bonusType = 'weekly',
+      minBetAmount,
+      maxBonusAmount,
+      bonusPercentage 
+    } = req.query;
     
     // Determine which field to check based on bonus type
     const betField = bonusType === 'weekly' ? 'weeklybetamount' : 'monthlybetamount';
-    const bonusRate = bonusType === 'weekly' ? 0.008 : 0.005;
-    const bonusPercentage = bonusType === 'weekly' ? '0.8%' : '0.5%';
+    
+    // Build query
+    let query = { [betField]: { $gt: 0 } };
+    
+    // Add min bet filter if provided
+    if (minBetAmount && parseFloat(minBetAmount) > 0) {
+      query[betField] = { $gt: parseFloat(minBetAmount) };
+    }
     
     // Find users with bet amount > 0
-    const users = await User.find({
-      [betField]: { $gt: 0 }
-    }).select(`_id username email player_id balance ${betField}`);
+    const users = await User.find(query).select(`_id username email player_id balance ${betField}`);
+    
+    // Parse bonus percentage
+    const bonusPercent = bonusPercentage ? parseFloat(bonusPercentage) : (bonusType === 'weekly' ? 0.8 : 0.5);
+    const bonusRateDecimal = bonusPercent / 100;
     
     // Calculate potential bonus for each user
-    const eligibleUsers = users.map(user => ({
-      userId: user._id,
-      username: user.username,
-      email: user.email,
-      player_id: user.player_id,
-      currentBalance: user.balance,
-      betAmount: user[betField],
-      potentialBonus: parseFloat((user[betField] * bonusRate).toFixed(2)),
-      newBalance: parseFloat((user.balance + (user[betField] * bonusRate)).toFixed(2))
-    }));
+    const eligibleUsers = users.map(user => {
+      let potentialBonus = bonusRateDecimal * user[betField];
+      
+      // Apply max bonus limit if provided
+      if (maxBonusAmount && parseFloat(maxBonusAmount) > 0 && potentialBonus > parseFloat(maxBonusAmount)) {
+        potentialBonus = parseFloat(maxBonusAmount);
+      }
+      
+      potentialBonus = parseFloat(potentialBonus.toFixed(2));
+      
+      return {
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        player_id: user.player_id,
+        currentBalance: user.balance,
+        betAmount: user[betField],
+        potentialBonus: potentialBonus,
+        newBalance: parseFloat((user.balance + potentialBonus).toFixed(2))
+      };
+    });
     
     // Calculate totals
     const totals = {
       totalUsers: eligibleUsers.length,
       totalBetAmount: eligibleUsers.reduce((sum, user) => sum + user.betAmount, 0),
       totalPotentialBonus: eligibleUsers.reduce((sum, user) => sum + user.potentialBonus, 0),
-      bonusRate: bonusPercentage
+      bonusPercentage: `${bonusPercent}%`
     };
     
     res.status(200).json({
       success: true,
       bonusType: bonusType,
-      bonusRate: bonusRate,
-      bonusPercentage: bonusPercentage,
+      bonusPercentage: bonusPercent,
       totals: totals,
       users: eligibleUsers
     });
@@ -14913,7 +15046,6 @@ Adminrouter.get("/bonus/eligible-users", adminAuth, async (req, res) => {
     });
   }
 });
-
 // GET route to fetch bonus history (for admin view)
 Adminrouter.get("/bonus/history", adminAuth, async (req, res) => {
   try {

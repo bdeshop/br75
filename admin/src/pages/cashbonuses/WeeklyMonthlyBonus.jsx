@@ -3,7 +3,7 @@ import {
   FaCalendarWeek, FaPercentage, FaGift, FaSpinner, 
   FaInfoCircle, FaUsers, FaMoneyBillWave, FaClock, 
   FaSearch, FaCheckCircle, FaTimesCircle, FaChartLine,
-  FaAward, FaHistory, FaWallet
+  FaAward, FaHistory, FaWallet, FaSlidersH
 } from 'react-icons/fa';
 import { FiRefreshCw } from 'react-icons/fi';
 import Sidebar from '../../components/Sidebar';
@@ -24,30 +24,30 @@ const WeeklyMonthlyBonus = () => {
   const [bonusHistory, setBonusHistory] = useState([]);
   const [summaryStats, setSummaryStats] = useState(null);
   const [distributionResult, setDistributionResult] = useState(null);
+  
+  // Custom bonus settings
+  const [bonusSettings, setBonusSettings] = useState({
+    bonusPercentage: 0.8,
+    minBetAmount: 0,
+    maxBonusAmount: 0,
+    useCustomSettings: false
+  });
 
   const navigate = useNavigate();
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Get admin info from localStorage - FIXED
+  // Get admin info from localStorage
   const getAdminInfo = () => {
     try {
-      // Try multiple possible storage keys
       const adminData = localStorage.getItem('adminData');
-      
       if (adminData) {
         const admin = JSON.parse(adminData);
-        return {
-          id: admin.id,
-          username: admin.name
-        };
+        return { id: admin.id, username: admin.name };
       }
-      
-      // Try to get from token if available
       const token = localStorage.getItem('admintoken') || localStorage.getItem('token');
       if (token) {
-        // Decode token to get admin info
         try {
           const base64Url = token.split('.')[1];
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -60,29 +60,33 @@ const WeeklyMonthlyBonus = () => {
           console.error('Error decoding token:', e);
         }
       }
-      
-      // Default fallback
-      return {
-        id: 'admin',
-        username: 'admin'
-      };
+      return { id: 'admin', username: 'admin' };
     } catch (error) {
       console.error('Error getting admin info:', error);
-      return {
-        id: 'admin',
-        username: 'admin'
-      };
+      return { id: 'admin', username: 'admin' };
     }
   };
 
-  // Fetch eligible users based on active tab
+  // Fetch eligible users based on active tab and custom settings
   const fetchEligibleUsers = async () => {
     setLoadingUsers(true);
     try {
       const token = localStorage.getItem('admintoken') || localStorage.getItem('token');
+      const params = { 
+        bonusType: activeTab,
+        bonusPercentage: bonusSettings.useCustomSettings ? bonusSettings.bonusPercentage : (activeTab === 'weekly' ? 0.8 : 0.5)
+      };
+      
+      if (bonusSettings.useCustomSettings && bonusSettings.minBetAmount > 0) {
+        params.minBetAmount = bonusSettings.minBetAmount;
+      }
+      if (bonusSettings.useCustomSettings && bonusSettings.maxBonusAmount > 0) {
+        params.maxBonusAmount = bonusSettings.maxBonusAmount;
+      }
+      
       const response = await axios.get(`${base_url}/api/admin/bonus/eligible-users`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { bonusType: activeTab }
+        params: params
       });
       
       if (response.data.success) {
@@ -120,12 +124,11 @@ const WeeklyMonthlyBonus = () => {
   useEffect(() => {
     fetchEligibleUsers();
     fetchBonusHistory();
-  }, [activeTab]);
+  }, [activeTab, bonusSettings.useCustomSettings]);
 
   // Filter users based on search term
   const getFilteredUsers = () => {
     if (!searchTerm.trim()) return eligibleUsers;
-    
     const search = searchTerm.toLowerCase();
     return eligibleUsers.filter(user => 
       user.username?.toLowerCase().includes(search) ||
@@ -134,7 +137,7 @@ const WeeklyMonthlyBonus = () => {
     );
   };
 
-  // Distribute Weekly Bonus - FIXED
+  // Distribute Weekly Bonus with custom settings
   const handleWeeklyBonus = async () => {
     setIsSubmitting(true);
     setDistributionResult(null);
@@ -143,51 +146,44 @@ const WeeklyMonthlyBonus = () => {
       const token = localStorage.getItem('admintoken') || localStorage.getItem('token');
       const adminInfo = getAdminInfo();
       
-      console.log('Admin Info being sent:', adminInfo); // Debug log
+      const payload = {
+        processedBy: adminInfo.username,
+        notes: 'Weekly bonus distribution',
+        bonusPercentage: bonusSettings.useCustomSettings ? bonusSettings.bonusPercentage : 0.8
+      };
       
-      const response = await axios.post(`${base_url}/api/admin/bonus/weekly`, 
-        {
-          processedBy: adminInfo.username,
-          notes: 'Weekly bonus distribution'
-        },
-        { 
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          } 
-        }
-      );
+      if (bonusSettings.useCustomSettings) {
+        if (bonusSettings.minBetAmount > 0) payload.minBetAmount = bonusSettings.minBetAmount;
+        if (bonusSettings.maxBonusAmount > 0) payload.maxBonusAmount = bonusSettings.maxBonusAmount;
+      }
+      
+      const response = await axios.post(`${base_url}/api/admin/bonus/weekly`, payload, { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      });
       
       if (response.data.success) {
         toast.success(response.data.message);
-        setDistributionResult({
-          success: true,
-          data: response.data.data
-        });
-        // Refresh data
+        setDistributionResult({ success: true, data: response.data.data });
         fetchEligibleUsers();
         fetchBonusHistory();
       } else {
         toast.error(response.data.message);
-        setDistributionResult({
-          success: false,
-          message: response.data.message
-        });
+        setDistributionResult({ success: false, message: response.data.message });
       }
     } catch (error) {
       console.error('Error distributing weekly bonus:', error);
       const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to distribute weekly bonus';
       toast.error(errorMsg);
-      setDistributionResult({
-        success: false,
-        message: errorMsg
-      });
+      setDistributionResult({ success: false, message: errorMsg });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Distribute Monthly Bonus - FIXED
+  // Distribute Monthly Bonus with custom settings
   const handleMonthlyBonus = async () => {
     setIsSubmitting(true);
     setDistributionResult(null);
@@ -196,53 +192,53 @@ const WeeklyMonthlyBonus = () => {
       const token = localStorage.getItem('admintoken') || localStorage.getItem('token');
       const adminInfo = getAdminInfo();
       
-      console.log('Admin Info being sent:', adminInfo); // Debug log
+      const payload = {
+        processedBy: adminInfo.username,
+        notes: 'Monthly bonus distribution',
+        bonusPercentage: bonusSettings.useCustomSettings ? bonusSettings.bonusPercentage : 0.5
+      };
       
-      const response = await axios.post(`${base_url}/api/admin/bonus/monthly`, 
-        {
-          processedBy: adminInfo.username,
-          notes: 'Monthly bonus distribution'
-        },
-        { 
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          } 
-        }
-      );
+      if (bonusSettings.useCustomSettings) {
+        if (bonusSettings.minBetAmount > 0) payload.minBetAmount = bonusSettings.minBetAmount;
+        if (bonusSettings.maxBonusAmount > 0) payload.maxBonusAmount = bonusSettings.maxBonusAmount;
+      }
+      
+      const response = await axios.post(`${base_url}/api/admin/bonus/monthly`, payload, { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      });
       
       if (response.data.success) {
         toast.success(response.data.message);
-        setDistributionResult({
-          success: true,
-          data: response.data.data
-        });
-        // Refresh data
+        setDistributionResult({ success: true, data: response.data.data });
         fetchEligibleUsers();
         fetchBonusHistory();
       } else {
         toast.error(response.data.message);
-        setDistributionResult({
-          success: false,
-          message: response.data.message
-        });
+        setDistributionResult({ success: false, message: response.data.message });
       }
     } catch (error) {
       console.error('Error distributing monthly bonus:', error);
       const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to distribute monthly bonus';
       toast.error(errorMsg);
-      setDistributionResult({
-        success: false,
-        message: errorMsg
-      });
+      setDistributionResult({ success: false, message: errorMsg });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const filteredUsers = getFilteredUsers();
-  const bonusRate = activeTab === 'weekly' ? '0.8%' : '0.5%';
+  const currentBonusPercentage = bonusSettings.useCustomSettings 
+    ? bonusSettings.bonusPercentage 
+    : (activeTab === 'weekly' ? 0.8 : 0.5);
   const totalPotentialBonus = filteredUsers.reduce((sum, user) => sum + (user.potentialBonus || 0), 0);
+
+  const getMonthName = (month) => {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return monthNames[month - 1];
+  };
 
   return (
     <section className="min-h-screen bg-[#0F111A] text-gray-200 font-poppins">
@@ -257,7 +253,7 @@ const WeeklyMonthlyBonus = () => {
             <div>
               <h1 className="text-2xl font-semibold text-white tracking-tighter uppercase">Weekly & Monthly Bonus</h1>
               <p className="text-xs font-bold text-gray-500 mt-1 flex items-center gap-2">
-                <FaAward className="text-amber-500" /> Automatically distribute bonuses based on user betting activity
+                <FaAward className="text-amber-500" /> Configure and distribute bonuses based on betting activity
               </p>
             </div>
             <button
@@ -278,7 +274,7 @@ const WeeklyMonthlyBonus = () => {
                   : 'text-gray-500 hover:text-gray-300'
               }`}
             >
-              <FaCalendarWeek /> Weekly Bonus (0.8%)
+              <FaCalendarWeek /> Weekly Bonus
             </button>
             <button
               onClick={() => { setActiveTab('monthly'); setDistributionResult(null); }}
@@ -288,8 +284,45 @@ const WeeklyMonthlyBonus = () => {
                   : 'text-gray-500 hover:text-gray-300'
               }`}
             >
-              <MdCalendarMonth /> Monthly Bonus (0.5%)
+              <MdCalendarMonth /> Monthly Bonus
             </button>
+          </div>
+
+          {/* Custom Bonus Settings Card */}
+          <div className="bg-gradient-to-r from-purple-900/20 to-indigo-900/20 border border-purple-500/30 rounded-lg p-5 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FaSlidersH className="text-purple-400" />
+                <p className="text-sm font-bold uppercase tracking-wider text-purple-400">Custom Bonus Settings</p>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={bonusSettings.useCustomSettings}
+                  onChange={(e) => setBonusSettings({ ...bonusSettings, useCustomSettings: e.target.checked })}
+                  className="w-4 h-4 accent-purple-500"
+                />
+                <span className="text-xs text-gray-300">Use Custom Settings</span>
+              </label>
+            </div>
+            
+            {bonusSettings.useCustomSettings && (
+              <div className="grid grid-cols-1 gap-4 mt-3">
+                <div>
+                  <label className="text-[11px] text-gray-500 uppercase block mb-1">Bonus Percentage (%)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="100"
+                    value={bonusSettings.bonusPercentage}
+                    onChange={(e) => setBonusSettings({ ...bonusSettings, bonusPercentage: parseFloat(e.target.value) })}
+                    className="w-full bg-[#0F111A] border border-gray-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                  />
+                  <p className="text-[8px] text-gray-500 mt-1">Percentage of bet amount to give as bonus</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Summary Stats Cards */}
@@ -305,7 +338,7 @@ const WeeklyMonthlyBonus = () => {
               </div>
               <div className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/10 border border-emerald-500/20 rounded-lg p-4">
                 <p className="text-[9px] text-gray-500 uppercase font-black">Bonus Rate</p>
-                <p className="text-2xl font-bold text-emerald-400">{bonusRate}</p>
+                <p className="text-2xl font-bold text-emerald-400">{currentBonusPercentage}%</p>
               </div>
               <div className="bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-500/20 rounded-lg p-4">
                 <p className="text-[9px] text-gray-500 uppercase font-black">Total Bonus to Distribute</p>
@@ -337,21 +370,31 @@ const WeeklyMonthlyBonus = () => {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-white">
-                          {activeTab === 'weekly' ? 'Weekly Bonus Rate: 0.8%' : 'Monthly Bonus Rate: 0.5%'}
+                          {activeTab === 'weekly' 
+                            ? `Weekly Bonus Rate: ${currentBonusPercentage}%` 
+                            : `Monthly Bonus Rate: ${currentBonusPercentage}%`}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Users receive {bonusRate} of their {activeTab} bet amount directly to their balance
+                          Users receive {currentBonusPercentage}% of their {activeTab} bet amount directly to their balance
                         </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-center text-xs">
                       <div className="p-2 bg-[#0F111A] rounded">
                         <p className="text-gray-500">Min Bet Amount</p>
-                        <p className="text-amber-400 font-bold">Any amount &gt; 0</p>
+                        <p className="text-amber-400 font-bold">
+                          {bonusSettings.useCustomSettings && bonusSettings.minBetAmount > 0 
+                            ? `৳${bonusSettings.minBetAmount.toLocaleString()}` 
+                            : 'Any amount > 0'}
+                        </p>
                       </div>
                       <div className="p-2 bg-[#0F111A] rounded">
                         <p className="text-gray-500">Max Bonus</p>
-                        <p className="text-amber-400 font-bold">Unlimited</p>
+                        <p className="text-amber-400 font-bold">
+                          {bonusSettings.useCustomSettings && bonusSettings.maxBonusAmount > 0 
+                            ? `৳${bonusSettings.maxBonusAmount.toLocaleString()}` 
+                            : 'Unlimited'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -412,16 +455,20 @@ const WeeklyMonthlyBonus = () => {
                         <p className="text-[9px] text-gray-500 uppercase">Total Bonus Distributed</p>
                         <p className="text-xl font-bold text-amber-400">৳{distributionResult.data.totalBonusAmount?.toLocaleString()}</p>
                       </div>
-                      {distributionResult.data.weekNumber && (
+                      <div className="p-3 bg-purple-500/10 rounded">
+                        <p className="text-[9px] text-gray-500 uppercase">Bonus Rate Used</p>
+                        <p className="text-sm font-bold text-purple-400">{distributionResult.data.bonusPercentage}</p>
+                      </div>
+                      {distributionResult.data.minBetAmount && (
                         <div className="p-3 bg-[#0F111A] rounded">
-                          <p className="text-[9px] text-gray-500 uppercase">Distribution Period</p>
-                          <p className="text-xs text-gray-300">Week {distributionResult.data.weekNumber}, {distributionResult.data.year}</p>
+                          <p className="text-[9px] text-gray-500 uppercase">Min Bet Applied</p>
+                          <p className="text-xs text-gray-300">৳{distributionResult.data.minBetAmount.toLocaleString()}</p>
                         </div>
                       )}
-                      {distributionResult.data.monthName && (
+                      {distributionResult.data.maxBonusAmount && (
                         <div className="p-3 bg-[#0F111A] rounded">
-                          <p className="text-[9px] text-gray-500 uppercase">Distribution Period</p>
-                          <p className="text-xs text-gray-300">{distributionResult.data.monthName} {distributionResult.data.year}</p>
+                          <p className="text-[9px] text-gray-500 uppercase">Max Bonus Limit</p>
+                          <p className="text-xs text-gray-300">৳{distributionResult.data.maxBonusAmount.toLocaleString()}</p>
                         </div>
                       )}
                     </div>
@@ -443,7 +490,7 @@ const WeeklyMonthlyBonus = () => {
                   <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
                     <div className="w-1 h-4 bg-amber-500"></div> 
                     <FaUsers className="text-amber-500" /> 
-                    Eligible Users ({bonusRate} Bonus)
+                    Eligible Users ({currentBonusPercentage}% Bonus)
                   </p>
                 </div>
                 
@@ -504,7 +551,6 @@ const WeeklyMonthlyBonus = () => {
                     )}
                   </div>
                 )}
-                
               </div>
             </div>
           </div>
@@ -540,8 +586,8 @@ const WeeklyMonthlyBonus = () => {
                         <th className="text-left py-3 px-2">Bonus Type</th>
                         <th className="text-left py-3 px-2">User</th>
                         <th className="text-left py-3 px-2">Bet Amount</th>
+                        <th className="text-left py-3 px-2">Bonus Rate</th>
                         <th className="text-left py-3 px-2">Bonus Amount</th>
-                        <th className="text-left py-3 px-2">Rate</th>
                         <th className="text-left py-3 px-2">Period</th>
                       </tr>
                     </thead>
@@ -560,10 +606,10 @@ const WeeklyMonthlyBonus = () => {
                           </td>
                           <td className="py-3 px-2 text-xs text-white">{bonus.username}</td>
                           <td className="py-3 px-2 text-xs text-amber-400">৳{bonus.betAmount?.toLocaleString()}</td>
-                          <td className="py-3 px-2 text-xs text-emerald-400">+৳{bonus.amount?.toLocaleString()}</td>
-                          <td className="py-3 px-2 text-[10px] text-gray-400">
-                            {bonus.bonusType === 'weekly' ? '0.8%' : '0.5%'}
+                          <td className="py-3 px-2 text-xs text-emerald-400">
+                            {bonus.metadata?.bonusPercentage || (bonus.bonusType === 'weekly' ? '0.8' : '0.5')}%
                           </td>
+                          <td className="py-3 px-2 text-xs text-emerald-400">+৳{bonus.amount?.toLocaleString()}</td>
                           <td className="py-3 px-2 text-[10px] text-gray-400">
                             {bonus.bonusType === 'weekly' 
                               ? `Week ${bonus.weekNumber}, ${bonus.year}`
@@ -582,12 +628,6 @@ const WeeklyMonthlyBonus = () => {
       </div>
     </section>
   );
-};
-
-// Helper function to get month name
-const getMonthName = (month) => {
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return monthNames[month - 1];
 };
 
 export default WeeklyMonthlyBonus;
