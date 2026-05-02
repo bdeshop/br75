@@ -11,10 +11,8 @@ import {
   FiLock,
   FiKey,
   FiSave,
-  FiInfo,
   FiShield,
   FiArrowLeft,
-  FiAlertTriangle,
   FiUserPlus,
   FiRefreshCw
 } from "react-icons/fi";
@@ -26,7 +24,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { FiAlertCircle } from "react-icons/fi";
 
 // Mode Selection Card Component
-const ModeCard = ({ icon: Icon, title, description, buttonText, onClick, isActive, isExisting }) => (
+const ModeCard = ({ icon: Icon, title, description, buttonText, onClick, isActive, isExisting, t }) => (
   <div 
     className={`relative overflow-hidden rounded-xl transition-all duration-300 cursor-pointer
       ${isActive 
@@ -45,7 +43,7 @@ const ModeCard = ({ icon: Icon, title, description, buttonText, onClick, isActiv
       {isExisting && (
         <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 rounded-full mb-2">
           <FiCheck className="w-2.5 h-2.5 text-green-400" />
-          <span className="text-[9px] sm:text-xs text-green-400">Password Set</span>
+          <span className="text-[9px] sm:text-xs text-green-400">{t.passwordSet || "Password Set"}</span>
         </div>
       )}
       <button
@@ -62,16 +60,16 @@ const ModeCard = ({ icon: Icon, title, description, buttonText, onClick, isActiv
 );
 
 // No Email Screen
-const NoEmailScreen = ({ onNavigate }) => (
+const NoEmailScreen = ({ onNavigate, t }) => (
   <div className="bg-[#13131F]/80 backdrop-blur-sm border border-gray-800/50 rounded-xl overflow-hidden">
     <div className="relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-[#F9BC20]/10 to-transparent"></div>
       <div className="relative px-4 py-3 sm:px-5 sm:py-4">
         <h2 className="text-base sm:text-lg font-semibold text-white">
-          Transaction Password
+          {t.transactionPassword || "Transaction Password"}
         </h2>
         <p className="text-xs text-gray-400 mt-0.5">
-          Secure your account with transaction password
+          {t.secureYourAccount || "Secure your account with transaction password"}
         </p>
       </div>
     </div>
@@ -82,11 +80,11 @@ const NoEmailScreen = ({ onNavigate }) => (
       </div>
       
       <h3 className="text-base font-semibold text-white mb-1.5">
-        Email Address Required
+        {t.emailAddressRequired || "Email Address Required"}
       </h3>
       
       <p className="text-xs text-gray-400 mb-5 max-w-xs mx-auto">
-        You need to add an email address to your account before setting up a transaction password. This is required for security verification.
+        {t.emailRequiredDesc || "You need to add an email address to your account before setting up a transaction password. This is required for security verification."}
       </p>
       
       <button
@@ -94,7 +92,7 @@ const NoEmailScreen = ({ onNavigate }) => (
         className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F9BC20] to-[#F9BC20]/80 text-gray-900 px-4 py-2 rounded-lg font-semibold hover:shadow-lg hover:shadow-[#F9BC20]/25 transition-all duration-300 text-xs sm:text-sm"
       >
         <FiUserPlus size={14} />
-        Add Email Now
+        {t.addEmailNow || "Add Email Now"}
       </button>
     </div>
   </div>
@@ -188,22 +186,22 @@ const TransactionPassword = () => {
     e.preventDefault();
     
     if (!setNewPassword || !setConfirmPassword) {
-      toast.error("Please enter new transaction password");
+      toast.error(t.pleaseEnterNewPassword || "Please enter new transaction password");
       return;
     }
 
     if (setNewPassword !== setConfirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t.passwordsDoNotMatch || "Passwords do not match");
       return;
     }
 
     if (setNewPassword.length < 4) {
-      toast.error("Transaction password must be at least 4 characters");
+      toast.error(t.passwordMinLength4 || "Transaction password must be at least 4 characters");
       return;
     }
 
     if (setNewPassword.length > 20) {
-      toast.error("Transaction password cannot exceed 20 characters");
+      toast.error(t.passwordMaxLength20 || "Transaction password cannot exceed 20 characters");
       return;
     }
 
@@ -215,18 +213,18 @@ const TransactionPassword = () => {
       });
       
       if (response.data.success) {
-        toast.success("Transaction password set successfully!");
+        toast.success(t.transactionPasswordSetSuccess || "Transaction password set successfully!");
         setIsTransactionPasswordSet(true);
         
         setTimeout(() => {
           navigate('/profile');
         }, 2000);
       } else {
-        toast.error(response.data.message || "Failed to set password");
+        toast.error(response.data.message || (t.failedToSetPassword || "Failed to set password"));
       }
     } catch (error) {
       console.error('Error setting password:', error);
-      const errorMessage = error.response?.data?.message || "Failed to set password";
+      const errorMessage = error.response?.data?.message || (t.failedToSetPassword || "Failed to set password");
       toast.error(errorMessage);
     } finally {
       setIsSetLoading(false);
@@ -237,27 +235,27 @@ const TransactionPassword = () => {
     e.preventDefault();
     
     if (!updateCurrentPassword) {
-      toast.error("Current transaction password is required");
+      toast.error(t.currentPasswordRequired || "Current transaction password is required");
       return;
     }
 
     if (!updateNewPassword || !updateConfirmPassword) {
-      toast.error("Please enter new transaction password");
+      toast.error(t.pleaseEnterNewPassword || "Please enter new transaction password");
       return;
     }
 
     if (updateNewPassword !== updateConfirmPassword) {
-      toast.error("New passwords do not match");
+      toast.error(t.passwordsDoNotMatch || "New passwords do not match");
       return;
     }
 
     if (updateNewPassword.length < 4) {
-      toast.error("Transaction password must be at least 4 characters");
+      toast.error(t.passwordMinLength4 || "Transaction password must be at least 4 characters");
       return;
     }
 
     if (updateNewPassword.length > 20) {
-      toast.error("Transaction password cannot exceed 20 characters");
+      toast.error(t.passwordMaxLength20 || "Transaction password cannot exceed 20 characters");
       return;
     }
 
@@ -270,17 +268,17 @@ const TransactionPassword = () => {
       });
       
       if (response.data.success) {
-        toast.success("Transaction password updated successfully!");
+        toast.success(t.transactionPasswordUpdatedSuccess || "Transaction password updated successfully!");
         
         setTimeout(() => {
           navigate('/profile');
         }, 2000);
       } else {
-        toast.error(response.data.message || "Failed to update password");
+        toast.error(response.data.message || (t.failedToUpdatePassword || "Failed to update password"));
       }
     } catch (error) {
       console.error('Error updating password:', error);
-      const errorMessage = error.response?.data?.message || "Failed to update password";
+      const errorMessage = error.response?.data?.message || (t.failedToUpdatePassword || "Failed to update password");
       toast.error(errorMessage);
     } finally {
       setIsUpdateLoading(false);
@@ -297,15 +295,15 @@ const TransactionPassword = () => {
             className="text-gray-400 hover:text-white flex items-center gap-1.5 mb-2 text-xs transition-colors group"
           >
             <FiArrowLeft size={11} className="group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to Profile</span>
+            <span>{t.backToProfile || "Back to Profile"}</span>
           </button>
           <h2 className="text-base sm:text-lg font-bold text-white">
-            Transaction Password
+            {t.transactionPassword || "Transaction Password"}
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
             {isTransactionPasswordSet 
-              ? "Update your transaction password for enhanced security"
-              : "Set up transaction password to secure your withdrawals"}
+              ? (t.updateTransactionPasswordDesc || "Update your transaction password for enhanced security")
+              : (t.setTransactionPasswordDesc || "Set up transaction password to secure your withdrawals")}
           </p>
         </div>
       </div>
@@ -314,23 +312,25 @@ const TransactionPassword = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           <ModeCard
             icon={FiKey}
-            title="Set Transaction Password"
-            description="Create a new transaction password for withdrawals and sensitive operations."
-            buttonText={isTransactionPasswordSet ? "Reset Password" : "Set New Password"}
+            title={t.setTransactionPassword || "Set Transaction Password"}
+            description={t.setTransactionPasswordDescCard || "Create a new transaction password for withdrawals and sensitive operations."}
+            buttonText={isTransactionPasswordSet ? (t.resetPassword || "Reset Password") : (t.setNewPasswordBtn || "Set New Password")}
             onClick={handleStartSet}
             isActive={mode === 'set'}
             isExisting={isTransactionPasswordSet}
+            t={t}
           />
           
           {isTransactionPasswordSet && (
             <ModeCard
               icon={FiRefreshCw}
-              title="Update Password"
-              description="Change your existing transaction password to a new one."
-              buttonText="Update Password"
+              title={t.updatePassword || "Update Password"}
+              description={t.updatePasswordDesc || "Change your existing transaction password to a new one."}
+              buttonText={t.updatePasswordBtn || "Update Password"}
               onClick={handleStartUpdate}
               isActive={mode === 'update'}
               isExisting={false}
+              t={t}
             />
           )}
         </div>
@@ -338,13 +338,13 @@ const TransactionPassword = () => {
         <div className="mt-4 p-3 bg-[#1E1E2E]/50 rounded-lg border border-gray-800/50">
           <div className="flex items-center gap-1.5 text-[#F9BC20] mb-1.5">
             <FiShield size={12} />
-            <span className="text-xs font-medium">Security Guidelines</span>
+            <span className="text-xs font-medium">{t.securityGuidelines || "Security Guidelines"}</span>
           </div>
           <ul className="text-[10px] text-gray-400 space-y-1 list-disc list-inside">
-            <li>Used for withdrawals and sensitive account operations</li>
-            <li>Must be 4-20 characters (numbers or letters only)</li>
-            <li>Cannot reuse recent passwords for security</li>
-            <li>Keep it confidential and never share with anyone</li>
+            <li>{t.securityGuideline1 || "Used for withdrawals and sensitive account operations"}</li>
+            <li>{t.securityGuideline2 || "Must be 4-20 characters (numbers or letters only)"}</li>
+            <li>{t.securityGuideline3 || "Cannot reuse recent passwords for security"}</li>
+            <li>{t.securityGuideline4 || "Keep it confidential and never share with anyone"}</li>
           </ul>
         </div>
       </div>
@@ -361,13 +361,13 @@ const TransactionPassword = () => {
             className="text-gray-400 hover:text-white flex items-center gap-1.5 mb-2 text-xs transition-colors group"
           >
             <FiArrowLeft size={11} className="group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back</span>
+            <span>{t.back || "Back"}</span>
           </button>
           <h2 className="text-base sm:text-lg font-bold text-white">
-            Set Transaction Password
+            {t.setTransactionPassword || "Set Transaction Password"}
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Create a secure password for your transactions
+            {t.createSecurePasswordDesc || "Create a secure password for your transactions"}
           </p>
         </div>
       </div>
@@ -376,7 +376,7 @@ const TransactionPassword = () => {
         <form onSubmit={handleSetPassword} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-300 mb-1.5">
-              New Transaction Password
+              {t.newTransactionPassword || "New Transaction Password"}
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -388,7 +388,7 @@ const TransactionPassword = () => {
                 onChange={(e) => setSetNewPassword(e.target.value)}
                 className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
                   focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
-                placeholder="Enter new transaction password"
+                placeholder={t.enterNewTransactionPassword || "Enter new transaction password"}
                 required
                 minLength={4}
                 maxLength={20}
@@ -403,13 +403,13 @@ const TransactionPassword = () => {
               </button>
             </div>
             <p className="text-[10px] text-gray-500 mt-1">
-              4-20 characters, numbers or letters only
+              {t.passwordHint || "4-20 characters, numbers or letters only"}
             </p>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-gray-300 mb-1.5">
-              Confirm Transaction Password
+              {t.confirmTransactionPassword || "Confirm Transaction Password"}
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -421,7 +421,7 @@ const TransactionPassword = () => {
                 onChange={(e) => setSetConfirmPassword(e.target.value)}
                 className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
                   focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
-                placeholder="Confirm your password"
+                placeholder={t.confirmYourPassword || "Confirm your password"}
                 required
                 disabled={isSetLoading}
               />
@@ -440,12 +440,12 @@ const TransactionPassword = () => {
               {setNewPassword === setConfirmPassword ? (
                 <>
                   <FiCheck size={12} />
-                  <span>Passwords match</span>
+                  <span>{t.passwordsMatch || "Passwords match"}</span>
                 </>
               ) : (
                 <>
                   <FiAlertCircle size={12} />
-                  <span>Passwords do not match</span>
+                  <span>{t.passwordsDoNotMatch || "Passwords do not match"}</span>
                 </>
               )}
             </div>
@@ -458,7 +458,7 @@ const TransactionPassword = () => {
               disabled={isSetLoading}
               className="flex-1 bg-gray-700/50 text-white py-2 rounded-lg hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm font-medium"
             >
-              Cancel
+              {t.cancel || "Cancel"}
             </button>
             <button
               type="submit"
@@ -473,12 +473,12 @@ const TransactionPassword = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  <span>Setting...</span>
+                  <span>{t.setting || "Setting..."}</span>
                 </>
               ) : (
                 <>
                   <FiSave size={13} />
-                  <span>Set Password</span>
+                  <span>{t.setPassword || "Set Password"}</span>
                 </>
               )}
             </button>
@@ -498,13 +498,13 @@ const TransactionPassword = () => {
             className="text-gray-400 hover:text-white flex items-center gap-1.5 mb-2 text-xs transition-colors group"
           >
             <FiArrowLeft size={11} className="group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back</span>
+            <span>{t.back || "Back"}</span>
           </button>
           <h2 className="text-base sm:text-lg font-bold text-white">
-            Update Transaction Password
+            {t.updateTransactionPassword || "Update Transaction Password"}
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Enter your current password and create a new one
+            {t.updatePasswordDescForm || "Enter your current password and create a new one"}
           </p>
         </div>
       </div>
@@ -513,7 +513,7 @@ const TransactionPassword = () => {
         <form onSubmit={handleUpdatePassword} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-300 mb-1.5">
-              Current Transaction Password
+              {t.currentTransactionPassword || "Current Transaction Password"}
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -525,7 +525,7 @@ const TransactionPassword = () => {
                 onChange={(e) => setUpdateCurrentPassword(e.target.value)}
                 className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
                   focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
-                placeholder="Enter current password"
+                placeholder={t.enterCurrentPassword || "Enter current password"}
                 required
                 disabled={isUpdateLoading}
               />
@@ -541,7 +541,7 @@ const TransactionPassword = () => {
 
           <div>
             <label className="block text-xs font-medium text-gray-300 mb-1.5">
-              New Transaction Password
+              {t.newTransactionPassword || "New Transaction Password"}
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -553,7 +553,7 @@ const TransactionPassword = () => {
                 onChange={(e) => setUpdateNewPassword(e.target.value)}
                 className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
                   focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
-                placeholder="Enter new transaction password"
+                placeholder={t.enterNewTransactionPassword || "Enter new transaction password"}
                 required
                 minLength={4}
                 maxLength={20}
@@ -568,13 +568,13 @@ const TransactionPassword = () => {
               </button>
             </div>
             <p className="text-[10px] text-gray-500 mt-1">
-              4-20 characters, numbers or letters only
+              {t.passwordHint || "4-20 characters, numbers or letters only"}
             </p>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-gray-300 mb-1.5">
-              Confirm Transaction Password
+              {t.confirmTransactionPassword || "Confirm Transaction Password"}
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -586,7 +586,7 @@ const TransactionPassword = () => {
                 onChange={(e) => setUpdateConfirmPassword(e.target.value)}
                 className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-10 py-2 text-white placeholder-gray-500 
                   focus:outline-none focus:border-[#F9BC20] focus:ring-1 focus:ring-[#F9BC20]/30 transition-all duration-200 text-xs sm:text-sm"
-                placeholder="Confirm your new password"
+                placeholder={t.confirmYourPassword || "Confirm your password"}
                 required
                 disabled={isUpdateLoading}
               />
@@ -605,12 +605,12 @@ const TransactionPassword = () => {
               {updateNewPassword === updateConfirmPassword ? (
                 <>
                   <FiCheck size={12} />
-                  <span>Passwords match</span>
+                  <span>{t.passwordsMatch || "Passwords match"}</span>
                 </>
               ) : (
                 <>
                   <FiAlertCircle size={12} />
-                  <span>Passwords do not match</span>
+                  <span>{t.passwordsDoNotMatch || "Passwords do not match"}</span>
                 </>
               )}
             </div>
@@ -623,7 +623,7 @@ const TransactionPassword = () => {
               disabled={isUpdateLoading}
               className="flex-1 bg-gray-700/50 text-white py-2 rounded-lg hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm font-medium"
             >
-              Cancel
+              {t.cancel || "Cancel"}
             </button>
             <button
               type="submit"
@@ -638,12 +638,12 @@ const TransactionPassword = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  <span>Updating...</span>
+                  <span>{t.updating || "Updating..."}</span>
                 </>
               ) : (
                 <>
                   <FiSave size={13} />
-                  <span>Update Password</span>
+                  <span>{t.updatePasswordBtn || "Update Password"}</span>
                 </>
               )}
             </button>
@@ -692,7 +692,7 @@ const TransactionPassword = () => {
         <div className="flex-1 overflow-auto">
           <div className="max-w-md sm:max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto px-3 sm:px-4 pt-14 sm:pt-16 pb-6">
             
-            {!hasEmail && <NoEmailScreen onNavigate={navigate} />}
+            {!hasEmail && <NoEmailScreen onNavigate={navigate} t={t} />}
             
             {hasEmail && (
               <>

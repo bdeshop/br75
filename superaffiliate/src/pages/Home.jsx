@@ -255,9 +255,9 @@ const Home = () => {
           </div>
           <div className="text-center md:text-left">
             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] mb-6 text-cyan-400">Support</h4>
-            <ul className="space-y-4 text-[10px] font-bold uppercase text-gray-500 tracking-widest">
+            <ul className="space-y-4 text-[10px] font-bold text-gray-500 tracking-widest">
               <li className="flex items-center justify-center md:justify-start space-x-2"><FaEnvelope className="text-cyan-400" /> <span>affiliate@Bir75.com</span></li>
-              <li className="flex items-center justify-center md:justify-start space-x-2"><FaPhone className="text-cyan-400" /> <span>+60134935257</span></li>
+              <li className="flex items-center justify-center md:justify-start space-x-2"><FaPhone className="text-cyan-400" /> <span>+60 13-493 5257</span></li>
             </ul>
           </div>
         </div>

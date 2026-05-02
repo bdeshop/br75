@@ -29,7 +29,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // OTP Input Component
-const OtpBoxes = ({ value, onChange, disabled }) => {
+const OtpBoxes = ({ value, onChange, disabled, t }) => {
   const inputRefs = useRef([]);
 
   const handleChange = (index, e) => {
@@ -95,7 +95,7 @@ const OtpBoxes = ({ value, onChange, disabled }) => {
 };
 
 // Tab Component
-const TabButton = ({ id, label, icon: Icon, active, onClick }) => (
+const TabButton = ({ id, label, icon: Icon, active, onClick, t }) => (
   <button
     onClick={onClick}
     className={`group relative flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-all duration-300
@@ -113,61 +113,61 @@ const TabButton = ({ id, label, icon: Icon, active, onClick }) => (
 );
 
 // No Email Warning
-const NoEmailWarning = ({ onNavigate }) => (
+const NoEmailWarning = ({ onNavigate, t }) => (
   <div className="text-center py-8">
     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
       <FiAlertTriangle className="text-amber-500 w-8 h-8" />
     </div>
-    <h3 className="text-lg font-semibold text-white mb-2">Email Not Set</h3>
+    <h3 className="text-lg font-semibold text-white mb-2">{t.emailNotSet || "Email Not Set"}</h3>
     <p className="text-sm text-gray-400 mb-5 max-w-xs mx-auto">
-      You haven't added an email address to your account yet. Please set up your email first to reset your transaction password.
+      {t.emailNotSetDesc || "You haven't added an email address to your account yet. Please set up your email first to reset your transaction password."}
     </p>
     <button
       onClick={onNavigate}
       className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F9BC20] to-[#F9BC20]/80 text-gray-900 px-5 py-2.5 rounded-lg font-semibold hover:shadow-lg hover:shadow-[#F9BC20]/25 transition-all duration-300 text-sm"
     >
       <FiUserPlus size={15} />
-      Set Up Email Now
+      {t.setUpEmailNow || "Set Up Email Now"}
     </button>
   </div>
 );
 
 // No Mobile Warning
-const NoMobileWarning = ({ onNavigate }) => (
+const NoMobileWarning = ({ onNavigate, t }) => (
   <div className="text-center py-8">
     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
       <FiSmartphone className="text-amber-500 w-8 h-8" />
     </div>
-    <h3 className="text-lg font-semibold text-white mb-2">Mobile Number Not Set</h3>
+    <h3 className="text-lg font-semibold text-white mb-2">{t.mobileNotSet || "Mobile Number Not Set"}</h3>
     <p className="text-sm text-gray-400 mb-5 max-w-xs mx-auto">
-      You haven't added a mobile number to your account yet. Please set up your mobile number first to reset your transaction password.
+      {t.mobileNotSetDesc || "You haven't added a mobile number to your account yet. Please set up your mobile number first to reset your transaction password."}
     </p>
     <button
       onClick={onNavigate}
       className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F9BC20] to-[#F9BC20]/80 text-gray-900 px-5 py-2.5 rounded-lg font-semibold hover:shadow-lg hover:shadow-[#F9BC20]/25 transition-all duration-300 text-sm"
     >
       <FiSmartphone size={15} />
-      Set Up Mobile Now
+      {t.setUpMobileNow || "Set Up Mobile Now"}
     </button>
   </div>
 );
 
 // No Transaction Password Warning - User cannot reset because they never set it
-const NoTransactionPasswordWarning = ({ onNavigate }) => (
+const NoTransactionPasswordWarning = ({ onNavigate, t }) => (
   <div className="text-center py-8">
     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/10 flex items-center justify-center">
       <FiLock className="text-blue-500 w-8 h-8" />
     </div>
-    <h3 className="text-lg font-semibold text-white mb-2">No Transaction Password Set</h3>
+    <h3 className="text-lg font-semibold text-white mb-2">{t.noTransactionPasswordSet || "No Transaction Password Set"}</h3>
     <p className="text-sm text-gray-400 mb-5 max-w-xs mx-auto">
-      You haven't set up a transaction password yet. Please set one up first before resetting it.
+      {t.noTransactionPasswordSetDesc || "You haven't set up a transaction password yet. Please set one up first before resetting it."}
     </p>
     <button
       onClick={onNavigate}
       className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F9BC20] to-[#F9BC20]/80 text-gray-900 px-5 py-2.5 rounded-lg font-semibold hover:shadow-lg hover:shadow-[#F9BC20]/25 transition-all duration-300 text-sm"
     >
       <FiKey size={15} />
-      Set Transaction Password
+      {t.setTransactionPasswordBtn || "Set Transaction Password"}
     </button>
   </div>
 );
@@ -273,19 +273,19 @@ const ResetTransactionPassword = () => {
     
     // Check if transaction password is set first
     if (!isTransactionPasswordSet) {
-      toast.error("You haven't set a transaction password yet. Please set one first.");
-      setTimeout(() => navigate('/transaction-password'), 2000);
+      toast.error(t.noTransactionPasswordError || "You haven't set a transaction password yet. Please set one first.");
+      setTimeout(() => navigate('/member/transaction-password'), 2000);
       return;
     }
     
     if (!email) {
-      toast.error("Please enter your email address");
+      toast.error(t.emailRequired || "Please enter your email address");
       return;
     }
 
     const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
     if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email address");
+      toast.error(t.validEmailRequired || "Please enter a valid email address");
       return;
     }
 
@@ -298,17 +298,17 @@ const ResetTransactionPassword = () => {
         setResetToken(token);
         setStep("verify");
         setCountdown(60);
-        toast.success("OTP sent to your email!");
+        toast.success(t.otpSentToEmail || "OTP sent to your email!");
         
         if (import.meta.env.DEV && (response.data.data?.devOtp || response.data.devOtp)) {
-          toast.info(`Development OTP: ${response.data.data?.devOtp || response.data.devOtp}`, { autoClose: 10000 });
+          toast.info(`${t.devOtp || "Development OTP"}: ${response.data.data?.devOtp || response.data.devOtp}`, { autoClose: 10000 });
         }
       } else {
-        toast.error(response.data.message || "Failed to send OTP");
+        toast.error(response.data.message || (t.failedToSendOTP || "Failed to send OTP"));
       }
     } catch (error) {
       console.error('Error requesting OTP:', error);
-      toast.error(error.response?.data?.message || "Failed to send OTP");
+      toast.error(error.response?.data?.message || (t.failedToSendOTP || "Failed to send OTP"));
     } finally {
       setIsLoading(false);
     }
@@ -319,13 +319,13 @@ const ResetTransactionPassword = () => {
     
     // Check if transaction password is set first
     if (!isTransactionPasswordSet) {
-      toast.error("You haven't set a transaction password yet. Please set one first.");
-      setTimeout(() => navigate('/transaction-password'), 2000);
+      toast.error(t.noTransactionPasswordError || "You haven't set a transaction password yet. Please set one first.");
+      setTimeout(() => navigate('/member/transaction-password'), 2000);
       return;
     }
     
     if (!phone) {
-      toast.error("Please enter your phone number");
+      toast.error(t.phoneRequired || "Please enter your phone number");
       return;
     }
 
@@ -333,7 +333,7 @@ const ResetTransactionPassword = () => {
     const phoneRegex = /^01[3-9]\d{8}$/;
     
     if (!phoneRegex.test(formattedPhone)) {
-      toast.error("Please enter a valid Bangladeshi phone number (e.g., 01XXXXXXXXX)");
+      toast.error(t.validPhoneRequired || "Please enter a valid Bangladeshi phone number (e.g., 01XXXXXXXXX)");
       return;
     }
 
@@ -349,17 +349,17 @@ const ResetTransactionPassword = () => {
         setResetToken(token);
         setStep("verify");
         setCountdown(60);
-        toast.success(`OTP sent to ${formattedPhone}!`);
+        toast.success(`${t.otpSentToMobile || "OTP sent to"} ${formattedPhone}!`);
         
         if (import.meta.env.DEV && (response.data.data?.devOtp || response.data.devOtp)) {
-          toast.info(`Development OTP: ${response.data.data?.devOtp || response.data.devOtp}`, { autoClose: 10000 });
+          toast.info(`${t.devOtp || "Development OTP"}: ${response.data.data?.devOtp || response.data.devOtp}`, { autoClose: 10000 });
         }
       } else {
-        toast.error(response.data.message || "Failed to send OTP");
+        toast.error(response.data.message || (t.failedToSendOTP || "Failed to send OTP"));
       }
     } catch (error) {
       console.error('Error requesting mobile OTP:', error);
-      toast.error(error.response?.data?.message || "Failed to send OTP");
+      toast.error(error.response?.data?.message || (t.failedToSendOTP || "Failed to send OTP"));
     } finally {
       setIsLoading(false);
     }
@@ -369,12 +369,12 @@ const ResetTransactionPassword = () => {
     e.preventDefault();
     
     if (!otp || otp.replace(/\s/g, "").length !== 6) {
-      toast.error("Please enter a valid 6-digit OTP");
+      toast.error(t.validOTPRequired || "Please enter a valid 6-digit OTP");
       return;
     }
 
     if (!resetToken) {
-      toast.error("Session expired. Please try again.");
+      toast.error(t.sessionExpired || "Session expired. Please try again.");
       setStep("request");
       return;
     }
@@ -392,13 +392,13 @@ const ResetTransactionPassword = () => {
       
       if (response.data.success) {
         setStep("reset");
-        toast.success("OTP verified! Now set your new transaction password.");
+        toast.success(t.otpVerifiedSuccess || "OTP verified! Now set your new transaction password.");
       } else {
-        toast.error(response.data.message || "Invalid OTP");
+        toast.error(response.data.message || (t.invalidOTP || "Invalid OTP"));
       }
     } catch (error) {
       console.error('Error verifying OTP:', error);
-      toast.error(error.response?.data?.message || "Invalid OTP");
+      toast.error(error.response?.data?.message || (t.invalidOTP || "Invalid OTP"));
     } finally {
       setIsLoading(false);
     }
@@ -408,27 +408,27 @@ const ResetTransactionPassword = () => {
     e.preventDefault();
     
     if (!newPassword || !confirmPassword) {
-      toast.error("Please enter new transaction password");
+      toast.error(t.enterNewPassword || "Please enter new transaction password");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t.passwordsDoNotMatch || "Passwords do not match");
       return;
     }
 
     if (newPassword.length < 4) {
-      toast.error("Transaction password must be at least 4 characters");
+      toast.error(t.passwordMinLength4 || "Transaction password must be at least 4 characters");
       return;
     }
 
     if (newPassword.length > 20) {
-      toast.error("Transaction password cannot exceed 20 characters");
+      toast.error(t.passwordMaxLength20 || "Transaction password cannot exceed 20 characters");
       return;
     }
 
     if (!resetToken) {
-      toast.error("Session expired. Please try again.");
+      toast.error(t.sessionExpired || "Session expired. Please try again.");
       setStep("request");
       return;
     }
@@ -446,16 +446,16 @@ const ResetTransactionPassword = () => {
       });
       
       if (response.data.success) {
-        toast.success("Transaction password reset successfully!");
+        toast.success(t.passwordResetSuccess || "Transaction password reset successfully!");
         setTimeout(() => {
           navigate('/profile');
         }, 2000);
       } else {
-        toast.error(response.data.message || "Failed to reset password");
+        toast.error(response.data.message || (t.failedToResetPassword || "Failed to reset password"));
       }
     } catch (error) {
       console.error('Error resetting password:', error);
-      toast.error(error.response?.data?.message || "Failed to reset password");
+      toast.error(error.response?.data?.message || (t.failedToResetPassword || "Failed to reset password"));
     } finally {
       setIsLoading(false);
     }
@@ -463,7 +463,7 @@ const ResetTransactionPassword = () => {
 
   const handleResendOTP = async () => {
     if (countdown > 0) {
-      toast.info(`Please wait ${countdown} seconds before requesting again`);
+      toast.info(`${t.waitSeconds || "Please wait"} ${countdown} ${t.secondsBeforeRequest || "seconds before requesting again"}`);
       return;
     }
 
@@ -472,14 +472,14 @@ const ResetTransactionPassword = () => {
       let response;
       if (activeTab === "email") {
         if (!email) {
-          toast.error("Email is required");
+          toast.error(t.emailRequired || "Email is required");
           return;
         }
         response = await axios.post(`${API_BASE_URL}/api/user/forgot-transaction-password`, { email });
       } else {
         const cleanPhone = formatMobileNumber(phone);
         if (!cleanPhone) {
-          toast.error("Phone number is required");
+          toast.error(t.phoneRequired || "Phone number is required");
           return;
         }
         response = await axios.post(`${API_BASE_URL}/api/user/resend-transaction-mobile-otp`, { 
@@ -496,17 +496,17 @@ const ResetTransactionPassword = () => {
         }
         setOtp("");
         setCountdown(60);
-        toast.success(`OTP resent to your ${activeTab === "email" ? "email" : "mobile number"}!`);
+        toast.success(`${t.otpResent || "OTP resent to your"} ${activeTab === "email" ? (t.email || "email") : (t.mobileNumber || "mobile number")}!`);
         
         if (import.meta.env.DEV && (response.data.data?.devOtp || response.data.devOtp)) {
-          toast.info(`Development OTP: ${response.data.data?.devOtp || response.data.devOtp}`, { autoClose: 10000 });
+          toast.info(`${t.devOtp || "Development OTP"}: ${response.data.data?.devOtp || response.data.devOtp}`, { autoClose: 10000 });
         }
       } else {
-        toast.error(response.data.message || "Failed to resend OTP");
+        toast.error(response.data.message || (t.failedToResendOTP || "Failed to resend OTP"));
       }
     } catch (error) {
       console.error('Error resending OTP:', error);
-      toast.error(error.response?.data?.message || "Failed to resend OTP");
+      toast.error(error.response?.data?.message || (t.failedToResendOTP || "Failed to resend OTP"));
     } finally {
       setIsLoading(false);
     }
@@ -527,9 +527,9 @@ const ResetTransactionPassword = () => {
     navigate('/member/profile/info');
   };
 
-const handleNavigateToSetPassword = () => {
-  navigate('/member/transaction-password');
-};
+  const handleNavigateToSetPassword = () => {
+    navigate('/member/transaction-password');
+  };
 
   const handlePhoneChange = (e) => {
     let value = e.target.value;
@@ -550,7 +550,7 @@ const handleNavigateToSetPassword = () => {
     <form onSubmit={handleRequestEmailOTP} className="space-y-5">
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          Email Address
+          {t.emailAddress || "Email Address"}
         </label>
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -562,7 +562,7 @@ const handleNavigateToSetPassword = () => {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg pl-9 pr-3 py-2.5 text-white placeholder-gray-500 
               focus:outline-none focus:border-[#F9BC20] focus:ring-2 focus:ring-[#F9BC20]/30 transition-all duration-200 text-sm"
-            placeholder="Enter your registered email"
+            placeholder={t.enterRegisteredEmail || "Enter your registered email"}
             required
             disabled={isLoading}
           />
@@ -582,12 +582,12 @@ const handleNavigateToSetPassword = () => {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
-            <span>Sending OTP...</span>
+            <span>{t.sendingOTP || "Sending OTP..."}</span>
           </>
         ) : (
           <>
             <FiSend size={14} />
-            <span>Send OTP to Email</span>
+            <span>{t.sendOTPToEmail || "Send OTP to Email"}</span>
           </>
         )}
       </button>
@@ -598,7 +598,7 @@ const handleNavigateToSetPassword = () => {
     <form onSubmit={handleRequestMobileOTP} className="space-y-5">
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          Mobile Number
+          {t.mobileNumber || "Mobile Number"}
         </label>
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -617,7 +617,7 @@ const handleNavigateToSetPassword = () => {
         </div>
         <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
           <FiInfo size={11} />
-          Enter 11-digit Bangladeshi mobile number starting with 01
+          {t.mobileNumberHint || "Enter 11-digit Bangladeshi mobile number starting with 01"}
         </p>
       </div>
 
@@ -634,12 +634,12 @@ const handleNavigateToSetPassword = () => {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
-            <span>Sending OTP...</span>
+            <span>{t.sendingOTP || "Sending OTP..."}</span>
           </>
         ) : (
           <>
             <FiSend size={14} />
-            <span>Send OTP to Mobile</span>
+            <span>{t.sendOTPToMobile || "Send OTP to Mobile"}</span>
           </>
         )}
       </button>
@@ -652,9 +652,9 @@ const handleNavigateToSetPassword = () => {
         <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-[#F9BC20]/10 flex items-center justify-center">
           <FiShield className="text-[#F9BC20] w-6 h-6" />
         </div>
-        <h3 className="text-base font-semibold text-white mb-1">Verification Required</h3>
+        <h3 className="text-base font-semibold text-white mb-1">{t.verificationRequired || "Verification Required"}</h3>
         <p className="text-xs text-gray-400">
-          We sent a 6-digit code to your {activeTab === "email" ? "email address" : "mobile number"}
+          {t.weSentCodeTo || "We sent a 6-digit code to your"} {activeTab === "email" ? (t.emailAddress || "email address") : (t.mobileNumber || "mobile number")}
         </p>
       </div>
       
@@ -662,6 +662,7 @@ const handleNavigateToSetPassword = () => {
         value={otp}
         onChange={setOtp}
         disabled={isLoading}
+        t={t}
       />
 
       <div className="flex gap-2">
@@ -671,7 +672,7 @@ const handleNavigateToSetPassword = () => {
           disabled={isLoading}
           className="flex-1 bg-gray-700/50 text-white py-2.5 rounded-lg hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 text-sm font-medium"
         >
-          Back
+          {t.back || "Back"}
         </button>
         <button
           type="submit"
@@ -686,12 +687,12 @@ const handleNavigateToSetPassword = () => {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              <span>Verifying...</span>
+              <span>{t.verifying || "Verifying..."}</span>
             </>
           ) : (
             <>
               <FiCheck size={14} />
-              <span>Verify OTP</span>
+              <span>{t.verifyOTP || "Verify OTP"}</span>
             </>
           )}
         </button>
@@ -706,7 +707,7 @@ const handleNavigateToSetPassword = () => {
             disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <FiRefreshCw size={12} className={countdown > 0 ? "animate-spin" : ""} />
-          {countdown > 0 ? `Resend OTP in ${countdown}s` : "Resend OTP"}
+          {countdown > 0 ? `${t.resendOTPIn || "Resend OTP in"} ${countdown}s` : (t.resendOTP || "Resend OTP")}
         </button>
       </div>
     </form>
@@ -718,13 +719,13 @@ const handleNavigateToSetPassword = () => {
         <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-[#F9BC20]/10 flex items-center justify-center">
           <FiKey className="text-[#F9BC20] w-6 h-6" />
         </div>
-        <h3 className="text-base font-semibold text-white mb-1">Set New Password</h3>
-        <p className="text-xs text-gray-400">Create a strong transaction password</p>
+        <h3 className="text-base font-semibold text-white mb-1">{t.setNewPasswordTitle || "Set New Password"}</h3>
+        <p className="text-xs text-gray-400">{t.createStrongPassword || "Create a strong transaction password"}</p>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          New Transaction Password
+          {t.newTransactionPassword || "New Transaction Password"}
         </label>
         <div className="relative">
           <input
@@ -733,7 +734,7 @@ const handleNavigateToSetPassword = () => {
             onChange={(e) => setNewPassword(e.target.value)}
             className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 
               focus:outline-none focus:border-[#F9BC20] focus:ring-2 focus:ring-[#F9BC20]/30 transition-all duration-200 text-sm"
-            placeholder="Enter new transaction password"
+            placeholder={t.enterNewTransactionPassword || "Enter new transaction password"}
             required
             minLength={4}
             maxLength={20}
@@ -747,12 +748,12 @@ const handleNavigateToSetPassword = () => {
             {showNewPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1.5">4-20 characters, numbers or letters</p>
+        <p className="text-xs text-gray-500 mt-1.5">{t.passwordHint || "4-20 characters, numbers or letters"}</p>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          Confirm Transaction Password
+          {t.confirmTransactionPassword || "Confirm Transaction Password"}
         </label>
         <div className="relative">
           <input
@@ -761,7 +762,7 @@ const handleNavigateToSetPassword = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="w-full bg-[#1E1E2E] border border-gray-700/50 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 
               focus:outline-none focus:border-[#F9BC20] focus:ring-2 focus:ring-[#F9BC20]/30 transition-all duration-200 text-sm"
-            placeholder="Confirm your password"
+            placeholder={t.confirmYourPassword || "Confirm your password"}
             required
             disabled={isLoading}
           />
@@ -780,12 +781,12 @@ const handleNavigateToSetPassword = () => {
           {newPassword === confirmPassword ? (
             <>
               <FiCheck size={14} />
-              <span>Passwords match</span>
+              <span>{t.passwordsMatch || "Passwords match"}</span>
             </>
           ) : (
             <>
               <FiAlertCircle size={14} />
-              <span>Passwords do not match</span>
+              <span>{t.passwordsDoNotMatch || "Passwords do not match"}</span>
             </>
           )}
         </div>
@@ -798,7 +799,7 @@ const handleNavigateToSetPassword = () => {
           disabled={isLoading}
           className="flex-1 bg-gray-700/50 text-white py-2.5 rounded-lg hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 text-sm font-medium"
         >
-          Back
+          {t.back || "Back"}
         </button>
         <button
           type="submit"
@@ -813,12 +814,12 @@ const handleNavigateToSetPassword = () => {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              <span>Resetting...</span>
+              <span>{t.resettingPassword || "Resetting..."}</span>
             </>
           ) : (
             <>
               <FiSave size={14} />
-              <span>Reset Password</span>
+              <span>{t.resetPasswordBtn || "Reset Password"}</span>
             </>
           )}
         </button>
@@ -851,7 +852,7 @@ const handleNavigateToSetPassword = () => {
           <Sidebar sidebarOpen={sidebarOpen} />
           <div className="flex-1 overflow-auto">
             <div className="max-w-md mx-auto px-4 pt-20 pb-8">
-              <NoTransactionPasswordWarning onNavigate={handleNavigateToSetPassword} />
+              <NoTransactionPasswordWarning onNavigate={handleNavigateToSetPassword} t={t} />
             </div>
           </div>
         </div>
@@ -894,15 +895,15 @@ const handleNavigateToSetPassword = () => {
                     className="text-gray-400 hover:text-white flex items-center gap-1.5 mb-2 text-xs transition-colors group"
                   >
                     <FiArrowLeft size={12} className="group-hover:-translate-x-0.5 transition-transform" />
-                    <span>Back to Profile</span>
+                    <span>{t.backToProfile || "Back to Profile"}</span>
                   </button>
                   <h2 className="text-lg font-bold text-white">
-                    Reset Transaction Password
+                    {t.resetTransactionPasswordTitle || "Reset Transaction Password"}
                   </h2>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {step === "request" && "Choose a method to receive verification code"}
-                    {step === "verify" && "Enter the verification code sent to you"}
-                    {step === "reset" && "Create your new transaction password"}
+                    {step === "request" && (t.chooseMethodDesc || "Choose a method to receive verification code")}
+                    {step === "verify" && (t.enterCodeDesc || "Enter the verification code sent to you")}
+                    {step === "reset" && (t.createNewPasswordDesc || "Create your new transaction password")}
                   </p>
                 </div>
               </div>
@@ -913,7 +914,7 @@ const handleNavigateToSetPassword = () => {
                   <div className="flex">
                     <TabButton 
                       id="email" 
-                      label="Email" 
+                      label={t.email || "Email"} 
                       icon={FiMail} 
                       active={activeTab === "email"} 
                       onClick={() => {
@@ -922,10 +923,11 @@ const handleNavigateToSetPassword = () => {
                         setOtp("");
                         setResetToken(null);
                       }}
+                      t={t}
                     />
                     <TabButton 
                       id="mobile" 
-                      label="Mobile" 
+                      label={t.mobile || "Mobile"} 
                       icon={FiSmartphone} 
                       active={activeTab === "mobile"} 
                       onClick={() => {
@@ -934,6 +936,7 @@ const handleNavigateToSetPassword = () => {
                         setOtp("");
                         setResetToken(null);
                       }}
+                      t={t}
                     />
                   </div>
                 </div>
@@ -944,10 +947,10 @@ const handleNavigateToSetPassword = () => {
                 {step === "request" && (
                   <>
                     {activeTab === "email" && (
-                      hasEmail ? renderEmailRequestForm() : <NoEmailWarning onNavigate={handleNavigateToProfileInfo} />
+                      hasEmail ? renderEmailRequestForm() : <NoEmailWarning onNavigate={handleNavigateToProfileInfo} t={t} />
                     )}
                     {activeTab === "mobile" && (
-                      hasPhone ? renderMobileRequestForm() : <NoMobileWarning onNavigate={handleNavigateToProfileInfo} />
+                      hasPhone ? renderMobileRequestForm() : <NoMobileWarning onNavigate={handleNavigateToProfileInfo} t={t} />
                     )}
 
                     {/* Info Card */}
@@ -955,11 +958,10 @@ const handleNavigateToSetPassword = () => {
                       <div className="mt-5 p-3 bg-[#1E1E2E]/50 rounded-lg border border-gray-800/50">
                         <div className="flex items-center gap-1.5 text-[#F9BC20] mb-1.5">
                           <FiLock size={12} />
-                          <span className="text-xs font-medium">About Transaction Password</span>
+                          <span className="text-xs font-medium">{t.aboutTransactionPassword || "About Transaction Password"}</span>
                         </div>
                         <p className="text-[11px] text-gray-400 leading-relaxed">
-                          Transaction password is used for sensitive operations like withdrawals and transfers.
-                          You are resetting your existing transaction password.
+                          {t.transactionPasswordInfo || "Transaction password is used for sensitive operations like withdrawals and transfers. You are resetting your existing transaction password."}
                         </p>
                       </div>
                     )}
@@ -968,10 +970,10 @@ const handleNavigateToSetPassword = () => {
                       <div className="mt-3 p-2.5 bg-blue-900/20 rounded-lg border border-blue-800/30">
                         <div className="flex items-center gap-1.5 text-blue-400 mb-0.5">
                           <FiInfo size={11} />
-                          <span className="text-[10px] font-medium">Note</span>
+                          <span className="text-[10px] font-medium">{t.note || "Note"}</span>
                         </div>
                         <p className="text-[10px] text-gray-400">
-                          Make sure your mobile number is verified. Standard SMS rates may apply.
+                          {t.mobileVerificationNote || "Make sure your mobile number is verified. Standard SMS rates may apply."}
                         </p>
                       </div>
                     )}
