@@ -3199,7 +3199,7 @@ Userrouter.post("/callback-data-game", async (req, res) => {
       game_uid: game_code || "unknown_game", // Use "unknown_game" as default if not provided
       serial_number: transaction_id || `TXN_${Date.now()}`,
       currency_code: 'BDT',
-      platform: 'casino',
+      platform: 'Sports',
       game_type: provider_code,
       device_info: 'web',
       bet_type: bet_type,
