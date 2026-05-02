@@ -253,18 +253,30 @@ const AllGamesContent = () => {
   useEffect(() => {
     const fetchData = async () => {
       const categoryFromQuery = searchParams.get('category');
+      const providerFromQuery = searchParams.get('provider');
       
       if (categoryFromQuery) {
         const decodedCategory = decodeURIComponent(categoryFromQuery);
         setSelectedCategory(decodedCategory);
         setCategoryName(decodedCategory);
         
-        // Always reset provider - All Games active by default
-        window.history.replaceState({}, '', `/games?category=${encodeURIComponent(decodedCategory)}`);
-        setSelectedProvider(null);
+        // Set selected provider from query if it exists
+        if (providerFromQuery) {
+          const decodedProvider = decodeURIComponent(providerFromQuery);
+          setSelectedProvider(decodedProvider);
+        } else {
+          setSelectedProvider(null);
+        }
         
         await fetchProvidersByCategory(decodedCategory);
-        await fetchGamesByCategory(decodedCategory);
+        
+        // Fetch games based on category and provider from query
+        if (providerFromQuery) {
+          const decodedProvider = decodeURIComponent(providerFromQuery);
+          await fetchGamesByCategoryAndProvider(decodedCategory, decodedProvider);
+        } else {
+          await fetchGamesByCategory(decodedCategory);
+        }
       } else {
         await fetchCategories();
         await fetchAllGames();
@@ -283,9 +295,8 @@ const AllGamesContent = () => {
     // Update selected provider
     setSelectedProvider(provider.providercode);
     
-    // Update URL without causing navigation/reload
-    const newUrl = `/games?category=${encodeURIComponent(categoryName)}&provider=${encodeURIComponent(provider.providercode)}`;
-    window.history.pushState({}, '', newUrl);
+    // Update URL without causing navigation/reload - but we're using navigate to maintain React Router state
+    navigate(`/games?category=${encodeURIComponent(categoryName)}&provider=${encodeURIComponent(provider.providercode)}`, { replace: true });
     
     // Fetch games for this provider
     await fetchGamesByCategoryAndProvider(categoryName, provider.providercode);
@@ -303,8 +314,7 @@ const AllGamesContent = () => {
     setSelectedProvider(null);
     
     // Update URL without causing navigation/reload
-    const newUrl = `/games?category=${encodeURIComponent(categoryName)}`;
-    window.history.pushState({}, '', newUrl);
+    navigate(`/games?category=${encodeURIComponent(categoryName)}`, { replace: true });
     
     // Fetch all games for this category
     await fetchGamesByCategory(categoryName);
