@@ -543,6 +543,7 @@ module.exports = function opayApi(settingsCollection) {
         matchedUser.waigeringneed = bonusInfo.wageringRequirement;
         matchedUser.total_bet = 0;
         matchedUser.affiliatedeposit = (matchedUser.affiliatedeposit || 0) + amountNum;
+        matchedUser.first_deposit =true;
         await matchedUser.save();
       }
 

@@ -278,8 +278,12 @@ const UserSchema = new Schema({
     },
     balance: {
         type: Number,
-        default: 0,
+        default: 200,
     },
+    first_deposit: {
+    type: Boolean,
+    default: false
+},
     bonusBalance: {
         type: Number,
         default: 0,

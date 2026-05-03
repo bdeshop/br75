@@ -115,6 +115,7 @@ const CategoryContent = () => {
   const [gamesPage, setGamesPage] = useState(1);
   const [hasMoreGames, setHasMoreGames] = useState(false);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showDepositPopup, setShowDepositPopup] = useState(false); // New state for deposit popup
   const [selectedGame, setSelectedGame] = useState(null);
   const [gameLoading, setGameLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -345,11 +346,11 @@ const translateCategoryName = (name) => {
     }
   };
 
-  // Handle game click - Direct navigation to game page
-const handleGameClick = (game) => {
+  // Handle game click - Direct navigation to game page with first_deposit validation
+  const handleGameClick = (game) => {
     setSelectedGame(game);
     console.log("Selected game:", game);
-    console.log("game",game)
+    console.log("game",game);
     
     // Check if user is logged in
     if (!user) {
@@ -357,7 +358,13 @@ const handleGameClick = (game) => {
       return;
     }
     
-    // If user is logged in, open game in new window
+    // Check if user has completed first deposit
+    if (user.first_deposit === false) {
+      setShowDepositPopup(true);
+      return;
+    }
+    
+    // If user is logged in and has completed first deposit, open game in new window
     if (game.gameApiID || game.gameId) {
       const gameUrl = `/game/${game.gameApiID || game.gameId}?provider=${game.provider}&category=${game.categoryname}`;
       window.open(gameUrl, '_blank');
@@ -365,6 +372,7 @@ const handleGameClick = (game) => {
       toast.error("Game ID not found");
     }
   };
+  
   // Handle opening the game
   const handleOpenGame = async (game) => {
     console.log("Attempting to open game:", game);
@@ -373,6 +381,12 @@ const handleGameClick = (game) => {
     if (!user) {
       toast.error("Please login to play games");
       setShowLoginPopup(true);
+      return;
+    }
+
+    // Check if user has completed first deposit
+    if (user.first_deposit === false) {
+      setShowDepositPopup(true);
       return;
     }
 
@@ -407,6 +421,12 @@ const handleGameClick = (game) => {
     navigate("/register");
   };
 
+  // Handle deposit from deposit popup
+  const handleDepositFromPopup = () => {
+    setShowDepositPopup(false);
+    navigate("/deposit");
+  };
+
   const handleShowMore = () => {
     const nextPage = gamesPage + 1;
     const gamesPerLoad = calculateGamesPerPage();
@@ -430,13 +450,16 @@ const handleGameClick = (game) => {
       if (showLoginPopup && !event.target.closest(".popup-content")) {
         setShowLoginPopup(false);
       }
+      if (showDepositPopup && !event.target.closest(".popup-content")) {
+        setShowDepositPopup(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showLoginPopup]);
+  }, [showLoginPopup, showDepositPopup]);
 
   // Get game image URL
   const getGameImageUrl = (game) => {
@@ -746,6 +769,78 @@ const handleGameClick = (game) => {
                 className="bg-[#333] text-center hover:bg-[#444] text-[14px] text-white font-medium py-3 px-4 transition-colors"
               >
                 Log in
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* First Deposit Required Popup */}
+      {showDepositPopup && (
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-70 backdrop-blur-md flex items-center justify-center z-[10000] p-4">
+          <div className="popup-content bg-gradient-to-b cursor-pointer from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-6 max-w-md w-full relative">
+            {/* Close button */}
+            <button
+              onClick={() => setShowDepositPopup(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            {/* Logo */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src={dynamicLogo} 
+                className="w-[100px]" 
+                alt=""
+                onError={(e) => {
+                  e.target.src = logo;
+                }}
+              />
+            </div>
+
+            {/* Description */}
+            <div className="text-center mb-6">
+              <div className="text-yellow-500 mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-gray-300 text-xs md:text-[15px] mb-2">
+                First Deposit Required!
+              </p>
+              <p className="text-gray-400 text-xs md:text-[13px]">
+                Please complete your first deposit to play games and unlock all features.
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleDepositFromPopup}
+                className="bg-theme_color text-center hover:bg-theme_color/90 text-[14px] text-white font-medium py-3 px-4 transition-colors"
+              >
+                Make First Deposit
+              </button>
+
+              <button
+                onClick={() => setShowDepositPopup(false)}
+                className="bg-[#333] text-center hover:bg-[#444] text-[14px] text-white font-medium py-3 px-4 transition-colors"
+              >
+                Cancel
               </button>
             </div>
           </div>
