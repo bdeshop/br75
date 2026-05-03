@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { FaSearch, FaFilter, FaEye, FaSort, FaSortUp, FaSortDown, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle, FaEdit, FaTrash, FaSpinner } from 'react-icons/fa';
+import { FaSearch, FaFilter, FaEye, FaSort, FaSortUp, FaSortDown, FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle, FaEdit, FaTrash, FaSpinner, FaFileCsv, FaDownload } from 'react-icons/fa';
 import { FiRefreshCw, FiTrendingUp, FiDownload } from 'react-icons/fi';
 import { FaCalendarAlt } from 'react-icons/fa';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 
 const Alldeposit = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -20,6 +21,7 @@ const Alldeposit = () => {
   const [deposits, setDeposits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
@@ -56,14 +58,15 @@ const Alldeposit = () => {
       setDeposits(response.data.deposits);
       setStats({
         total: response.data.total,
-        completed: response.data.statusCounts.find((s) => s._id === 'approved')?.count || 0,
-        pending: response.data.statusCounts.find((s) => s._id === 'pending')?.count || 0,
-        totalAmount: response.data.totalAmount,
-        completedAmount: response.data.statusCounts.find((s) => s._id === 'approved')?.amount || 0,
+        completed: response.data.statusCounts?.find((s) => s._id === 'approved')?.count || 0,
+        pending: response.data.statusCounts?.find((s) => s._id === 'pending')?.count || 0,
+        totalAmount: response.data.totalAmount || 0,
+        completedAmount: response.data.statusCounts?.find((s) => s._id === 'approved')?.amount || 0,
       });
     } catch (err) {
       console.error('Error fetching deposits:', err);
       setError('Failed to load deposits. Please try again.');
+      toast.error('Failed to load deposits');
       setDeposits([
         {
           _id: '68ae24b8c2b1c27dfe6572c1',
@@ -95,19 +98,174 @@ const Alldeposit = () => {
     }
   };
 
+  // Function to download CSV
+  const downloadCSV = async () => {
+    try {
+      setDownloading(true);
+      toast.loading('Preparing CSV file...', { id: 'csv-download' });
+      
+      // Fetch all deposits for export (without pagination)
+      const token = localStorage.getItem('token');
+      let allDeposits = [];
+      
+      // Try to fetch all deposits at once, or fetch multiple pages
+      try {
+        const exportUrl = `${API_BASE_URL}/api/admin/deposits/export`;
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('search', searchTerm);
+        if (statusFilter !== 'all') params.append('status', statusFilter);
+        if (methodFilter !== 'all') params.append('method', methodFilter);
+        if (dateRange.start) params.append('startDate', dateRange.start);
+        if (dateRange.end) params.append('endDate', dateRange.end);
+        
+        const response = await axios.get(`${exportUrl}?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        allDeposits = response.data.deposits || [];
+      } catch (err) {
+        // Fallback: use current deposits if export endpoint doesn't exist
+        allDeposits = deposits;
+      }
+      
+      if (allDeposits.length === 0) {
+        toast.error('No data to export', { id: 'csv-download' });
+        return;
+      }
+      
+      // Define CSV headers
+      const headers = [
+        'Deposit ID',
+        'Date',
+        'Player ID',
+        'Username',
+        'Phone Number',
+        'Amount (BDT)',
+        'Payment Method',
+        'Transaction ID',
+        'Status',
+        'Processed Date',
+      ];
+      
+      // Map deposit data to CSV rows
+      const csvRows = allDeposits.map(deposit => {
+        const createdAt = deposit.createdAt ? new Date(deposit.createdAt) : null;
+        const processedAt = deposit.processedAt ? new Date(deposit.processedAt) : null;
+        
+        return [
+          deposit._id || 'N/A',
+          createdAt ? createdAt.toLocaleDateString('en-BD') : 'N/A',
+          deposit.userId?.player_id || 'N/A',
+          deposit.userId?.username || 'N/A',
+          deposit.phoneNumber,
+          deposit.amount || 0,
+          getMethodName(deposit.method),
+          deposit.transactionId || 'N/A',
+          deposit.status || 'N/A',
+          processedAt ? processedAt.toLocaleDateString('en-BD') : 'N/A',
+        ];
+      });
+      
+      // Combine headers and rows
+      const csvContent = [headers, ...csvRows].map(row => 
+        row.map(cell => {
+          // Handle commas, quotes, and newlines in cell data
+          if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
+            return `"${cell.replace(/"/g, '""')}"`;
+          }
+          return cell;
+        }).join(',')
+      ).join('\n');
+      
+      // Add BOM for UTF-8 encoding to support special characters
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `deposits_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Downloaded ${allDeposits.length} deposits successfully`, { id: 'csv-download' });
+    } catch (err) {
+      console.error('CSV download error:', err);
+      toast.error('Failed to download CSV file', { id: 'csv-download' });
+    } finally {
+      setDownloading(false);
+    }
+  };
+  
+  // Function to download sample CSV template
+  const downloadSampleCSV = () => {
+    try {
+      const headers = [
+        'Deposit ID',
+        'Date',
+        'Time',
+        'Player ID',
+        'Username',
+        'Phone Number',
+        'Amount (BDT)',
+        'Payment Method',
+        'Transaction ID',
+        'Status',
+        'Admin Notes'
+      ];
+      
+      const sampleRow = [
+        'DEP001',
+        '2025-01-15',
+        '14:30:00',
+        'PID123456',
+        'john_doe',
+        '+8801712345678',
+        '5000',
+        'bKash',
+        'TXN123456789',
+        'approved',
+        'Initial deposit'
+      ];
+      
+      const csvContent = [headers, sampleRow].map(row => 
+        row.map(cell => {
+          if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"'))) {
+            return `"${cell.replace(/"/g, '""')}"`;
+          }
+          return cell;
+        }).join(',')
+      ).join('\n');
+      
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'deposits_sample_template.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Sample template downloaded');
+    } catch (err) {
+      toast.error('Failed to download sample template');
+    }
+  };
+
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/admin/deposits-stats`, {
+      const response = await axios.get(`${API_BASE_URL}/api/admin/deposits-stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setStats((prev) => ({
         ...prev,
         total: response.data.total.totalCount,
-        completed: response.data.byStatus.find((s) => s._id === 'approved')?.count || 0,
-        pending: response.data.byStatus.find((s) => s._id === 'pending')?.count || 0,
+        completed: response.data.byStatus?.find((s) => s._id === 'approved')?.count || 0,
+        pending: response.data.byStatus?.find((s) => s._id === 'pending')?.count || 0,
         totalAmount: response.data.total.totalAmount,
-        completedAmount: response.data.byStatus.find((s) => s._id === 'approved')?.amount || 0,
+        completedAmount: response.data.byStatus?.find((s) => s._id === 'approved')?.amount || 0,
       }));
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -131,10 +289,12 @@ const Alldeposit = () => {
         { status: newStatus, adminNotes: notes },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      toast.success(`Deposit ${newStatus} successfully`);
       fetchDeposits();
       fetchStats();
       setShowDepositDetails(false);
     } catch (err) {
+      toast.error('Failed to update deposit status.');
       setError('Failed to update deposit status.');
     }
   };
@@ -142,12 +302,14 @@ const Alldeposit = () => {
   const editDeposit = async (depositId, updates) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${API_BASE_URL}/admin/deposits/${depositId}`, updates, {
+      await axios.put(`${API_BASE_URL}/api/admin/deposits/${depositId}`, updates, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      toast.success('Deposit updated successfully');
       fetchDeposits();
       setShowEditModal(false);
     } catch (err) {
+      toast.error('Failed to edit deposit.');
       setError('Failed to edit deposit.');
     }
   };
@@ -159,10 +321,12 @@ const Alldeposit = () => {
       await axios.delete(`${API_BASE_URL}/api/admin/deposits/${depositId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      toast.success('Deposit deleted successfully');
       fetchDeposits();
       fetchStats();
       setShowDepositDetails(false);
     } catch (err) {
+      toast.error('Failed to delete deposit.');
       setError('Failed to delete deposit.');
     }
   };
@@ -232,7 +396,7 @@ const Alldeposit = () => {
 
   const getStatusInfo = (status) => {
     switch (status) {
-      case 'completed':
+      case 'approved':
         return {
           icon: <FaCheckCircle className="text-emerald-400" />,
           badge: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
@@ -271,36 +435,6 @@ const Alldeposit = () => {
       card: 'text-indigo-400',
     };
     return map[method] || 'text-gray-400';
-  };
-
-  const exportToCSV = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      let url = `${API_BASE_URL}/api/admin/deposits/export`;
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (methodFilter !== 'all') params.append('method', methodFilter);
-      if (dateRange.start) params.append('startDate', dateRange.start);
-      if (dateRange.end) params.append('endDate', dateRange.end);
-      if (params.toString()) url += `?${params.toString()}`;
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob',
-      });
-      const blob = new Blob([response.data], { type: 'text/csv' });
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `deposit_history_${new Date().toISOString().split('T')[0]}.csv`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      setError('Failed to export CSV.');
-    }
   };
 
   // Smart pagination: always show first, last, current ± 1, with ellipsis
@@ -344,6 +478,8 @@ const Alldeposit = () => {
   return (
     <section className="min-h-screen bg-[#0F111A] text-gray-200 font-poppins">
       <Header toggleSidebar={toggleSidebar} />
+      <Toaster position="top-right" toastOptions={{ style: { background: '#161B22', color: '#e5e7eb', border: '1px solid #374151' } }} />
+      
       <div className="flex pt-[10vh]">
         <Sidebar isOpen={isSidebarOpen} />
         <main
@@ -368,9 +504,21 @@ const Alldeposit = () => {
               </p>
             </div>
             <div className="flex gap-3 mt-4 md:mt-0">
+              {/* CSV Download Dropdown */}
+              <div className="relative group">
+                <button
+                  className="bg-[#1F2937] hover:bg-emerald-600/20 border border-gray-700 hover:border-emerald-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-emerald-400"
+                  onClick={downloadCSV}
+                  disabled={downloading}
+                >
+                  {downloading ? <FaSpinner className="animate-spin" /> : <FaFileCsv />} 
+                  {downloading ? 'DOWNLOADING...' : 'EXPORT CSV'}
+                </button>
+              </div>
+              
               <button
                 onClick={() => { fetchDeposits(); fetchStats(); }}
-                className="bg-[#1F2937] hover:bg-indigo-600 border border-gray-700 px-6 py-2 rounded font-bold text-xs transition-all flex items-center gap-2"
+                className="bg-[#1F2937] hover:bg-indigo-600/20 border border-gray-700 hover:border-indigo-500/40 px-6 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-indigo-400"
               >
                 <FiRefreshCw className={loading ? 'animate-spin' : ''} /> REFRESH
               </button>
@@ -465,17 +613,32 @@ const Alldeposit = () => {
             </div>
           </div>
 
-          {/* Results Info */}
+          {/* Results Info and Export Button */}
           <div className="mb-3 flex justify-between items-center">
             <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
               Showing {deposits.length} of {stats.total} deposits
             </p>
+            {stats.total > 0 && (
+              <button
+                onClick={downloadCSV}
+                className="text-[9px] text-emerald-400 hover:text-emerald-300 uppercase tracking-wider font-bold flex items-center gap-1"
+              >
+                <FaFileCsv /> Export All Data
+              </button>
+            )}
           </div>
 
           {/* Table */}
           <div className="bg-[#161B22] border border-gray-800 rounded-lg overflow-hidden shadow-2xl">
-            <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-indigo-400 uppercase tracking-widest">
-              All Deposit Transactions
+            <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-indigo-400 uppercase tracking-widest flex justify-between items-center">
+              <span>All Deposit Transactions</span>
+              <button
+                onClick={downloadCSV}
+                className="text-emerald-400 hover:text-emerald-300 transition-colors text-[9px] flex items-center gap-1"
+                disabled={deposits.length === 0}
+              >
+                <FaFileCsv /> Export Table
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full text-left">
@@ -752,7 +915,7 @@ const Alldeposit = () => {
               >
                 <div className="space-y-4">
                   {[
-                    { label: 'Amount (BDT)', name: 'amount', type: 'number', defaultValue: selectedDeposit.amount, extra: { min: 300, max: 50000 } },
+                    { label: 'Amount (BDT)', name: 'amount', type: 'number', defaultValue: selectedDeposit.amount, extra: { min: 300, max: 50000, step: '100' } },
                     { label: 'Phone Number', name: 'phoneNumber', type: 'text', defaultValue: selectedDeposit.phoneNumber },
                     { label: 'Transaction ID', name: 'transactionId', type: 'text', defaultValue: selectedDeposit.transactionId },
                   ].map((f) => (

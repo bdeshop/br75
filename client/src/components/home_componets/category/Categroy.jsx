@@ -424,7 +424,7 @@ const translateCategoryName = (name) => {
   // Handle deposit from deposit popup
   const handleDepositFromPopup = () => {
     setShowDepositPopup(false);
-    navigate("/deposit");
+    navigate("/member/deposit");
   };
 
   const handleShowMore = () => {

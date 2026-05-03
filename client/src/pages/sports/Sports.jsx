@@ -92,15 +92,15 @@ const SkeletonGameCard = () => {
   );
 };
 
-// Main Slots Component
-const SlotsContent = () => {
+// Main Sports Component
+const SportsContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProviders, setSelectedProviders] = useState([]);
   const [selectedGameTypes, setSelectedGameTypes] = useState([]);
   const [selectedThemes, setSelectedThemes] = useState(['all']);
   const [selectedSpecialFeatures, setSelectedSpecialFeatures] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('sports'); // Changed from 'slots' to 'sports'
+  const [selectedCategory, setSelectedCategory] = useState('sports');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showFilterSidebar, setShowFilterSidebar] = useState(false);
@@ -115,6 +115,7 @@ const SlotsContent = () => {
   const [categories, setCategories] = useState([]);
   const [filteredGames, setFilteredGames] = useState([]);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showDepositPopup, setShowDepositPopup] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
   const [gameLoading, setGameLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -130,6 +131,7 @@ const SlotsContent = () => {
   const searchRef = useRef(null);
   const categoryRef = useRef(null);
   const popupRef = useRef(null);
+  const depositPopupRef = useRef(null);
   const filterSidebarRef = useRef(null);
   const sortRef = useRef(null);
 
@@ -199,6 +201,9 @@ const SlotsContent = () => {
     const handleClickOutside = (event) => {
       if (popupRef.current && !popupRef.current.contains(event.target)) {
         setShowLoginPopup(false);
+      }
+      if (depositPopupRef.current && !depositPopupRef.current.contains(event.target)) {
+        setShowDepositPopup(false);
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSuggestions(false);
@@ -452,6 +457,7 @@ const SlotsContent = () => {
     setShowFilterSidebar(false);
   };
 
+  // Handle game click with first_deposit validation
   const handleGameClick = (game) => {
     setSelectedGame(game);
     console.log("Game clicked:", game);
@@ -461,16 +467,29 @@ const SlotsContent = () => {
       setShowLoginPopup(true);
       return;
     }
-    // If user is logged in, navigate directly to game
+    
+    // Check if user has completed first deposit
+    if (user.first_deposit === false) {
+      setShowDepositPopup(true);
+      return;
+    }
+    
+    // If all validations pass, open the game
     handleOpenGame(game);
   };
 
   // Handle opening the game
-const handleOpenGame = async (game) => {
+  const handleOpenGame = async (game) => {
     // Check if user is logged in
     if (!user) {
       toast.error("Please login to play games");
       setShowLoginPopup(true);
+      return;
+    }
+
+    // Check if user has completed first deposit
+    if (user.first_deposit === false) {
+      setShowDepositPopup(true);
       return;
     }
 
@@ -502,14 +521,22 @@ const handleOpenGame = async (game) => {
     }
   };
 
+  // Handle login from popup
   const handleLoginFromPopup = () => {
     setShowLoginPopup(false);
     navigate('/login');
   };
 
+  // Handle register from popup
   const handleRegisterFromPopup = () => {
     setShowLoginPopup(false);
     navigate('/register');
+  };
+
+  // Handle deposit from deposit popup
+  const handleDepositFromPopup = () => {
+    setShowDepositPopup(false);
+    navigate('/member/deposit');
   };
 
   return (
@@ -679,19 +706,19 @@ const handleOpenGame = async (game) => {
                           onClick={() => handleGameClick(game)}
                         >
                           {/* ── Portrait-ratio image container with glow sweep ── */}
-                          <div className="slots-game-image-container w-full">
+                          <div className="sports-game-image-container w-full">
                             <img 
                               src={imageUrl} 
                               alt={game.name} 
-                              className="slots-game-image transition-transform duration-500 group-hover:scale-110"
+                              className="sports-game-image transition-transform duration-500 group-hover:scale-110"
                               onError={(e) => {
                                 e.target.onerror = null;
                                 e.target.src = logo;
                               }}
                             />
 
-                            {/* Glow Sweep Animation — same as Category component */}
-                            <div className="slots-glow-sweep"></div>
+                            {/* Glow Sweep Animation */}
+                            <div className="sports-glow-sweep"></div>
 
                             {game.featured && (
                               <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-md z-10">
@@ -970,6 +997,7 @@ const handleOpenGame = async (game) => {
         </div>
       )}
 
+      {/* Login Popup */}
       {showLoginPopup && (
         <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-70 backdrop-blur-md flex items-center justify-center z-[10000] p-4">
           <div 
@@ -1017,6 +1045,66 @@ const handleOpenGame = async (game) => {
         </div>
       )}
 
+      {/* First Deposit Required Popup */}
+      {showDepositPopup && (
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-70 backdrop-blur-md flex items-center justify-center z-[10000] p-4">
+          <div 
+            ref={depositPopupRef}
+            className="bg-gradient-to-b cursor-pointer from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-6 max-w-md w-full relative"
+          >
+            <button 
+              onClick={() => setShowDepositPopup(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="flex justify-center mb-6">
+              <img 
+                src={dynamicLogo}
+                alt="BJ Member Logo" 
+                className="h-12"
+                onError={(e) => {
+                  e.target.src = logo;
+                }}
+              />
+            </div>
+            
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="text-yellow-500">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            
+            <p className="text-gray-300 text-center text-lg font-semibold mb-2">
+              First Deposit Required!
+            </p>
+            <p className="text-gray-400 text-center text-sm mb-6">
+              Please complete your first deposit to play games and unlock all features.
+            </p>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleDepositFromPopup}
+                className="bg-theme_color text-center hover:bg-theme_color/90 text-[14px] text-white font-medium py-3 px-4 rounded-md transition-colors"
+              >
+                Make First Deposit
+              </button>
+              <button
+                onClick={() => setShowDepositPopup(false)}
+                className="bg-[#333] text-center hover:bg-[#444] text-[14px] text-white font-medium py-3 px-4 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {gameLoading && (
         <div className="fixed inset-0 bg-[rgba(0,0,0,0.7)] flex items-center justify-center z-[1000]">
           <div className="flex flex-col items-center">
@@ -1036,8 +1124,8 @@ const handleOpenGame = async (game) => {
       )}
 
       <style jsx>{`
-        /* ── Portrait-ratio container (matches Category component) ── */
-        .slots-game-image-container {
+        /* ── Portrait-ratio container for sports games ── */
+        .sports-game-image-container {
           position: relative;
           width: 100%;
           padding-bottom: 133.33%; /* 3:4 portrait ratio */
@@ -1046,7 +1134,7 @@ const handleOpenGame = async (game) => {
           background: #1a1a1a;
         }
 
-        .slots-game-image {
+        .sports-game-image {
           position: absolute;
           top: 0;
           left: 0;
@@ -1055,8 +1143,8 @@ const handleOpenGame = async (game) => {
           object-fit: cover;
         }
 
-        /* ── Glow Sweep — identical to Category component ── */
-        .slots-glow-sweep {
+        /* ── Glow Sweep Animation ── */
+        .sports-glow-sweep {
           position: absolute;
           top: 0;
           left: -200%;
@@ -1071,13 +1159,12 @@ const handleOpenGame = async (game) => {
             transparent 100%
           );
           transform: skewX(-25deg);
-          /* 5s cycle: ~3s sweep + 2s hidden pause */
-          animation: slotsSweepWide 5s ease-in-out infinite;
+          animation: sportsSweepWide 5s ease-in-out infinite;
           pointer-events: none;
           z-index: 1;
         }
 
-        @keyframes slotsSweepWide {
+        @keyframes sportsSweepWide {
           0%   { left: -250%; opacity: 0; }
           10%  { opacity: 1; }
           60%  { left: 150%; opacity: 1; }
@@ -1086,12 +1173,12 @@ const handleOpenGame = async (game) => {
         }
 
         /* Stagger the sweep per card so they don't all flash at once */
-        .slots-game-image-container:nth-child(2n)   .slots-glow-sweep { animation-delay: 0.7s; }
-        .slots-game-image-container:nth-child(3n)   .slots-glow-sweep { animation-delay: 1.4s; }
-        .slots-game-image-container:nth-child(4n)   .slots-glow-sweep { animation-delay: 2.1s; }
-        .slots-game-image-container:nth-child(5n)   .slots-glow-sweep { animation-delay: 2.8s; }
-        .slots-game-image-container:nth-child(6n)   .slots-glow-sweep { animation-delay: 3.5s; }
-        .slots-game-image-container:nth-child(7n)   .slots-glow-sweep { animation-delay: 4.2s; }
+        .sports-game-image-container:nth-child(2n)   .sports-glow-sweep { animation-delay: 0.7s; }
+        .sports-game-image-container:nth-child(3n)   .sports-glow-sweep { animation-delay: 1.4s; }
+        .sports-game-image-container:nth-child(4n)   .sports-glow-sweep { animation-delay: 2.1s; }
+        .sports-game-image-container:nth-child(5n)   .sports-glow-sweep { animation-delay: 2.8s; }
+        .sports-game-image-container:nth-child(6n)   .sports-glow-sweep { animation-delay: 3.5s; }
+        .sports-game-image-container:nth-child(7n)   .sports-glow-sweep { animation-delay: 4.2s; }
 
         ::-webkit-scrollbar {
           width: 8px;
@@ -1121,7 +1208,7 @@ const handleOpenGame = async (game) => {
 const Sports = () => {
   return (
     <AuthProvider>
-      <SlotsContent />
+      <SportsContent />
     </AuthProvider>
   );
 };

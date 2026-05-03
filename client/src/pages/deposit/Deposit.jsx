@@ -30,7 +30,23 @@ const Deposit = () => {
   
   const { t } = useContext(LanguageContext);
 
-  const quickAmounts = [50, 100, 300, 500, 1000, 25000];
+  // Determine minimum deposit amount based on first deposit status
+  const getMinimumDepositAmount = () => {
+    if (userData && userData.first_deposit === true) {
+      return 50; // After first deposit, minimum is 50
+    } else {
+      return 500; // Before first deposit, minimum is 500
+    }
+  };
+
+  const quickAmounts = () => {
+    const minDeposit = getMinimumDepositAmount();
+    if (minDeposit === 500) {
+      return [500, 1000, 2000, 5000, 10000, 25000];
+    } else {
+      return [50, 100, 300, 500, 1000, 25000];
+    }
+  };
 
   // Fetch deposit methods
   useEffect(() => {
@@ -132,13 +148,26 @@ const Deposit = () => {
               });
             }
             
-            const filteredBonuses = response.data.data.filter(bonus => {
+            let filteredBonuses = response.data.data.filter(bonus => {
               if (!bonus.bonusCode) return true;
               const isUsed = usedBonusCodes.includes(bonus.bonusCode);
               if (bonus.bonusType === 'first_deposit' && userData.bonusInfo?.firstDepositBonusClaimed) {
                 return false;
               }
               return !isUsed;
+            });
+            
+            // Filter out bonuses that have minimum deposit higher than current user's capability
+            const minDeposit = getMinimumDepositAmount();
+            filteredBonuses = filteredBonuses.filter(bonus => {
+              if (bonus.minDeposit && bonus.minDeposit > 0) {
+                // For users who haven't made first deposit, only show bonuses with min deposit <= 500
+                if (!userData.first_deposit && bonus.minDeposit > 500) {
+                  return false;
+                }
+                return true;
+              }
+              return true;
             });
             
             setAvailableBonuses(filteredBonuses);
@@ -151,8 +180,10 @@ const Deposit = () => {
       }
     };
 
-    fetchAvailableBonuses();
-  }, [API_BASE_URL]);
+    if (userData) {
+      fetchAvailableBonuses();
+    }
+  }, [API_BASE_URL, userData]);
 
   const getOraclePayMethodName = (methodName) => {
     const methodMap = {
@@ -172,13 +203,19 @@ const Deposit = () => {
     setTransactionStatus(null);
     
     const errors = {};
+    const minDeposit = getMinimumDepositAmount();
+    
     if (!activeMethod) {
       errors.method = t.pleaseSelectPaymentMethod || "Please select a payment method";
     }
     if (!amount) {
       errors.amount = t.amountRequired || "Amount is required";
-    } else if (parseFloat(amount) < 50) {
-      errors.amount = t.minDepositAmount || "Minimum deposit amount is ৳50";
+    } else if (parseFloat(amount) < minDeposit) {
+      if (!userData?.first_deposit) {
+        errors.amount = `First deposit minimum amount is ৳${minDeposit}. Please deposit at least ৳${minDeposit} to activate your account.`;
+      } else {
+        errors.amount = `${t.minDepositAmount || "Minimum deposit amount is"} ৳${minDeposit}`;
+      }
     } else if (parseFloat(amount) > parseFloat(activeMethod?.maxAmount || 50000)) {
       errors.amount = `${t.maxDepositAmount || "Maximum deposit amount is"} ৳${activeMethod?.maxAmount || 50000}`;
     }
@@ -263,7 +300,8 @@ const Deposit = () => {
           bonusCode: selectedBonus?.bonusCode || '',
           bonusName: selectedBonus?.name || '',
           checkoutItems: checkoutItems,
-          currency: 'BDT'
+          currency: 'BDT',
+          isFirstDeposit: !userData?.first_deposit // Mark if this is first deposit
         };
 
         try {
@@ -473,6 +511,9 @@ const Deposit = () => {
     );
   }
 
+  const minDepositAmount = getMinimumDepositAmount();
+  const isFirstDeposit = userData && userData.first_deposit === false;
+
   return (
     <div className="h-screen overflow-hidden bg-[#0a0f0f] text-white font-rubik">
       <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -494,6 +535,37 @@ const Deposit = () => {
                 {t.depositDescription || "Add money to your account using OraclePay secure payment gateway"}
               </p>
             </div>
+
+            {/* First Deposit Warning Banner */}
+            {isFirstDeposit && (
+              <div className="bg-gradient-to-r from-[#2a1f1f] to-[#1a2525] border-l-4 border-[#ff6b6b] p-4 mb-6 md:mb-8 rounded-r-lg">
+                <div className="flex items-start">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-[#ff6b6b] mr-3 mt-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <div>
+                    <h3 className="text-sm md:text-base font-semibold text-[#ff6b6b] mb-1">
+                      First Deposit Requirement
+                    </h3>
+                    <p className="text-xs md:text-sm text-[#a8b9c6]">
+                      As this is your first deposit, the minimum amount is <strong className="text-white">৳{minDepositAmount}</strong>. 
+                      After your first deposit, the minimum will be reduced to ৳50.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {userData && (
               <div className="bg-[#1a1f1f] rounded-[2px] p-4 md:p-6 mb-6 md:mb-8 border border-[#2a2f2f] shadow-lg">
@@ -520,6 +592,13 @@ const Deposit = () => {
                     </p>
                   </div>
                 </div>
+                {isFirstDeposit && (
+                  <div className="mt-3 pt-3 border-t border-[#2a2f2f]">
+                    <p className="text-xs text-[#e6db74]">
+                      ⚡ First Deposit Bonus Available! Check the bonus section below.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -613,7 +692,9 @@ const Deposit = () => {
                                 ? "border-[#ff6b6b]"
                                 : "border-[#2a2f2f]"
                             }`}
-                            placeholder={t.enterDepositAmount || "Enter deposit amount (minimum ৳50)"}
+                            placeholder={isFirstDeposit 
+                              ? `Enter deposit amount (minimum ৳${minDepositAmount})` 
+                              : "Enter deposit amount (minimum ৳50)"}
                             value={amount}
                             onChange={(e) => {
                               setAmount(e.target.value);
@@ -630,7 +711,7 @@ const Deposit = () => {
                               }
                             }}
                             required
-                            min="50"
+                            min={minDepositAmount}
                           />
                           {formErrors.amount && (
                             <p className="text-[#ff6b6b] text-xs md:text-sm mt-1">
@@ -639,7 +720,7 @@ const Deposit = () => {
                           )}
 
                           <div className="flex flex-wrap gap-2 mt-3 md:mt-4">
-                            {quickAmounts.map((quickAmount) => (
+                            {quickAmounts().map((quickAmount) => (
                               <button
                                 type="button"
                                 key={quickAmount}
@@ -664,6 +745,11 @@ const Deposit = () => {
                               </button>
                             ))}
                           </div>
+                          <p className="text-xs text-[#8a9ba8] mt-2">
+                            {isFirstDeposit 
+                              ? `ℹ️ First deposit minimum: ৳${minDepositAmount} (After first deposit, minimum will be ৳50)`
+                              : `ℹ️ Minimum deposit: ৳${minDepositAmount}`}
+                          </p>
                         </div>
 
                         {/* Dynamic Bonus Selection */}
@@ -925,7 +1011,7 @@ const Deposit = () => {
                 </h3>
                 <ol className="text-xs md:text-sm text-[#8a9ba8] space-y-2 md:space-y-3 list-decimal list-inside">
                   <li>{t.selectPaymentMethod || "Select your preferred payment method"}</li>
-                  <li>{t.enterDepositAmountInstruction || "Enter the amount you want to deposit (minimum ৳50)"}</li>
+                  <li>{t.enterDepositAmountInstruction || `Enter the amount you want to deposit (minimum ৳${minDepositAmount})`}</li>
                   <li>{t.selectBonusIfAvailable || "Select a bonus option if available (optional)"}</li>
                   <li>{t.clickProceedToPayment || `Click "Proceed to [Payment Method] Payment"`}</li>
                   <li>{t.redirectedToOraclePay || "You will be redirected to OraclePay secure payment page"}</li>
@@ -1027,6 +1113,11 @@ const Deposit = () => {
                                   }`}>
                                     {t[transaction.status] || transaction.status}
                                   </span>
+                                  {transaction.isFirstDeposit && (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-blue-900/30 text-blue-400">
+                                      First Deposit
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-xs text-[#8a9ba8] mt-1">
                                   {formatDate(transaction.createdAt)} • {timeAgo(transaction.createdAt)}

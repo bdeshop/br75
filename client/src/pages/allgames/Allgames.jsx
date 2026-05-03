@@ -115,6 +115,7 @@ const AllGamesContent = () => {
   const [categories, setCategories] = useState([]);
   const [filteredGames, setFilteredGames] = useState([]);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showDepositPopup, setShowDepositPopup] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
   const [gameLoading, setGameLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -133,6 +134,7 @@ const AllGamesContent = () => {
   const searchRef = useRef(null);
   const categoryRef = useRef(null);
   const popupRef = useRef(null);
+  const depositPopupRef = useRef(null);
   const filterSidebarRef = useRef(null);
   const sortRef = useRef(null);
 
@@ -278,6 +280,9 @@ const AllGamesContent = () => {
     const handleClickOutside = (event) => {
       if (popupRef.current && !popupRef.current.contains(event.target)) {
         setShowLoginPopup(false);
+      }
+      if (depositPopupRef.current && !depositPopupRef.current.contains(event.target)) {
+        setShowDepositPopup(false);
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSuggestions(false);
@@ -569,7 +574,7 @@ const AllGamesContent = () => {
     setShowFilterSidebar(false);
   };
 
-  // Handle game click
+  // Handle game click with first_deposit validation
   const handleGameClick = (game) => {
     setSelectedGame(game);
     console.log("Game clicked:", game);
@@ -579,18 +584,31 @@ const AllGamesContent = () => {
       setShowLoginPopup(true);
       return;
     }
-    // If user is logged in, navigate directly to game
+    
+    // Check if user has completed first deposit
+    if (user.first_deposit === false) {
+      setShowDepositPopup(true);
+      return;
+    }
+    
+    // If all validations pass, open the game
     handleOpenGame(game);
   };
 
   // Handle opening the game
-const handleOpenGame = async (game) => {
+  const handleOpenGame = async (game) => {
     console.log("Attempting to open game:", game);
 
     // Check if user is logged in
     if (!user) {
       toast.error("Please login to play games");
       setShowLoginPopup(true);
+      return;
+    }
+
+    // Check if user has completed first deposit
+    if (user.first_deposit === false) {
+      setShowDepositPopup(true);
       return;
     }
 
@@ -634,14 +652,22 @@ const handleOpenGame = async (game) => {
     }
   };
 
+  // Handle login from popup
   const handleLoginFromPopup = () => {
     setShowLoginPopup(false);
     navigate('/login');
   };
 
+  // Handle register from popup
   const handleRegisterFromPopup = () => {
     setShowLoginPopup(false);
     navigate('/register');
+  };
+
+  // Handle deposit from deposit popup
+  const handleDepositFromPopup = () => {
+    setShowDepositPopup(false);
+    navigate('/member/deposit');
   };
 
   // Get provider name from URL for display
@@ -1125,6 +1151,7 @@ const handleOpenGame = async (game) => {
         </div>
       )}
 
+      {/* Login Popup */}
       {showLoginPopup && (
         <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-70 backdrop-blur-md flex items-center justify-center z-[10000] p-4">
           <div 
@@ -1167,6 +1194,66 @@ const handleOpenGame = async (game) => {
               >
                 Log in
               </NavLink>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* First Deposit Required Popup */}
+      {showDepositPopup && (
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-70 backdrop-blur-md flex items-center justify-center z-[10000] p-4">
+          <div 
+            ref={depositPopupRef}
+            className="bg-gradient-to-b cursor-pointer from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-6 max-w-md w-full relative"
+          >
+            <button 
+              onClick={() => setShowDepositPopup(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="flex justify-center mb-6">
+              <img 
+                src={dynamicLogo}
+                alt="BJ Member Logo" 
+                className="h-12"
+                onError={(e) => {
+                  e.target.src = logo;
+                }}
+              />
+            </div>
+            
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="text-yellow-500">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            
+            <p className="text-gray-300 text-center text-lg font-semibold mb-2">
+              First Deposit Required!
+            </p>
+            <p className="text-gray-400 text-center text-sm mb-6">
+              Please complete your first deposit to play games and unlock all features.
+            </p>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleDepositFromPopup}
+                className="bg-theme_color text-center hover:bg-theme_color/90 text-[14px] text-white font-medium py-3 px-4 rounded-md transition-colors"
+              >
+                Make First Deposit
+              </button>
+              <button
+                onClick={() => setShowDepositPopup(false)}
+                className="bg-[#333] text-center hover:bg-[#444] text-[14px] text-white font-medium py-3 px-4 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

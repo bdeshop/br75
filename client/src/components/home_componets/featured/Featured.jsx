@@ -73,6 +73,7 @@ const FeaturedContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showDepositPopup, setShowDepositPopup] = useState(false);
   const [gameLoading, setGameLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [dynamicLogo, setDynamicLogo] = useState(logo);
@@ -81,6 +82,7 @@ const FeaturedContent = () => {
   const navigate = useNavigate();
   const sliderRef = useRef(null);
   const popupRef = useRef(null);
+  const depositPopupRef = useRef(null);
 
   // --- MOUSE DRAG SLIDER LOGIC ---
   const [isDragging, setIsDragging] = useState(false);
@@ -180,14 +182,24 @@ const FeaturedContent = () => {
 
   const handleGameClick = (game) => {
     if (isDragging) return; // Prevent click during drag
+    
+    // Check if user is logged in
     if (!user) {
       setShowLoginPopup(true);
       return;
     }
+    
+    // Check if user has completed first deposit
+    if (user.first_deposit === false) {
+      setShowDepositPopup(true);
+      return;
+    }
+    
+    // If all validations pass, open the game
     handleOpenGame(game);
   };
 
-const handleOpenGame = async (game) => {
+  const handleOpenGame = async (game) => {
     try {
       setGameLoading(true);
       const gameId = game.gameId || game.gameApiID;
@@ -218,22 +230,43 @@ const handleOpenGame = async (game) => {
     }
   };
 
-  // Handle click outside popup
+  // Handle login from popup
+  const handleLoginFromPopup = () => {
+    setShowLoginPopup(false);
+    navigate("/login");
+  };
+
+  // Handle register from popup
+  const handleRegisterFromPopup = () => {
+    setShowLoginPopup(false);
+    navigate("/register");
+  };
+
+  // Handle deposit from deposit popup
+  const handleDepositFromPopup = () => {
+    setShowDepositPopup(false);
+    navigate("/member/deposit");
+  };
+
+  // Handle click outside popups
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (popupRef.current && !popupRef.current.contains(event.target)) {
         setShowLoginPopup(false);
       }
+      if (depositPopupRef.current && !depositPopupRef.current.contains(event.target)) {
+        setShowDepositPopup(false);
+      }
     };
 
-    if (showLoginPopup) {
+    if (showLoginPopup || showDepositPopup) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showLoginPopup]);
+  }, [showLoginPopup, showDepositPopup]);
 
   if (loading) return (
     <div className="bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] p-4">
@@ -382,6 +415,7 @@ const handleOpenGame = async (game) => {
         </div>
       </div>
 
+      {/* Login Popup */}
       {showLoginPopup && (
         <div 
           className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[10000] p-4" 
@@ -413,16 +447,78 @@ const handleOpenGame = async (game) => {
             </p>
             <div className="flex flex-col gap-3">
               <button 
-                onClick={() => navigate("/register")} 
+                onClick={handleRegisterFromPopup} 
                 className="bg-theme_color hover:bg-theme_color/90 text-white font-medium py-3 px-4 rounded-md transition-colors"
               >
                 Sign up
               </button>
               <button 
-                onClick={() => navigate("/login")} 
+                onClick={handleLoginFromPopup} 
                 className="bg-[#333] hover:bg-[#444] text-white font-medium py-3 px-4 rounded-md transition-colors"
               >
                 Log in
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* First Deposit Required Popup */}
+      {showDepositPopup && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[10000] p-4" 
+          onClick={() => setShowDepositPopup(false)}
+        >
+          <div 
+            ref={depositPopupRef} 
+            className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-6 max-w-md w-full relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setShowDepositPopup(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="flex justify-center mb-6">
+              <img 
+                className="h-12 w-auto object-contain" 
+                src={dynamicLogo} 
+                alt="Logo" 
+                onError={(e) => { e.target.src = logo; }} 
+              />
+            </div>
+            
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="text-yellow-500">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            
+            <p className="text-gray-300 text-center text-lg font-semibold mb-2">
+              First Deposit Required!
+            </p>
+            <p className="text-gray-400 text-center text-sm mb-6">
+              Please complete your first deposit to play games and unlock all features.
+            </p>
+            
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={handleDepositFromPopup} 
+                className="bg-theme_color hover:bg-theme_color/90 text-white font-medium py-3 px-4 rounded-md transition-colors"
+              >
+                Make First Deposit
+              </button>
+              <button 
+                onClick={() => setShowDepositPopup(false)} 
+                className="bg-[#333] hover:bg-[#444] text-white font-medium py-3 px-4 rounded-md transition-colors"
+              >
+                Cancel
               </button>
             </div>
           </div>

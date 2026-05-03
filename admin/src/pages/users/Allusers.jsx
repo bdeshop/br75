@@ -19,6 +19,8 @@ import {
   FaUserCheck,
   FaUserShield,
   FaChartLine,
+  FaDownload,
+  FaFileCsv,
 } from 'react-icons/fa';
 import { FiRefreshCw } from 'react-icons/fi';
 import Sidebar from '../../components/Sidebar';
@@ -39,6 +41,7 @@ const Allusers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [users, setUsers] = useState([]);
+  const [downloading, setDownloading] = useState(false);
 
   const navigate = useNavigate();
   const itemsPerPage = 10;
@@ -68,6 +71,153 @@ const Allusers = () => {
       toast.error('Failed to fetch users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to download CSV
+  const downloadCSV = () => {
+    try {
+      setDownloading(true);
+      
+      // Get filtered users for download (all pages, not just current page)
+      let dataToExport = [...users];
+      
+      // Apply filters to exported data
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        dataToExport = dataToExport.filter(user =>
+          user.username?.toLowerCase().includes(term) ||
+          user.email?.toLowerCase().includes(term) ||
+          user.player_id?.toLowerCase().includes(term) ||
+          user.phone?.toLowerCase().includes(term)
+        );
+      }
+      
+      if (statusFilter !== 'all') {
+        dataToExport = dataToExport.filter(user => user.status === statusFilter);
+      }
+      
+      if (kycFilter !== 'all') {
+        dataToExport = dataToExport.filter(user => user.kycStatus === kycFilter);
+      }
+      
+      if (dataToExport.length === 0) {
+        toast.error('No data to export');
+        return;
+      }
+      
+      // Define CSV headers
+      const headers = [
+        'Username',
+        'Player ID',
+        'Email',
+        'Phone',
+        'Role',
+        'Status',
+        'KYC Status',
+        'Balance',
+        'Bonus Balance',
+        'Total Deposits',
+        'Total Withdrawals',
+        'Registration Date',
+      ];
+      
+      // Map user data to CSV rows
+      const csvRows = dataToExport.map(user => [
+        user.username || 'N/A',
+        user.player_id || 'N/A',
+        user.email || 'N/A',
+        user.phone || 'N/A',
+        user.role || 'User',
+        user.status || 'N/A',
+        user.kycStatus || 'Unverified',
+        user.balance || 0,
+        user.bonusBalance || 0,
+        user.totalDeposits || 0,
+        user.totalWithdrawals || 0,
+        user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-BD') : 'N/A',
+      ]);
+      
+      // Combine headers and rows
+      const csvContent = [headers, ...csvRows].map(row => 
+        row.map(cell => {
+          // Handle commas, quotes, and newlines in cell data
+          if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
+            return `"${cell.replace(/"/g, '""')}"`;
+          }
+          return cell;
+        }).join(',')
+      ).join('\n');
+      
+      // Add BOM for UTF-8 encoding to support special characters
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Downloaded ${dataToExport.length} users successfully`);
+    } catch (err) {
+      console.error('CSV download error:', err);
+      toast.error('Failed to download CSV file');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Function to download sample CSV template
+  const downloadSampleCSV = () => {
+    try {
+      const headers = [
+        'Username',
+        'Email',
+        'Phone',
+        'Role',
+        'Status',
+        'KYC Status',
+        'Balance',
+        'Bonus Balance',
+        'Currency'
+      ];
+      
+      const sampleRow = [
+        'john_doe',
+        'john@example.com',
+        '+8801234567890',
+        'user',
+        'active',
+        'verified',
+        '1000.00',
+        '50.00',
+        'BDT'
+      ];
+      
+      const csvContent = [headers, sampleRow].map(row => 
+        row.map(cell => {
+          if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"'))) {
+            return `"${cell.replace(/"/g, '""')}"`;
+          }
+          return cell;
+        }).join(',')
+      ).join('\n');
+      
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'users_sample_template.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Sample template downloaded');
+    } catch (err) {
+      toast.error('Failed to download sample template');
     }
   };
 
@@ -287,7 +437,7 @@ const Allusers = () => {
   return (
     <section className="min-h-screen bg-[#0F111A] text-gray-200 font-poppins">
       <Header toggleSidebar={toggleSidebar} />
-      <Toaster position="top-right" toastOptions={{ style: { background: '#161B22', color: '#e5e7eb', border: '1px solid #374151' } }} />
+      <Toaster toastOptions={{ style: { background: '#161B22', color: '#e5e7eb', border: '1px solid #374151' } }} />
 
       <div className="flex pt-[10vh]">
         <Sidebar isOpen={isSidebarOpen} />
@@ -307,6 +457,18 @@ const Allusers = () => {
                 </p>
               </div>
               <div className="flex gap-3 mt-4 md:mt-0">
+                {/* CSV Download Dropdown */}
+                <div className="relative group">
+                  <button
+                    className="bg-[#1F2937] hover:bg-emerald-600/20 border border-gray-700 hover:border-emerald-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-emerald-400"
+                    onClick={downloadCSV}
+                    disabled={downloading}
+                  >
+                    {downloading ? <FaSpinner className="animate-spin" /> : <FaFileCsv />} 
+                    {downloading ? 'DOWNLOADING...' : 'EXPORT CSV'}
+                  </button>
+                </div>
+                
                 <Link
                   to="/admin/users/new"
                   className="bg-[#1F2937] hover:bg-amber-600/20 border border-gray-700 hover:border-amber-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-amber-400"
@@ -392,17 +554,29 @@ const Allusers = () => {
               </div>
             </div>
 
-            {/* Results Count */}
+            {/* Results Count and Export Info */}
             <div className="mb-3 flex justify-between items-center">
               <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
                 Showing {currentItems.length} of {filteredAndSortedUsers.length} users
               </p>
+              {filteredAndSortedUsers.length > 0 && (
+                <p className="text-[9px] text-emerald-500/70 uppercase tracking-wider font-bold flex items-center gap-1">
+                  <FaFileCsv /> {filteredAndSortedUsers.length} users ready for export
+                </p>
+              )}
             </div>
 
             {/* Users Table */}
             <div className="bg-[#161B22] border border-gray-800 rounded-lg overflow-hidden shadow-2xl">
-              <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-amber-400 uppercase tracking-widest">
-                User List
+              <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-amber-400 uppercase tracking-widest flex justify-between items-center">
+                <span>User List</span>
+                <button
+                  onClick={downloadCSV}
+                  className="text-emerald-400 hover:text-emerald-300 transition-colors text-[9px] flex items-center gap-1"
+                  disabled={filteredAndSortedUsers.length === 0}
+                >
+                  <FaFileCsv /> Export All
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left">

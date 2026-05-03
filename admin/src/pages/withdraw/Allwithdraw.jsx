@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   FaSearch, FaEye, FaSort, FaSortUp, FaSortDown,
   FaCheckCircle, FaTimesCircle, FaClock, FaExclamationTriangle,
-  FaEdit, FaTrash, FaSpinner, FaCalendarAlt
+  FaEdit, FaTrash, FaSpinner, FaCalendarAlt, FaFileCsv, FaDownload
 } from 'react-icons/fa';
 import { FiRefreshCw, FiTrendingUp, FiDownload } from 'react-icons/fi';
 import Sidebar from '../../components/Sidebar';
@@ -29,6 +29,7 @@ const Allwithdraw = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
@@ -95,7 +96,7 @@ const Allwithdraw = () => {
         const arr = response.data.withdrawals || response.data.data || [];
         setWithdrawals(arr);
         setStats({
-          total: arr.length,
+          total: response.data.total || arr.length,
           completed: arr.filter((w) => w.status === 'completed').length,
           pending: arr.filter((w) => ['pending', 'processing'].includes(w.status)).length,
           totalAmount: arr.reduce((sum, w) => sum + (w.amount || 0), 0),
@@ -155,6 +156,218 @@ const Allwithdraw = () => {
     }
   };
 
+  // Enhanced CSV Export Function
+  const downloadCSV = () => {
+    try {
+      setDownloading(true);
+      toast.loading('Preparing CSV file...', { id: 'csv-download' });
+      
+      // Get filtered data for export
+      let dataToExport = [...withdrawals];
+      
+      // Apply current filters to exported data
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        dataToExport = dataToExport.filter(w =>
+          w.userId?.username?.toLowerCase().includes(term) ||
+          w.userId?.player_id?.toLowerCase().includes(term) ||
+          w.transactionId?.toLowerCase().includes(term) ||
+          getAccountDetails(w).fullDetails.toLowerCase().includes(term)
+        );
+      }
+      
+      if (statusFilter !== 'all') {
+        dataToExport = dataToExport.filter(w => w.status === statusFilter);
+      }
+      
+      if (methodFilter !== 'all') {
+        dataToExport = dataToExport.filter(w => w.method === methodFilter);
+      }
+      
+      if (dateRange.start) {
+        const startDate = new Date(dateRange.start);
+        dataToExport = dataToExport.filter(w => new Date(w.createdAt) >= startDate);
+      }
+      
+      if (dateRange.end) {
+        const endDate = new Date(dateRange.end);
+        endDate.setHours(23, 59, 59);
+        dataToExport = dataToExport.filter(w => new Date(w.createdAt) <= endDate);
+      }
+      
+      if (dataToExport.length === 0) {
+        toast.error('No data to export', { id: 'csv-download' });
+        return;
+      }
+      
+      // Define CSV headers
+      const headers = [
+        'Withdrawal ID',
+        'Date',
+        'Time',
+        'Player ID',
+        'Username',
+        'Amount (BDT)',
+        'Payment Method',
+        'Account Details',
+        'Bank Name',
+        'Account Holder Name',
+        'Account Number',
+        'Branch Name',
+        'District',
+        'Routing Number',
+        'Status',
+        'Transaction ID',
+        'Processed Date',
+        'Requested At'
+      ];
+      
+      // Map withdrawal data to CSV rows
+      const csvRows = dataToExport.map(w => {
+        const createdAt = w.createdAt ? new Date(w.createdAt) : null;
+        const processedAt = w.processedAt ? new Date(w.processedAt) : null;
+        const accountDetails = getAccountDetails(w);
+        
+        // Get detailed bank/mobile info
+        let bankName = 'N/A';
+        let accountHolderName = 'N/A';
+        let accountNumber = 'N/A';
+        let branchName = 'N/A';
+        let district = 'N/A';
+        let routingNumber = 'N/A';
+        
+        if (w.method === 'bank' && w.bankDetails) {
+          bankName = w.bankDetails.bankName || 'N/A';
+          accountHolderName = w.bankDetails.accountHolderName || 'N/A';
+          accountNumber = w.bankDetails.accountNumber || 'N/A';
+          branchName = w.bankDetails.branchName || 'N/A';
+          district = w.bankDetails.district || 'N/A';
+          routingNumber = w.bankDetails.routingNumber || 'N/A';
+        } else if (w.mobileBankingDetails) {
+          accountNumber = w.mobileBankingDetails.phoneNumber || 'N/A';
+        }
+        
+        return [
+          w._id || 'N/A',
+          createdAt ? createdAt.toLocaleDateString('en-BD') : 'N/A',
+          createdAt ? createdAt.toLocaleTimeString('en-BD') : 'N/A',
+          w.userId?.player_id || 'N/A',
+          w.userId?.username || 'N/A',
+          w.amount || 0,
+          getMethodName(w.method),
+          accountDetails.fullDetails,
+          bankName,
+          accountHolderName,
+          accountNumber,
+          branchName,
+          district,
+          routingNumber,
+          w.status || 'N/A',
+          w.transactionId || 'N/A',
+          processedAt ? processedAt.toLocaleDateString('en-BD') : 'N/A',
+          createdAt ? createdAt.toLocaleString('en-BD') : 'N/A'
+        ];
+      });
+      
+      // Combine headers and rows
+      const csvContent = [headers, ...csvRows].map(row => 
+        row.map(cell => {
+          // Handle commas, quotes, and newlines in cell data
+          if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
+            return `"${cell.replace(/"/g, '""')}"`;
+          }
+          return cell;
+        }).join(',')
+      ).join('\n');
+      
+      // Add BOM for UTF-8 encoding to support special characters
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `withdrawals_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Downloaded ${dataToExport.length} withdrawals successfully`, { id: 'csv-download' });
+    } catch (err) {
+      console.error('CSV download error:', err);
+      toast.error('Failed to download CSV file', { id: 'csv-download' });
+    } finally {
+      setDownloading(false);
+    }
+  };
+  
+  // Download sample CSV template
+  const downloadSampleCSV = () => {
+    try {
+      const headers = [
+        'Withdrawal ID',
+        'Date',
+        'Time',
+        'Player ID',
+        'Username',
+        'Amount (BDT)',
+        'Payment Method',
+        'Account Details',
+        'Bank Name',
+        'Account Holder Name',
+        'Account Number',
+        'Branch Name',
+        'District',
+        'Routing Number',
+        'Status',
+        'Transaction ID',
+        'Admin Notes'
+      ];
+      
+      const sampleRow = [
+        'WD123456',
+        '2025-01-15',
+        '14:30:00',
+        'PID123456',
+        'john_doe',
+        '5000',
+        'bKash',
+        '01712345678 (Personal)',
+        'N/A',
+        'N/A',
+        '01712345678',
+        'N/A',
+        'N/A',
+        'N/A',
+        'completed',
+        'TXN123456789',
+        'Withdrawal processed successfully'
+      ];
+      
+      const csvContent = [headers, sampleRow].map(row => 
+        row.map(cell => {
+          if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"'))) {
+            return `"${cell.replace(/"/g, '""')}"`;
+          }
+          return cell;
+        }).join(',')
+      ).join('\n');
+      
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'withdrawals_sample_template.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Sample template downloaded');
+    } catch (err) {
+      toast.error('Failed to download sample template');
+    }
+  };
+
   const updateWithdrawalStatus = async (withdrawalId, status, transactionId = null, adminNote = null) => {
     try {
       setUpdatingStatus(true);
@@ -193,35 +406,6 @@ const Allwithdraw = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete withdrawal');
       return false;
-    }
-  };
-
-  const exportToCSV = () => {
-    try {
-      const headers = ['Date', 'Player ID', 'Username', 'Method', 'Amount', 'Account Details', 'Status', 'Transaction ID'];
-      const csvData = withdrawals.map((w) => [
-        formatDate(w.createdAt),
-        w.userId?.player_id || 'N/A',
-        w.userId?.username || 'N/A',
-        getMethodName(w.method),
-        w.amount,
-        getAccountDetails(w).fullDetails,
-        w.status,
-        w.transactionId || 'N/A',
-      ]);
-      const csvContent = [headers, ...csvData].map((row) => row.join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `withdrawal_history_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success('CSV exported successfully!');
-    } catch (err) {
-      toast.error('Failed to export data.');
     }
   };
 
@@ -388,12 +572,18 @@ const Allwithdraw = () => {
               </p>
             </div>
             <div className="flex gap-3 mt-4 md:mt-0">
-              <button
-                onClick={exportToCSV}
-                className="bg-[#1F2937] hover:bg-emerald-600/20 border border-gray-700 hover:border-emerald-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-emerald-400"
-              >
-                <FiDownload /> EXPORT CSV
-              </button>
+              {/* CSV Download Dropdown */}
+              <div className="relative group">
+                <button
+                  className="bg-[#1F2937] hover:bg-emerald-600/20 border border-gray-700 hover:border-emerald-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-emerald-400"
+                  onClick={downloadCSV}
+                  disabled={downloading}
+                >
+                  {downloading ? <FaSpinner className="animate-spin" /> : <FaFileCsv />} 
+                  {downloading ? 'DOWNLOADING...' : 'EXPORT CSV'}
+                </button>
+              </div>
+              
               <button
                 onClick={fetchWithdrawals}
                 className="bg-[#1F2937] hover:bg-amber-600/30 border border-gray-700 hover:border-amber-500/40 px-6 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-amber-400"
@@ -479,17 +669,32 @@ const Allwithdraw = () => {
             </div>
           </div>
 
-          {/* Results Info */}
+          {/* Results Info and Export Button */}
           <div className="mb-3 flex justify-between items-center">
             <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
               Showing {withdrawals.length} of {stats.total} withdrawals
             </p>
+            {stats.total > 0 && (
+              <button
+                onClick={downloadCSV}
+                className="text-[9px] text-emerald-400 hover:text-emerald-300 uppercase tracking-wider font-bold flex items-center gap-1"
+              >
+                <FaFileCsv /> Export All Data
+              </button>
+            )}
           </div>
 
           {/* Table */}
           <div className="bg-[#161B22] border border-gray-800 rounded-lg overflow-hidden shadow-2xl">
-            <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-amber-400 uppercase tracking-widest">
-              Withdrawal Transactions
+            <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-amber-400 uppercase tracking-widest flex justify-between items-center">
+              <span>Withdrawal Transactions</span>
+              <button
+                onClick={downloadCSV}
+                className="text-emerald-400 hover:text-emerald-300 transition-colors text-[9px] flex items-center gap-1"
+                disabled={withdrawals.length === 0}
+              >
+                <FaFileCsv /> Export Table
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full text-left">
