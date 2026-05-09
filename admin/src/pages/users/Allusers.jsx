@@ -437,7 +437,6 @@ const Allusers = () => {
   return (
     <section className="min-h-screen bg-[#0F111A] text-gray-200 font-poppins">
       <Header toggleSidebar={toggleSidebar} />
-      <Toaster toastOptions={{ style: { background: '#161B22', color: '#e5e7eb', border: '1px solid #374151' } }} />
 
       <div className="flex pt-[10vh]">
         <Sidebar isOpen={isSidebarOpen} />

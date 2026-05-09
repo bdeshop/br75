@@ -371,6 +371,22 @@ const Allwithdraw = () => {
   const updateWithdrawalStatus = async (withdrawalId, status, transactionId = null, adminNote = null) => {
     try {
       setUpdatingStatus(true);
+      
+      // Find the current withdrawal before updating
+      const currentWithdrawal = withdrawals.find(w => w._id === withdrawalId);
+      
+      // Prevent updating if status is already 'cancelled', 'completed', or 'failed'
+      if (currentWithdrawal && ['cancelled', 'completed', 'failed'].includes(currentWithdrawal.status)) {
+        toast.error(`Cannot update status: Withdrawal is already ${currentWithdrawal.status}`);
+        return false;
+      }
+      
+      // Prevent setting status to 'cancelled' if withdrawal is already in a terminal state
+      if (status === 'cancelled' && currentWithdrawal && ['completed', 'failed'].includes(currentWithdrawal.status)) {
+        toast.error(`Cannot cancel a withdrawal that is already ${currentWithdrawal.status}`);
+        return false;
+      }
+      
       const token = localStorage.getItem('usertoken') || localStorage.getItem('token');
       const response = await axios.put(
         `${API_BASE_URL}/api/admin/withdrawals/${withdrawalId}/status`,
@@ -455,6 +471,7 @@ const Allwithdraw = () => {
   const closeWithdrawalDetails = () => { setShowWithdrawalDetails(false); setSelectedWithdrawal(null); };
 
   const openUpdateModal = (w) => {
+    if (showWithdrawalDetails) closeWithdrawalDetails();
     setSelectedWithdrawal(w);
     setUpdateStatus(w.status);
     setUpdateTransactionId(w.transactionId || '');
@@ -471,6 +488,25 @@ const Allwithdraw = () => {
 
   const handleUpdateSubmit = async () => {
     if (!selectedWithdrawal) return;
+    
+    // Check if trying to update to cancelled when already cancelled
+    if (updateStatus === 'cancelled' && selectedWithdrawal.status === 'cancelled') {
+      toast.error('Withdrawal is already cancelled. Cannot cancel again.');
+      return;
+    }
+    
+    // Check if trying to update to cancelled when already completed or failed
+    if (updateStatus === 'cancelled' && ['completed', 'failed'].includes(selectedWithdrawal.status)) {
+      toast.error(`Cannot cancel a withdrawal that is already ${selectedWithdrawal.status}`);
+      return;
+    }
+    
+    // Check if no status change
+    if (updateStatus === selectedWithdrawal.status) {
+      toast.error('No changes made to status');
+      return;
+    }
+    
     const success = await updateWithdrawalStatus(
       selectedWithdrawal._id,
       updateStatus,
@@ -480,7 +516,12 @@ const Allwithdraw = () => {
     if (success) closeUpdateModal();
   };
 
-  const openDeleteModal = (w) => { setSelectedWithdrawal(w); setShowDeleteModal(true); };
+  const openDeleteModal = (w) => { 
+    if (showWithdrawalDetails) closeWithdrawalDetails();
+    if (showUpdateModal) closeUpdateModal();
+    setSelectedWithdrawal(w); 
+    setShowDeleteModal(true); 
+  };
   const closeDeleteModal = () => { setShowDeleteModal(false); setSelectedWithdrawal(null); };
 
   const handleDeleteSubmit = async () => {
@@ -514,6 +555,24 @@ const Allwithdraw = () => {
       default:
         return { icon: <FaExclamationTriangle className="text-gray-400" />, badge: 'bg-gray-500/10 text-gray-400 border border-gray-500/20' };
     }
+  };
+
+  // Check if a status option should be disabled
+  const isStatusDisabled = (statusValue) => {
+    if (!selectedWithdrawal) return false;
+    const currentStatus = selectedWithdrawal.status;
+    
+    // If current status is cancelled, disable all options except cancelled (to prevent changes)
+    if (currentStatus === 'cancelled') {
+      return statusValue !== 'cancelled';
+    }
+    
+    // If current status is completed or failed, disable cancelled option
+    if (currentStatus === 'completed' || currentStatus === 'failed') {
+      return statusValue === 'cancelled';
+    }
+    
+    return false;
   };
 
   const getMethodName = (method) => {
@@ -959,19 +1018,35 @@ const Allwithdraw = () => {
                   <p className="text-xs text-gray-300">Amount: <span className="text-amber-400 font-black">৳{formatCurrency(selectedWithdrawal.amount)}</span></p>
                   <p className="text-xs text-gray-300">Method: <span className={`font-bold ${getMethodColor(selectedWithdrawal.method)}`}>{getMethodName(selectedWithdrawal.method)}</span></p>
                   <p className="text-xs text-gray-300">Account: <span className="text-gray-200 font-mono">{getAccountDetails(selectedWithdrawal).fullDetails}</span></p>
+                  <p className="text-xs text-gray-300">Current Status: <span className={`font-bold ${getStatusInfo(selectedWithdrawal.status).badge} inline-block px-2 py-0.5 text-[8px]`}>{selectedWithdrawal.status}</span></p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">Status</label>
-                  <select value={updateStatus} onChange={(e) => setUpdateStatus(e.target.value)} className={selectClass}>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="completed">Completed</option>
-                    <option value="failed">Failed</option>
-                    <option value="cancelled">Cancelled</option>
+                  <select 
+                    value={updateStatus} 
+                    onChange={(e) => setUpdateStatus(e.target.value)} 
+                    className={selectClass}
+                    disabled={selectedWithdrawal.status === 'cancelled' || selectedWithdrawal.status === 'completed' || selectedWithdrawal.status === 'failed'}
+                  >
+                    <option value="pending" disabled={isStatusDisabled('pending')}>Pending {isStatusDisabled('pending') && '(Already Finalized)'}</option>
+                    <option value="processing" disabled={isStatusDisabled('processing')}>Processing {isStatusDisabled('processing') && '(Already Finalized)'}</option>
+                    <option value="completed" disabled={isStatusDisabled('completed')}>Completed {isStatusDisabled('completed') && '(Already Finalized)'}</option>
+                    <option value="failed" disabled={isStatusDisabled('failed')}>Failed {isStatusDisabled('failed') && '(Already Finalized)'}</option>
+                    <option value="cancelled" disabled={isStatusDisabled('cancelled')}>
+                      Cancelled 
+                      {isStatusDisabled('cancelled') && selectedWithdrawal.status === 'cancelled' && ' (Already Cancelled)'}
+                      {isStatusDisabled('cancelled') && selectedWithdrawal.status === 'completed' && ' (Cannot Cancel Completed)'}
+                      {isStatusDisabled('cancelled') && selectedWithdrawal.status === 'failed' && ' (Cannot Cancel Failed)'}
+                    </option>
                   </select>
+                  {(selectedWithdrawal.status === 'cancelled' || selectedWithdrawal.status === 'completed' || selectedWithdrawal.status === 'failed') && (
+                    <p className="text-[8px] text-rose-400 mt-1 font-bold uppercase tracking-wider">
+                      ⚠️ Status cannot be changed - Withdrawal is already {selectedWithdrawal.status}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">Transaction ID (Optional)</label>
@@ -981,6 +1056,7 @@ const Allwithdraw = () => {
                     onChange={(e) => setUpdateTransactionId(e.target.value)}
                     className={inputClass}
                     placeholder="Enter transaction ID if applicable"
+                    disabled={selectedWithdrawal.status === 'cancelled' || selectedWithdrawal.status === 'completed' || selectedWithdrawal.status === 'failed'}
                   />
                 </div>
                 <div>
@@ -991,6 +1067,7 @@ const Allwithdraw = () => {
                     rows={3}
                     className={inputClass}
                     placeholder="Add any notes about this withdrawal..."
+                    disabled={selectedWithdrawal.status === 'cancelled' || selectedWithdrawal.status === 'completed' || selectedWithdrawal.status === 'failed'}
                   />
                 </div>
               </div>
@@ -1003,8 +1080,8 @@ const Allwithdraw = () => {
                 >Cancel</button>
                 <button
                   onClick={handleUpdateSubmit}
-                  disabled={updatingStatus}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+                  disabled={updatingStatus || selectedWithdrawal.status === 'cancelled' || selectedWithdrawal.status === 'completed' || selectedWithdrawal.status === 'failed' || updateStatus === selectedWithdrawal.status}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {updatingStatus ? <><FaSpinner className="animate-spin" /> Updating...</> : 'Update Status'}
                 </button>

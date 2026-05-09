@@ -1591,7 +1591,7 @@ const validateForm = () => {
     if (!showTransactionPasswordModal) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-[rgba(0,0,0,0.7)] bg-opacity-70 flex items-center justify-center z-[10000] p-4">
         <div className="bg-[#1a1f1f] rounded-lg max-w-md w-full border border-[#2a2f2f] shadow-xl">
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
