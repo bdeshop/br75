@@ -72,6 +72,7 @@ import NewCashBonus from './pages/cashbonuses/NewCashBonus'
 import CashBonusList from './pages/cashbonuses/CashBonusList'
 import WeeklyMonthlyBonus from './pages/cashbonuses/WeeklyMonthlyBonus'
 import DailybetBonus from './pages/cashbonuses/DailybetBonus'
+import BusinessEmail from './pages/businessemail/BusinessEmail'
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -688,6 +689,21 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
+
+        {/* ------------------business-email----------------------- */}
+   <Route 
+          exact 
+          path="/business-email" 
+          element={
+            <ProtectedRoute>
+              <BusinessEmail/>
+            </ProtectedRoute>
+          }
+        />
+
+
+        {/* ------------------business-email----------------------- */}
 
         {/* --------------------------bonuses--------------------- */}
           <Route 

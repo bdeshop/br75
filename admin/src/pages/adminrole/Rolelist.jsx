@@ -188,6 +188,12 @@ const Rolelist = () => {
         { id: 'view_events', label: 'View All Events' }
       ]
     },
+       {
+    category: "Business Email Management",
+    permissions: [
+      { id: 'manage_business_email', label: 'Manage Business Email' },
+    ]
+  },
     {
       category: "Notice Management",
       permissions: [

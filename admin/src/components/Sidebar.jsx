@@ -4,7 +4,7 @@ import {
   FiChevronRight, FiHome, FiUsers, FiSettings, FiBell, FiActivity, FiTrendingUp, 
   FiBarChart2, FiLayers, FiCreditCard, FiCalendar, FiBox, FiMessageSquare, 
   FiLogIn, FiFileText, FiShare2, FiGift, FiUserPlus, FiDollarSign, FiCheckCircle, FiXCircle,
-  FiShield, FiUserCheck,FiAward
+  FiShield, FiUserCheck, FiAward, FiMail
 } from 'react-icons/fi';
 import { RiCoinsLine, RiRefund2Line } from 'react-icons/ri';
 import { useNavigate } from "react-router-dom";
@@ -50,11 +50,9 @@ const Sidebar = ({ isOpen }) => {
         if (response.data.success) {
           // response.data.permissions is an array of permission strings
           setAdminPermissions(response.data.permissions || []);
-          console.log('Admin Permissions:', response.data);
           setAdminRole(response.data.role || '');
         }
       } catch (error) {
-        console.error('Error fetching admin permissions:', error);
         setAdminPermissions([]);
       }
     };
@@ -104,7 +102,8 @@ const Sidebar = ({ isOpen }) => {
       '/payment-method': 'method',
       '/admin-roles': 'adminRoles',
       '/kyc': 'kyc',
-      '/bonuses': 'bonuses'
+      '/bonuses': 'bonuses',
+      '/business-email': 'businessEmail'
     };
     const matchedKey = Object.keys(menuMapping).find(key => path.startsWith(key));
     const newOpenMenu = matchedKey ? menuMapping[matchedKey] : null;
@@ -372,6 +371,13 @@ const Sidebar = ({ isOpen }) => {
             { to: '/admin-roles/create-role', text: 'Create Role', requiredPermission: 'edit_admin_profile' },
             { to: '/admin-roles/role-list', text: 'Role List', requiredPermission: 'view_admin_profile' },
             { to: '/admin-roles/create-admin', text: 'Create Admin', requiredPermission: 'edit_admin_profile' },
+          ],
+        },
+        {
+          label: 'Business Email', icon: <FiMail />, key: 'businessEmail',
+          requiredPermission: 'manage_business_email',
+          links: [
+            { to: '/business-email', text: 'Business Email', requiredPermission: 'manage_business_email' },
           ],
         },
       ].map((item) => renderMenuItem(item))}

@@ -15504,4 +15504,721 @@ Adminrouter.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
     });
   }
 });
+
+
+// routes/admin/emailRoutes.js
+const { ImapFlow } = require('imapflow');
+const { simpleParser } = require('mailparser');
+const nodemailer = require('nodemailer');
+const Email = require("../models/Email")
+
+// Configure email transporter
+const emailTransporter = nodemailer.createTransport({
+    host: 'smtp.hostinger.com',
+    port: 465,
+    secure: true,
+    auth: {
+        user: 'support@bir75.com',
+        pass: 'VnSnxC0+c2S'
+    }
+});
+
+// IMAP configuration
+const imapConfig = {
+    host: 'imap.hostinger.com',
+    port: 993,
+    secure: true,
+    auth: {
+        user: 'support@bir75.com',
+        pass: 'VnSnxC0+c2S'
+    },
+    logger: false
+};
+
+// Helper: Sync emails from IMAP to DB
+async function syncEmailsToDB(req, res) {
+    const client = new ImapFlow(imapConfig);
+    
+    try {
+        await client.connect();
+        let lock = await client.getMailboxLock('INBOX');
+
+        try {
+            // Search for all emails
+            let messages = await client.search({ all: true });
+            let lastEmails = messages.slice(-100).reverse();
+            
+            for (let uid of lastEmails) {
+                try {
+                    let message = await client.fetchOne(uid, { 
+                        envelope: true, 
+                        source: true 
+                    });
+                    const parsed = await simpleParser(message.source);
+                    
+                    // Check if email already exists
+                    const existing = await Email.findOne({ uid: message.uid });
+                    
+                    if (!existing) {
+                        await Email.create({
+                            uid: message.uid,
+                            messageId: parsed.messageId,
+                            subject: message.envelope.subject || '(No Subject)',
+                            from: message.envelope.from?.[0]?.address || '',
+                            fromName: message.envelope.from?.[0]?.name,
+                            to: message.envelope.to?.[0]?.address || '',
+                            toName: message.envelope.to?.[0]?.name,
+                            body: parsed.html || parsed.text || '',
+                            bodyText: parsed.text || '',
+                            preview: (parsed.text || parsed.html || '').substring(0, 200),
+                            hasAttachments: parsed.attachments && parsed.attachments.length > 0,
+                            attachments: parsed.attachments || [],
+                            receivedAt: message.envelope.date,
+                            isRead: false,
+                            isStarred: false,
+                            isArchived: false
+                        });
+                    }
+                } catch (err) {
+                    console.error(`Error syncing email UID ${uid}:`, err);
+                }
+            }
+        } finally {
+            lock.release();
+        }
+        await client.logout();
+        
+    } catch (error) {
+        console.error('Sync Error:', error);
+        throw error;
+    }
+}
+
+// routes/admin/emailRoutes.js - Updated sync function
+
+// Helper: Sync emails from IMAP to DB
+async function syncEmailsToDB() {
+    const client = new ImapFlow(imapConfig);
+    
+    try {
+        await client.connect();
+        let lock = await client.getMailboxLock('INBOX');
+
+        try {
+            // Search for all emails
+            let messages = await client.search({ all: true });
+            let lastEmails = messages.slice(-100).reverse(); // Get last 100 emails
+            
+            for (let uid of lastEmails) {
+                try {
+                    let message = await client.fetchOne(uid, { 
+                        envelope: true, 
+                        source: true,
+                        uid: true
+                    });
+                    
+                    if (!message || !message.source) {
+                        console.log(`Skipping email UID ${uid}: No source data`);
+                        continue;
+                    }
+                    
+                    const parsed = await simpleParser(message.source);
+                    
+                    // Extract email addresses safely
+                    const fromAddress = message.envelope.from?.[0]?.address || '';
+                    const fromName = message.envelope.from?.[0]?.name || '';
+                    const toAddress = message.envelope.to?.[0]?.address || message.envelope.to?.map(t => t.address).join(', ') || '';
+                    const toName = message.envelope.to?.[0]?.name || '';
+                    
+                    // Skip if no valid from address (system emails)
+                    if (!fromAddress && !toAddress) {
+                        console.log(`Skipping email UID ${uid}: No valid sender or recipient`);
+                        continue;
+                    }
+                    
+                    // Get HTML and text content
+                    let htmlContent = parsed.html || '';
+                    let textContent = parsed.text || '';
+                    let previewText = (textContent || htmlContent.replace(/<[^>]*>/g, '')).substring(0, 200);
+                    
+                    // Check if email already exists
+                    const existing = await Email.findOne({ uid: message.uid });
+                    
+                    if (!existing) {
+                        const emailData = {
+                            uid: message.uid,
+                            messageId: parsed.messageId || null,
+                            subject: message.envelope.subject || '(No Subject)',
+                            from: fromAddress,
+                            fromName: fromName,
+                            to: toAddress,
+                            toName: toName,
+                            cc: message.envelope.cc?.map(c => c.address).join(', ') || '',
+                            body: htmlContent || textContent,
+                            bodyText: textContent || htmlContent.replace(/<[^>]*>/g, ''),
+                            preview: previewText,
+                            hasAttachments: parsed.attachments && parsed.attachments.length > 0,
+                            attachments: parsed.attachments || [],
+                            receivedAt: message.envelope.date || new Date(),
+                            isRead: false,
+                            isStarred: false,
+                            isArchived: false
+                        };
+                        
+                        await Email.create(emailData);
+                        console.log(`Synced email UID ${uid}: ${emailData.subject}`);
+                    } else {
+                        console.log(`Email UID ${uid} already exists, skipping`);
+                    }
+                    
+                } catch (err) {
+                    console.error(`Error syncing email UID ${uid}:`, err.message);
+                    // Continue with next email instead of breaking
+                    continue;
+                }
+            }
+            
+            console.log(`Sync completed: Processed ${lastEmails.length} emails`);
+            
+        } catch (err) {
+            console.error('Error during mailbox operation:', err);
+        } finally {
+            lock.release();
+        }
+        await client.logout();
+        
+    } catch (error) {
+        console.error('IMAP Connection Error:', error);
+        throw error;
+    }
+}
+
+// GET all emails from DATABASE (updated with better error handling)
+Adminrouter.get("/emails", adminAuth, async (req, res) => {
+    try {
+        const { folder = 'inbox', page = 1, limit = 50, search = '' } = req.query;
+        
+        let query = { isDeleted: false };
+        
+        // Filter by folder
+        if (folder === 'inbox') {
+            query.isArchived = false;
+            query.isDeleted = false;
+            query.isDraft = { $ne: true };
+        } else if (folder === 'starred') {
+            query.isStarred = true;
+            query.isDeleted = false;
+        } else if (folder === 'archived') {
+            query.isArchived = true;
+            query.isDeleted = false;
+        } else if (folder === 'sent') {
+            query.from = 'support@bir75.com';
+            query.isDraft = { $ne: true };
+        } else if (folder === 'drafts') {
+            query.isDraft = true;
+        }
+        
+        // Search filter
+        if (search) {
+            query.$or = [
+                { subject: { $regex: search, $options: 'i' } },
+                { from: { $regex: search, $options: 'i' } },
+                { fromName: { $regex: search, $options: 'i' } },
+                { to: { $regex: search, $options: 'i' } },
+                { bodyText: { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        const [emails, total] = await Promise.all([
+            Email.find(query)
+                .sort({ receivedAt: -1, createdAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .populate('replies', 'subject from fromName to bodyText preview isRead createdAt receivedAt'),
+            Email.countDocuments(query)
+        ]);
+        
+        // Sync new emails from IMAP in background (don't await, don't block response)
+        syncEmailsToDB().catch(err => console.error('Background sync error:', err));
+        
+        res.json({
+            success: true,
+            total,
+            page: parseInt(page),
+            totalPages: Math.ceil(total / parseInt(limit)),
+            data: emails
+        });
+        
+    } catch (error) {
+        console.error('Error fetching emails:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch emails',
+            error: error.message
+        });
+    }
+});
+
+// GET single email by ID with replies (updated)
+Adminrouter.get("/emails/:id", adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if it's a MongoDB ObjectId or UID
+        let query;
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            query = { _id: id, isDeleted: false };
+        } else {
+            query = { uid: parseInt(id), isDeleted: false };
+        }
+        
+        const email = await Email.findOne(query)
+            .populate({
+                path: 'replies',
+                select: 'subject from fromName to body bodyText preview isRead createdAt receivedAt',
+                options: { sort: { createdAt: 1 } }
+            });
+        
+        if (!email) {
+            return res.status(404).json({
+                success: false,
+                message: 'Email not found'
+            });
+        }
+        
+        // Mark as read if not already
+        if (!email.isRead) {
+            email.isRead = true;
+            await email.save();
+        }
+        
+        res.json({
+            success: true,
+            data: email
+        });
+        
+    } catch (error) {
+        console.error('Error fetching email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch email',
+            error: error.message
+        });
+    }
+});
+
+// POST send a new email (updated with better validation)
+Adminrouter.post("/emails/send", adminAuth, async (req, res) => {
+    const { to, subject, message, cc, bcc, isDraft = false } = req.body;
+    
+    if (!isDraft && (!to || !subject || !message)) {
+        return res.status(400).json({
+            success: false,
+            message: 'To, subject, and message are required for sending'
+        });
+    }
+    
+    const mailOptions = {
+        from: 'support@bir75.com',
+        to: to || '',
+        subject: subject || '(No Subject)',
+        html: message || '',
+        cc: cc || '',
+        bcc: bcc || ''
+    };
+    
+    try {
+        let sentMessageId = null;
+        
+        // Only send if not a draft
+        if (!isDraft && to) {
+            const info = await emailTransporter.sendMail(mailOptions);
+            sentMessageId = info.messageId;
+        }
+        
+        // Store sent email in database
+        const sentEmail = await Email.create({
+            subject: subject || '(No Subject)',
+            from: 'support@bir75.com',
+            fromName: 'Support',
+            to: to || '',
+            toName: to ? to.split('@')[0] : '',
+            body: message || '',
+            bodyText: message ? message.replace(/<[^>]*>/g, '') : '',
+            preview: message ? message.replace(/<[^>]*>/g, '').substring(0, 200) : '',
+            isRead: true,
+            isStarred: false,
+            isArchived: false,
+            isDraft: isDraft,
+            draftTo: isDraft ? to : null,
+            messageId: sentMessageId,
+            sentAt: isDraft ? null : new Date(),
+            receivedAt: isDraft ? null : new Date()
+        });
+        
+        res.json({
+            success: true,
+            message: isDraft ? 'Draft saved successfully!' : 'Email sent successfully!',
+            data: sentEmail
+        });
+        
+    } catch (error) {
+        console.error('Send Email Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send email',
+            error: error.message
+        });
+    }
+});
+
+// POST reply to an email (updated with better error handling)
+Adminrouter.post("/emails/:id/reply", adminAuth, async (req, res) => {
+    const { id } = req.params;
+    const { message } = req.body;
+    
+    if (!message || message.trim() === '' || message === '<p><br></p>') {
+        return res.status(400).json({
+            success: false,
+            message: 'Reply message is required'
+        });
+    }
+    
+    try {
+        // Find original email
+        let query;
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            query = { _id: id };
+        } else {
+            query = { uid: parseInt(id) };
+        }
+        
+        const originalEmail = await Email.findOne(query);
+        
+        if (!originalEmail) {
+            return res.status(404).json({
+                success: false,
+                message: 'Original email not found'
+            });
+        }
+        
+        // Prepare reply content
+        const replyHtml = `
+            <div>${message}</div>
+            <br/>
+            <div style="border-left: 2px solid #ccc; padding-left: 10px; margin-top: 10px;">
+                <div style="color: #666; font-size: 12px;">
+                    On ${new Date(originalEmail.receivedAt || originalEmail.createdAt).toLocaleString()}, ${originalEmail.fromName || originalEmail.from} wrote:
+                </div>
+                <div style="margin-top: 5px;">${originalEmail.bodyText || originalEmail.body}</div>
+            </div>
+        `;
+        
+        // Send reply email
+        const mailOptions = {
+            from: 'support@bir75.com',
+            to: originalEmail.from,
+            subject: originalEmail.subject.startsWith('Re:') ? originalEmail.subject : `Re: ${originalEmail.subject}`,
+            html: replyHtml,
+            headers: {
+                'In-Reply-To': originalEmail.messageId,
+                'References': originalEmail.messageId
+            }
+        };
+        
+        const info = await emailTransporter.sendMail(mailOptions);
+        
+        // Store reply in database
+        const replyEmail = await Email.create({
+            subject: originalEmail.subject.startsWith('Re:') ? originalEmail.subject : `Re: ${originalEmail.subject}`,
+            from: 'support@bir75.com',
+            fromName: 'Support',
+            to: originalEmail.from,
+            toName: originalEmail.fromName || originalEmail.from?.split('@')[0] || '',
+            body: replyHtml,
+            bodyText: message.replace(/<[^>]*>/g, ''),
+            preview: message.replace(/<[^>]*>/g, '').substring(0, 200),
+            isRead: true,
+            isStarred: false,
+            isArchived: false,
+            parentId: originalEmail._id,
+            threadId: originalEmail.threadId || originalEmail._id,
+            replyToId: originalEmail.messageId,
+            messageId: info.messageId,
+            sentAt: new Date(),
+            receivedAt: new Date()
+        });
+        
+        // Update original email with reply reference
+        await Email.findByIdAndUpdate(originalEmail._id, {
+            $push: { replies: replyEmail._id }
+        });
+        
+        // If no threadId, set it
+        if (!originalEmail.threadId) {
+            await Email.findByIdAndUpdate(originalEmail._id, {
+                threadId: originalEmail._id
+            });
+            await Email.findByIdAndUpdate(replyEmail._id, {
+                threadId: originalEmail._id
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Reply sent successfully',
+            data: replyEmail
+        });
+        
+    } catch (error) {
+        console.error('Reply Email Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send reply',
+            error: error.message
+        });
+    }
+});
+
+// GET all replies for an email
+Adminrouter.get("/emails/:id/replies", adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const email = await Email.findById(id).populate({
+            path: 'replies',
+            select: 'subject from fromName bodyText preview isRead createdAt sentAt',
+            options: { sort: { createdAt: 1 } }
+        });
+        
+        if (!email) {
+            return res.status(404).json({
+                success: false,
+                message: 'Email not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: email.replies || []
+        });
+        
+    } catch (error) {
+        console.error('Error fetching replies:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch replies',
+            error: error.message
+        });
+    }
+});
+
+// PUT mark email as read/unread
+Adminrouter.put("/emails/:id/read", adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isRead } = req.body;
+        
+        const email = await Email.findByIdAndUpdate(
+            id,
+            { isRead: isRead === undefined ? true : isRead },
+            { new: true }
+        );
+        
+        if (!email) {
+            return res.status(404).json({
+                success: false,
+                message: 'Email not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `Email marked as ${email.isRead ? 'read' : 'unread'}`,
+            data: email
+        });
+        
+    } catch (error) {
+        console.error('Error marking email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update email status',
+            error: error.message
+        });
+    }
+});
+
+// PUT mark email as starred/unstarred
+Adminrouter.put("/emails/:id/star", adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isStarred } = req.body;
+        
+        const email = await Email.findByIdAndUpdate(
+            id,
+            { isStarred: isStarred === undefined ? true : isStarred },
+            { new: true }
+        );
+        
+        if (!email) {
+            return res.status(404).json({
+                success: false,
+                message: 'Email not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `Email ${email.isStarred ? 'starred' : 'unstarred'}`,
+            data: email
+        });
+        
+    } catch (error) {
+        console.error('Error starring email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update star status',
+            error: error.message
+        });
+    }
+});
+
+// PUT archive email
+Adminrouter.put("/emails/:id/archive", adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const email = await Email.findByIdAndUpdate(
+            id,
+            { isArchived: true },
+            { new: true }
+        );
+        
+        if (!email) {
+            return res.status(404).json({
+                success: false,
+                message: 'Email not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Email archived',
+            data: email
+        });
+        
+    } catch (error) {
+        console.error('Error archiving email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to archive email',
+            error: error.message
+        });
+    }
+});
+
+// DELETE email (soft delete)
+Adminrouter.delete("/emails/:id", adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const email = await Email.findByIdAndUpdate(
+            id,
+            { isDeleted: true },
+            { new: true }
+        );
+        
+        if (!email) {
+            return res.status(404).json({
+                success: false,
+                message: 'Email not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Email moved to trash',
+            data: email
+        });
+        
+    } catch (error) {
+        console.error('Error deleting email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete email',
+            error: error.message
+        });
+    }
+});
+
+// GET email statistics
+Adminrouter.get("/emails/stats/summary", adminAuth, async (req, res) => {
+    try {
+        const [total, unread, starred, archived] = await Promise.all([
+            Email.countDocuments({ isDeleted: false, isArchived: false }),
+            Email.countDocuments({ isDeleted: false, isArchived: false, isRead: false }),
+            Email.countDocuments({ isDeleted: false, isStarred: true }),
+            Email.countDocuments({ isDeleted: false, isArchived: true })
+        ]);
+        
+        // Get recent emails (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const recent = await Email.countDocuments({
+            isDeleted: false,
+            createdAt: { $gte: sevenDaysAgo }
+        });
+        
+        res.json({
+            success: true,
+            data: {
+                totalMessages: total,
+                unreadCount: unread,
+                starredCount: starred,
+                archivedCount: archived,
+                recentCount: recent
+            }
+        });
+        
+    } catch (error) {
+        console.error('Email Stats Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch email statistics',
+            error: error.message
+        });
+    }
+});
+
+// GET thread/conversation
+Adminrouter.get("/emails/thread/:threadId", adminAuth, async (req, res) => {
+    try {
+        const { threadId } = req.params;
+        
+        const emails = await Email.find({
+            $or: [
+                { _id: threadId },
+                { threadId: threadId },
+                { parentId: threadId }
+            ],
+            isDeleted: false
+        }).sort({ createdAt: 1 });
+        
+        res.json({
+            success: true,
+            data: emails
+        });
+        
+    } catch (error) {
+        console.error('Error fetching thread:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch conversation thread',
+            error: error.message
+        });
+    }
+});
+
 module.exports = Adminrouter;
