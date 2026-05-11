@@ -98,11 +98,15 @@ const GlobalStyles = () => (
     @keyframes pulse-ring   { 0%{transform:scale(1);opacity:1} 70%{transform:scale(2);opacity:0} 100%{opacity:0} }
     @keyframes glow-pulse   { 0%,100%{box-shadow:0 0 0 0 var(--accent-glow)} 50%{box-shadow:0 0 20px 6px var(--accent-glow)} }
     @keyframes spin         { to { transform: rotate(360deg); } }
+    @keyframes popIn        { 0%{opacity:0;transform:scale(.88) translateY(12px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
+    @keyframes backdropIn   { from{opacity:0} to{opacity:1} }
 
     .anim-up     { animation: fadeSlideUp  .28s cubic-bezier(.16,1,.3,1) both; }
     .anim-fade   { animation: fadeIn       .2s ease both; }
     .anim-right  { animation: slideInRight .3s cubic-bezier(.16,1,.3,1) both; }
     .anim-float  { animation: floatUp      .34s cubic-bezier(.16,1,.3,1) both; }
+    .anim-pop    { animation: popIn        .28s cubic-bezier(.16,1,.3,1) both; }
+    .anim-backdrop { animation: backdropIn .2s ease both; }
     .d1 { animation-delay:.05s } .d2 { animation-delay:.1s }
     .d3 { animation-delay:.15s } .d4 { animation-delay:.2s } .d5 { animation-delay:.25s }
 
@@ -197,9 +201,7 @@ const GlobalStyles = () => (
     .compose-btn:active { transform: scale(.97); }
 
     /* ── Send button ── */
-    .send-btn {
-      transition: all .18s ease;
-    }
+    .send-btn { transition: all .18s ease; }
     .send-btn:hover { transform: translateY(-1px); }
     .send-btn:active { transform: scale(.97); }
 
@@ -232,6 +234,54 @@ const GlobalStyles = () => (
       font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace;
       padding:2px 8px; border-radius:6px; letter-spacing:.03em;
     }
+
+    /* ── Delete Modal ── */
+    .delete-modal-backdrop {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .delete-modal {
+      width: 380px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(239,68,68,.08),
+        0 8px 32px rgba(0,0,0,.6),
+        0 32px 80px rgba(0,0,0,.5),
+        0 0 60px -10px rgba(239,68,68,.12);
+    }
+    .delete-modal-cancel {
+      flex:1; padding:10px 0; border-radius:10px;
+      font-size:13px; font-weight:600;
+      background: var(--bg-hover); border:1px solid var(--border);
+      color: var(--text-muted);
+      transition: all .15s ease;
+      font-family:'Syne',sans-serif;
+    }
+    .delete-modal-cancel:hover {
+      background: var(--bg-active); color: var(--text-primary);
+      border-color: rgba(255,255,255,.1);
+    }
+    .delete-modal-confirm {
+      flex:1; padding:10px 0; border-radius:10px;
+      font-size:13px; font-weight:600;
+      background: linear-gradient(135deg,#EF4444,#b91c1c);
+      border:1px solid rgba(239,68,68,.3);
+      color: #fff;
+      transition: all .15s ease;
+      font-family:'Syne',sans-serif;
+      box-shadow: 0 4px 20px rgba(239,68,68,.28);
+    }
+    .delete-modal-confirm:hover {
+      box-shadow: 0 6px 28px rgba(239,68,68,.45);
+      transform: translateY(-1px);
+    }
+    .delete-modal-confirm:active { transform: scale(.97); }
+    .delete-modal-confirm:disabled { opacity:.5; transform:none; cursor:not-allowed; }
   `}</style>
 );
 
@@ -327,6 +377,72 @@ const IBtn = ({ icon, tip, onClick, danger=false, active=false, sm=false, classN
     {tip && <span className="tipbox">{tip}</span>}
   </button>
 );
+
+/* ─────────────────────────────────────────────────────────────
+   DELETE CONFIRM MODAL
+───────────────────────────────────────────────────────────── */
+const DeleteModal = ({ email, onConfirm, onCancel, loading }) => {
+  if (!email) return null;
+  const name = email.fromName || email.from?.split('<')[0].trim() || email.from || 'Unknown';
+  const subject = email.subject || '(No Subject)';
+
+  return (
+    <div className="delete-modal-backdrop anim-backdrop" onClick={onCancel}>
+      <div className="delete-modal anim-pop" onClick={e => e.stopPropagation()}>
+        {/* Top accent bar */}
+        <div style={{ height:3, background:'linear-gradient(90deg,#EF4444,#b91c1c,#7f1d1d)', width:'100%' }} />
+
+        {/* Icon + title */}
+        <div className="flex flex-col items-center px-8 pt-7 pb-5">
+          <div style={{
+            width:56, height:56, borderRadius:18,
+            background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.2)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            marginBottom:16,
+            boxShadow:'0 0 0 8px rgba(239,68,68,.04)',
+          }}>
+            <FaTrash size={20} style={{ color:'#f87171' }} />
+          </div>
+
+          <h2 style={{ fontSize:17, fontWeight:800, color:'var(--text-primary)', fontFamily:'Syne,sans-serif', marginBottom:6, textAlign:'center' }}>
+            Delete Email?
+          </h2>
+          <p style={{ fontSize:12.5, color:'var(--text-muted)', textAlign:'center', lineHeight:1.6, maxWidth:260 }}>
+            This action cannot be undone. The email will be permanently removed.
+          </p>
+        </div>
+
+        {/* Email preview card */}
+        <div style={{ margin:'0 20px 20px', padding:'12px 14px', background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:12 }}>
+          <div className="flex items-center gap-3">
+            <Avatar name={name} size={32} />
+            <div className="flex-1 min-w-0">
+              <p style={{ fontSize:12, fontWeight:600, color:'var(--text-primary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {name}
+              </p>
+              <p style={{ fontSize:11, color:'var(--text-faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:1 }}>
+                {subject}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 px-5 pb-6">
+          <button className="delete-modal-cancel" onClick={onCancel} disabled={loading}>
+            Cancel
+          </button>
+          <button className="delete-modal-confirm" onClick={onConfirm} disabled={loading}>
+            {loading
+              ? <span className="flex items-center justify-center gap-2"><FaSpinner style={{ animation:'spin 1s linear infinite' }} size={11} /> Deleting…</span>
+              : <span className="flex items-center justify-center gap-2"><FaTrash size={11} /> Delete</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* ─────────────────────────────────────────────────────────────
    FIELD ROW
@@ -572,6 +688,7 @@ const BusinessEmail = () => {
   const base_url = import.meta.env.VITE_API_KEY_Base_URL;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [emails, setEmails] = useState([]);
   const [selected, setSelected] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
@@ -583,6 +700,10 @@ const BusinessEmail = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalEmails, setTotalEmails] = useState(0);
+
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState(null); // holds the email object to delete
+
   const PER = 20;
 
   const [compose, setCompose] = useState({ to:'', subject:'', message:'', cc:'', bcc:'', showCc:false });
@@ -681,6 +802,28 @@ const BusinessEmail = () => {
     finally { setLoading(false); }
   };
 
+  /* ── Delete (with modal) ── */
+  const requestDelete = (email, e) => {
+    if (e) e.stopPropagation();
+    setDeleteModal(email);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal) return;
+    try {
+      setDeleteLoading(true);
+      const r = await fetch(`${base_url}/api/admin/emails/${deleteModal._id}`, { method:'DELETE', headers:aH() });
+      const d = await r.json();
+      if (d.success) {
+        toast.success('Email deleted');
+        if (selected?._id===deleteModal._id) setSelected(null);
+        setDeleteModal(null);
+        fetchEmails();
+      } else { toast.error(d.message||'Failed to delete'); }
+    } catch { toast.error('Error deleting'); }
+    finally { setDeleteLoading(false); }
+  };
+
   /* ── Other actions ── */
   const forward = async (email) => {
     const fwd = prompt('Forward to:'); if (!fwd) return;
@@ -690,16 +833,6 @@ const BusinessEmail = () => {
       const d = await r.json();
       if (d.success) toast.success('Forwarded!'); else toast.error(d.message||'Failed');
     } catch { toast.error('Error'); } finally { setLoading(false); }
-  };
-
-  const del = async (email) => {
-    if (!window.confirm('Delete this email?')) return;
-    try {
-      const r = await fetch(`${base_url}/api/admin/emails/${email._id}`, { method:'DELETE', headers:aH() });
-      const d = await r.json();
-      if (d.success) { toast.success('Deleted'); if (selected?._id===email._id) setSelected(null); fetchEmails(); }
-      else toast.error(d.message||'Failed');
-    } catch { toast.error('Error deleting'); }
   };
 
   const markRead = async (email, current) => {
@@ -762,6 +895,14 @@ const BusinessEmail = () => {
           success:{ iconTheme:{ primary:'#5B6EF5', secondary:'var(--bg-card)' } },
         }} />
 
+        {/* ── Custom Delete Modal ── */}
+        <DeleteModal
+          email={deleteModal}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteModal(null)}
+          loading={deleteLoading}
+        />
+
         <div className="flex pt-[10vh]">
           <Sidebar isOpen={sidebarOpen} />
 
@@ -775,39 +916,87 @@ const BusinessEmail = () => {
               {/* Top controls */}
               <div className="px-4 pt-5 pb-3 shrink-0 space-y-3">
 
-                {/* Compose button */}
-                <button
-                  onClick={()=>{ setShowCompose(true); setShowReply(false); setSelected(null); setCompose({ to:'', subject:'', message:'', cc:'', bcc:'', showCc:false }); }}
-                  className="bg-blue-500 w-full flex items-center gap-2 px-5 py-3 rounded-[5px] text-[13px] font-semibold text-white"
-                  style={{ fontFamily:'Syne,sans-serif', letterSpacing:'.01em' }}
-                >
-                  <div style={{ width:20, height:20, borderRadius:7,display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <FaPencil size={13}/>
-                  </div>
-                  Compose
-                  <span className="ml-auto mono" style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontFamily:'JetBrains Mono,monospace' }}>⌘N</span>
-                </button>
-
-                {/* Search */}
-                <div
-                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-[5px] transition-all duration-200 `}
-                  style={{ background:'var(--bg-card)', border:'1px solid var(--border)' }}
-                >
-                  <FaSearch size={11} style={{ color:searchFocus?'var(--accent)':'text-gray-500', flexShrink:0, transition:'color .15s' }}/>
-                  <input
-                    type="text" value={search}
-                    onChange={e=>{ setSearch(e.target.value); setPage(1); }}
-                    onFocus={()=>setSearchFocus(true)} onBlur={()=>setSearchFocus(false)}
-                    placeholder="Search mail…"
-                    style={{ flex:1, background:'transparent', fontSize:13, color:'var(--text-primary)', outline:'none' }}
-                    className=""
-                  />
-                  {search && (
-                    <button onClick={()=>setSearch('')} style={{ color:'var(--text-faint)', transition:'color .12s' }} className="hover:text-white">
-                      <FaTimes size={10}/>
+                {/* ── When right panel is CLOSED: Compose + Search in ONE ROW ── */}
+                {!selected ? (
+                  <div className="flex items-center gap-2">
+                    {/* Compose button — compact icon+label */}
+                    <button
+                      onClick={()=>{ setShowCompose(true); setShowReply(false); setCompose({ to:'', subject:'', message:'', cc:'', bcc:'', showCc:false }); }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-[5px] text-[13px] font-semibold text-white shrink-0"
+                      style={{
+                        background:'linear-gradient(135deg,#5B6EF5,#4338ca)',
+                        boxShadow:'0 4px 20px rgba(91,110,245,.35)',
+                        fontFamily:'Syne,sans-serif',
+                        letterSpacing:'.01em',
+                        whiteSpace:'nowrap',
+                        transition:'all .2s ease',
+                      }}
+                      onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 6px 28px rgba(91,110,245,.5)'; e.currentTarget.style.transform='translateY(-1px)';}}
+                      onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 4px 20px rgba(91,110,245,.35)'; e.currentTarget.style.transform='none';}}
+                    >
+                      <FaPencil size={11}/>
+                      Compose
                     </button>
-                  )}
-                </div>
+
+                    {/* Search — takes remaining width */}
+                    <div
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-[5px] flex-1 transition-all duration-200"
+                      style={{
+                        background:'var(--bg-card)',
+                        border:`1px solid ${searchFocus?'rgba(91,110,245,.4)':'var(--border)'}`,
+                        boxShadow: searchFocus ? '0 0 0 3px var(--accent-glow)' : 'none',
+                      }}
+                    >
+                      <FaSearch size={11} style={{ color:searchFocus?'var(--accent)':'var(--text-faint)', flexShrink:0, transition:'color .15s' }}/>
+                      <input
+                        type="text" value={search}
+                        onChange={e=>{ setSearch(e.target.value); setPage(1); }}
+                        onFocus={()=>setSearchFocus(true)} onBlur={()=>setSearchFocus(false)}
+                        placeholder="Search mail…"
+                        style={{ flex:1, background:'transparent', fontSize:13, color:'var(--text-primary)', outline:'none' }}
+                      />
+                      {search && (
+                        <button onClick={()=>setSearch('')} style={{ color:'var(--text-faint)', transition:'color .12s' }} className="hover:text-white">
+                          <FaTimes size={10}/>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* ── When right panel is OPEN: Compose button full width, search below ── */
+                  <>
+                    <button
+                      onClick={()=>{ setShowCompose(true); setShowReply(false); setSelected(null); setCompose({ to:'', subject:'', message:'', cc:'', bcc:'', showCc:false }); }}
+                      className="bg-blue-500 w-full flex items-center gap-2 px-5 py-3 rounded-[5px] text-[13px] font-semibold text-white"
+                      style={{ fontFamily:'Syne,sans-serif', letterSpacing:'.01em' }}
+                    >
+                      <div style={{ width:20, height:20, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <FaPencil size={13}/>
+                      </div>
+                      Compose
+                      <span className="ml-auto mono" style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontFamily:'JetBrains Mono,monospace' }}>⌘N</span>
+                    </button>
+
+                    <div
+                      className="flex items-center gap-2.5 px-4 py-2.5 rounded-[5px] transition-all duration-200"
+                      style={{ background:'var(--bg-card)', border:`1px solid ${searchFocus?'rgba(91,110,245,.4)':'var(--border)'}`, boxShadow: searchFocus?'0 0 0 3px var(--accent-glow)':'none' }}
+                    >
+                      <FaSearch size={11} style={{ color:searchFocus?'var(--accent)':'var(--text-faint)', flexShrink:0, transition:'color .15s' }}/>
+                      <input
+                        type="text" value={search}
+                        onChange={e=>{ setSearch(e.target.value); setPage(1); }}
+                        onFocus={()=>setSearchFocus(true)} onBlur={()=>setSearchFocus(false)}
+                        placeholder="Search mail…"
+                        style={{ flex:1, background:'transparent', fontSize:13, color:'var(--text-primary)', outline:'none' }}
+                      />
+                      {search && (
+                        <button onClick={()=>setSearch('')} style={{ color:'var(--text-faint)', transition:'color .12s' }} className="hover:text-white">
+                          <FaTimes size={10}/>
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Navigation */}
@@ -913,7 +1102,7 @@ const BusinessEmail = () => {
                               <button onClick={e=>{e.stopPropagation();archive(email);}} style={{ color:'var(--text-faint)', transition:'color .12s' }} className="hover:!text-[#ECC94B]">
                                 <FaArchive size={10}/>
                               </button>
-                              <button onClick={e=>{e.stopPropagation();del(email);}} style={{ color:'var(--text-faint)', transition:'color .12s' }} className="hover:!text-[#f87171]">
+                              <button onClick={e=>requestDelete(email,e)} style={{ color:'var(--text-faint)', transition:'color .12s' }} className="hover:!text-[#f87171]">
                                 <FaTrash size={10}/>
                               </button>
                             </div>
@@ -963,7 +1152,7 @@ const BusinessEmail = () => {
                     ? <IBtn icon={<FaStar size={12}/>} tip="Unstar" onClick={e=>toggleStar(selected,e)} active />
                     : <IBtn icon={<FaRegStar size={12}/>} tip="Star" onClick={e=>toggleStar(selected,e)} />
                   }
-                  <IBtn icon={<FaTrash size={12}/>} tip="Delete" danger onClick={()=>del(selected)} />
+                  <IBtn icon={<FaTrash size={12}/>} tip="Delete" danger onClick={()=>requestDelete(selected, { stopPropagation:()=>{} })} />
                   <IBtn icon={<FaEllipsisH size={13}/>} tip="More" />
                 </div>
 
