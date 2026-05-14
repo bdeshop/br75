@@ -251,6 +251,12 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     return saved !== null ? saved === "true" : true;
   });
 
+  // ── Unclaimed bonus count ──────────────────────────────────────────────────
+  const [unclaimedBonusCount, setUnclaimedBonusCount] = useState(0);
+  // ── Unread notification count ──────────────────────────────────────────────
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  // ───────────────────────────────────────────────────────────────────────────
+
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const popupRef = useRef(null);
@@ -300,6 +306,70 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
+  // ── Fetch total unclaimed bonus count (cash + betting + level) ─────────────
+  const fetchUnclaimedBonusCount = async (token) => {
+    if (!token) return;
+    try {
+      const [cashRes, bettingRes, levelRes] = await Promise.allSettled([
+        axios.get(`${API_BASE_URL}/api/user/cash-bonus/available`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_BASE_URL}/api/user/betting-bonus/unclaimed`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_BASE_URL}/api/user/level-bonus/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+      ]);
+
+      let count = 0;
+      if (cashRes.status === "fulfilled" && cashRes.value.data?.success) {
+        count += cashRes.value.data.data?.bonuses?.length || 0;
+      }
+      if (bettingRes.status === "fulfilled" && bettingRes.value.data?.success) {
+        count += bettingRes.value.data.data?.bonuses?.length || 0;
+      }
+      if (levelRes.status === "fulfilled" && levelRes.value.data?.success) {
+        count += levelRes.value.data.data?.pendingBonuses?.length || 0;
+      }
+      setUnclaimedBonusCount(count);
+    } catch (err) {
+      console.error("Error fetching unclaimed bonus count:", err);
+    }
+  };
+
+  // ── Fetch unread notification count ───────────────────────────────────────
+// ── Fetch unread notification count ───────────────────────────────────────
+const fetchUnreadNotificationCount = async (token) => {
+  if (!token) return;
+  try {
+    // Get user from localStorage
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return;
+    
+    const user = JSON.parse(userStr);
+    const userId = user?.id || user?._id;
+    
+    if (!userId) {
+      console.error("No user ID found");
+      return;
+    }
+    
+    // Use the correct endpoint with userId parameter
+    const response = await axios.get(`${API_BASE_URL}/api/user/notifications/unread-count/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    if (response.data.success) {
+      setUnreadNotificationCount(response.data.data?.count || 0);
+    }
+  } catch (err) {
+    console.error("Error fetching unread notification count:", err);
+    setUnreadNotificationCount(0);
+  }
+};
+  // ───────────────────────────────────────────────────────────────────────────
+
   const checkAuthStatus = () => {
     const token = localStorage.getItem("usertoken");
     const user = localStorage.getItem("user");
@@ -307,9 +377,14 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       setIsLoggedIn(true);
       setUserData(JSON.parse(user));
       verifyToken(token);
+      fetchUnclaimedBonusCount(token);
+      // ── NEW: fetch notification count on auth ──
+      fetchUnreadNotificationCount(token);
     } else {
       setIsLoggedIn(false);
       setUserData(null);
+      setUnclaimedBonusCount(0);
+      setUnreadNotificationCount(0);
     }
   };
 
@@ -332,6 +407,8 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     localStorage.removeItem("user");
     setIsLoggedIn(false);
     setUserData(null);
+    setUnclaimedBonusCount(0);
+    setUnreadNotificationCount(0);
     delete axios.defaults.headers.common["Authorization"];
     setProfileDropdownOpen(false);
     setShowLogoutConfirm(false);
@@ -361,8 +438,27 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     localStorage.setItem("isBalanceHidden", newState);
   };
 
+  // ── Badge component ─────────────────────────────────────────────────────────
+  const BonusBadge = ({ count }) => {
+    if (!count || count <= 0) return null;
+    return (
+      <span
+        className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-[5px] rounded-full text-[10px] font-bold leading-none bg-red-500 text-white shadow-md"
+        style={{ boxShadow: "0 0 6px rgba(239,68,68,0.7)" }}
+      >
+        {count > 99 ? "99+" : count}
+      </span>
+    );
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
+  // ── Combined badge count for the profile icon (bonus + notifications) ──────
+  const totalHeaderBadgeCount = unclaimedBonusCount + unreadNotificationCount;
+  // ───────────────────────────────────────────────────────────────────────────
+
   const menuItems = [
-    { id: "notifications", label: t.notifications, icon: <FiBell />, path: "/member/inbox/notification" },
+    // ── notifications now has badge: "notification" ──
+    { id: "notifications", label: t.notifications, icon: <FiBell />, path: "/member/inbox/notification", badgeType: "notification" },
     { id: "personal-info", label: t.personalInfo, icon: <FiUser />, path: "/member/profile/info" },
     { id: "login-security", label: t.loginSecurity, icon: <FiLock />, path: "/member/profile/account" },
     { id: "transaction-password", label: t.transactionPassword || "Transaction Password", icon: <FiLock />, path: "/member/transaction-password" },
@@ -372,7 +468,8 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     { id: "betting-records", label: t.bettingRecords, icon: <MdSportsSoccer />, path: "/member/betting-records/settled" },
     { id: "turnover", label: t.turnover, icon: <FiTrendingUp />, path: "/member/turnover/uncomplete" },
     { id: "referral", label: t.myReferral, icon: <FiUsers />, path: "/referral-program/details" },
-    { id: "bonuses", label: t.bonuses_text || "Bonuses", icon: <FaGift />, path: "/member/bonuses" },
+    // ── bonuses badge ──
+    { id: "bonuses", label: t.bonuses_text || "Bonuses", icon: <FaGift />, path: "/member/bonuses", badgeType: "bonus" },
   ];
 
   useEffect(() => {
@@ -383,6 +480,20 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     const timer = setTimeout(() => { if (checkBannerVisibility()) setShowMobileAppBanner(true); }, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // ── Re-fetch counts whenever localStorage changes (e.g. after visiting bonus/notification pages) ──
+  useEffect(() => {
+    const handleStorage = () => {
+      const token = localStorage.getItem("usertoken");
+      if (token) {
+        fetchUnclaimedBonusCount(token);
+        fetchUnreadNotificationCount(token);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+  // ───────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -428,6 +539,14 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     );
   };
 
+  // ── Helper: resolve badge count for a menu item ────────────────────────────
+  const getMenuBadgeCount = (item) => {
+    if (item.badgeType === "bonus") return unclaimedBonusCount;
+    if (item.badgeType === "notification") return unreadNotificationCount;
+    return 0;
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
   return (
     <>
       <Toaster />
@@ -467,11 +586,23 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
           {/* Profile Dropdown for Desktop */}
           {isLoggedIn && (
             <div className="relative" ref={dropdownRef}>
+              {/* Profile button — badge shows total (bonus + notifications) */}
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="md:flex hidden cursor-pointer items-center space-x-2 text-gray-400 text-[13px] font-[400] hover:text-yellow-400"
+                className="md:flex hidden cursor-pointer items-center space-x-2 text-gray-400 text-[13px] font-[400] hover:text-yellow-400 relative"
               >
-                <img src={profile_img} alt="Profile" className="h-5 w-5" />
+                <span className="relative">
+                  <img src={profile_img} alt="Profile" className="h-5 w-5" />
+                  {/* ── Combined badge on profile icon ── */}
+                  {totalHeaderBadgeCount > 0 && (
+                    <span
+                      className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[16px] h-[16px] px-[4px] rounded-full text-[9px] font-bold leading-none bg-red-500 text-white"
+                      style={{ boxShadow: "0 0 5px rgba(239,68,68,0.8)" }}
+                    >
+                      {totalHeaderBadgeCount > 99 ? "99+" : totalHeaderBadgeCount}
+                    </span>
+                  )}
+                </span>
                 <span>{t.profile}</span>
               </button>
               
@@ -491,21 +622,46 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     </div>
                   </div>
                   <div className="flex flex-col py-3">
-                    {menuItems.map((item) => (
-                      <NavLink
-                        key={item.id}
-                        to={item.path}
-                        className={`flex items-center gap-3 px-4 py-3 text-sm transition ${
-                          activeTab === item.id
-                            ? "bg-[#222] text-white"
-                            : "text-gray-300 hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:text-white"
-                        }`}
-                        onClick={() => { setActiveTab(item.id); setProfileDropdownOpen(false); }}
-                      >
-                        <span className="text-lg">{item.icon}</span>
-                        <span>{item.label}</span>
-                      </NavLink>
-                    ))}
+                    {menuItems.map((item) => {
+                      const badgeCount = getMenuBadgeCount(item);
+                      return (
+                        <NavLink
+                          key={item.id}
+                          to={item.path}
+                          className={`flex items-center gap-3 px-4 py-3 text-sm transition ${
+                            activeTab === item.id
+                              ? "bg-[#222] text-white"
+                              : "text-gray-300 hover:bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:text-white"
+                          }`}
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setProfileDropdownOpen(false);
+                            // Re-fetch counts after visiting bonus or notification page
+                            if (item.id === "bonuses" || item.id === "notifications") {
+                              setTimeout(() => {
+                                const token = localStorage.getItem("usertoken");
+                                if (token) {
+                                  fetchUnclaimedBonusCount(token);
+                                  fetchUnreadNotificationCount(token);
+                                }
+                              }, 2000);
+                            }
+                          }}
+                        >
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="flex-1">{item.label}</span>
+                          {/* ── Badge for bonus OR notification items ── */}
+                          {badgeCount > 0 && (
+                            <span
+                              className="inline-flex items-center justify-center min-w-[20px] h-[20px] px-[6px] rounded-full text-[10px] font-bold leading-none bg-red-500 text-white ml-auto"
+                              style={{ boxShadow: "0 0 6px rgba(239,68,68,0.7)" }}
+                            >
+                              {badgeCount > 99 ? "99+" : badgeCount}
+                            </span>
+                          )}
+                        </NavLink>
+                      );
+                    })}
                   </div>
                   <div className="border-t border-[#333] p-3">
                     <button
@@ -716,9 +872,20 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
             <span className="text-[11px] whitespace-nowrap">{t.refer || "Refer"}</span>
           </div>
 
+          {/* Mobile Profile with combined badge (bonus + notifications) */}
           {isLoggedIn ? (
-            <NavLink to="/my-profile" className="flex flex-col items-center justify-center p-2 text-sm text-white hover:text-yellow-400 transition-colors min-w-[60px]">
-              <img src={profile_img} alt="Profile" className="h-6 w-6 mb-1" />
+            <NavLink to="/my-profile" className="flex flex-col items-center justify-center p-2 text-sm text-white hover:text-yellow-400 transition-colors min-w-[60px] relative">
+              <span className="relative">
+                <img src={profile_img} alt="Profile" className="h-6 w-6 mb-1" />
+                {totalHeaderBadgeCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-[3px] rounded-full text-[9px] font-bold leading-none bg-red-500 text-white"
+                    style={{ boxShadow: "0 0 5px rgba(239,68,68,0.8)" }}
+                  >
+                    {totalHeaderBadgeCount > 99 ? "99+" : totalHeaderBadgeCount}
+                  </span>
+                )}
+              </span>
               <span className="text-[11px] whitespace-nowrap">{t.profile}</span>
             </NavLink>
           ) : (

@@ -2800,234 +2800,457 @@ const MasterAffiliate = require("../models/MasterAffiliate");
 const Game = require("../models/Game");
 
 // -------- NOTIFICATION ROUTES --------
+// ==================== COMPLETE NOTIFICATION ROUTES WITH READ/UNREAD ====================
 
-// Get user notifications
-Userrouter.get(
-  "/notifications/:userId",
-  authenticateToken,
-  async (req, res) => {
+
+// GET user notifications (with pagination and filtering)
+Userrouter.get("/notifications/:userId", authenticateToken, async (req, res) => {
+  try {
+    const { limit = 20, page = 1, unreadOnly = false, includeExpired = false } = req.query;
+    const userId = req.params.userId;
+    const userRole = req.user.role || "user";
+
+    const options = {
+      limit: parseInt(limit),
+      page: parseInt(page),
+      unreadOnly: unreadOnly === "true",
+      includeExpired: includeExpired === "true",
+    };
+
+    // Convert userId to ObjectId
+    let userObjectId;
     try {
-      const { limit = 20, page = 1, unreadOnly = false } = req.query;
-      const userId = req.params.userId;
-      const userRole = req.user.role || "user";
-      console.log(userId);
-      // Convert query params to proper types
-      const options = {
-        limit: parseInt(limit),
-        page: parseInt(page),
-        unreadOnly: unreadOnly === "true",
-      };
-
-      // Convert userId to ObjectId safely
-      let userObjectId;
-      try {
-        userObjectId = new mongoose.Types.ObjectId(userId);
-      } catch (error) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid user ID format",
-        });
-      }
-
-      // Build the query for notifications accessible to this user
-      const query = {
-        $or: [
-          { targetType: "all" },
-          { targetType: "specific", targetUsers: { $in: [userObjectId] } },
-          { targetType: "role_based", userRoles: userRole },
-        ],
-        status: "sent",
-        $or: [
-          { expiresAt: { $exists: false } },
-          { expiresAt: null },
-          { expiresAt: { $gt: new Date() } },
-        ],
-        scheduledFor: { $lte: new Date() },
-      };
-
-      // Add unread filter if requested
-      if (options.unreadOnly) {
-        query["isRead.userId"] = { $ne: userObjectId };
-      }
-
-      // Execute the query with pagination
-      const notifications = await Notification.find(query)
-        .sort({ createdAt: -1 })
-        .skip((options.page - 1) * options.limit)
-        .limit(options.limit)
-        .lean();
-
-      // Get total count for pagination
-      const totalCount = await Notification.countDocuments(query);
-
-      // Format the response with read status for each notification
-      const formattedNotifications = notifications.map((notification) => ({
-        ...notification,
-        isRead: notification.isRead.some(
-          (read) => read.userId && read.userId.toString() === userId
-        ),
-      }));
-      console.log(formattedNotifications);
-      res.send({
-        success: true,
-        message: "Notifications retrieved successfully",
-        data: {
-          notifications: formattedNotifications,
-          pagination: {
-            page: options.page,
-            limit: options.limit,
-            total: totalCount,
-            pages: Math.ceil(totalCount / options.limit),
-          },
-        },
-      });
+      userObjectId = new mongoose.Types.ObjectId(userId);
     } catch (error) {
-      console.error("Get notifications error:", error);
-      res.status(500).json({
+      return res.status(400).json({
         success: false,
-        message: "Internal server error",
+        message: "Invalid user ID format",
       });
     }
+
+    // Use the static method from the model
+    const result = await Notification.getUserNotifications(userObjectId, userRole, options);
+
+    // Format notifications with read status
+    const formattedNotifications = result.notifications.map((notification) => ({
+      ...notification.toObject(),
+      isRead: notification.isRead?.some(
+        (read) => read.userId && read.userId.toString() === userId
+      ) || false,
+      readAt: notification.isRead?.find(
+        (read) => read.userId && read.userId.toString() === userId
+      )?.readAt || null
+    }));
+
+    res.send({
+      success: true,
+      message: "Notifications retrieved successfully",
+      data: {
+        notifications: formattedNotifications,
+        pagination: {
+          page: options.page,
+          limit: options.limit,
+          total: result.total,
+          pages: result.totalPages,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Get notifications error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
-);
-// Mark notification as read
-Userrouter.post(
-  "/notifications/:id/read",
-  authenticateToken,
-  async (req, res) => {
-    try {
-      const notificationId = req.params.id;
-      const userId = req.user.userId;
+});
 
-      const notification = await Notification.findById(notificationId);
+// GET unread notifications count
+Userrouter.get("/notifications/unread-count/:userid", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.params.userid;
+    console.log("Getting unread count for user:", userId);
+    const userRole = req.user.role || "user";
 
-      if (!notification) {
-        return res.status(404).json({
-          success: false,
-          message: "Notification not found",
-        });
+    const count = await Notification.getUnreadCount(userId, userRole);
+
+    res.send({
+      success: true,
+      data: { count },
+    });
+  } catch (error) {
+    console.error("Get unread count error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// Mark single notification as read
+Userrouter.post("/notifications/:id/read", authenticateToken, async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const userId = req.user._id;
+
+    const notification = await Notification.findById(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    // Check if user has access to this notification
+    const hasAccess =
+      notification.targetType === "all" ||
+      (notification.targetType === "specific" &&
+        notification.targetUsers.some(id => id.toString() === userId.toString())) ||
+      (notification.targetType === "role_based" &&
+        notification.userRoles.includes(req.user.role));
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: "Access to this notification denied",
+      });
+    }
+
+    await notification.markAsRead(userId);
+
+    res.send({
+      success: true,
+      message: "Notification marked as read",
+      data: {
+        notificationId: notification._id,
+        readAt: new Date()
       }
+    });
+  } catch (error) {
+    console.error("Mark notification as read error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
 
-      // Check if user has access to this notification
+// Mark single notification as unread
+Userrouter.post("/notifications/:id/unread", authenticateToken, async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const userId = req.user._id;
+
+    const notification = await Notification.findById(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    // Check if user has access
+    const hasAccess =
+      notification.targetType === "all" ||
+      (notification.targetType === "specific" &&
+        notification.targetUsers.some(id => id.toString() === userId.toString())) ||
+      (notification.targetType === "role_based" &&
+        notification.userRoles.includes(req.user.role));
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: "Access to this notification denied",
+      });
+    }
+
+    await notification.markAsUnread(userId);
+
+    res.send({
+      success: true,
+      message: "Notification marked as unread",
+      data: {
+        notificationId: notification._id
+      }
+    });
+  } catch (error) {
+    console.error("Mark notification as unread error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// Mark all notifications as read
+Userrouter.post("/notifications/read-all", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const userRole = req.user.role || "user";
+
+    const count = await Notification.markAllAsRead(userId, userRole);
+
+    res.send({
+      success: true,
+      message: "All notifications marked as read",
+      data: { count },
+    });
+  } catch (error) {
+    console.error("Mark all notifications as read error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// Toggle notification read status (read/unread)
+Userrouter.put("/notifications/:id/toggle-read", authenticateToken, async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const userId = req.user._id;
+
+    const notification = await Notification.findById(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    // Check access
+    const hasAccess =
+      notification.targetType === "all" ||
+      (notification.targetType === "specific" &&
+        notification.targetUsers.some(id => id.toString() === userId.toString())) ||
+      (notification.targetType === "role_based" &&
+        notification.userRoles.includes(req.user.role));
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    const isCurrentlyRead = notification.isRead.some(
+      read => read.userId.toString() === userId.toString()
+    );
+
+    if (isCurrentlyRead) {
+      await notification.markAsUnread(userId);
+    } else {
+      await notification.markAsRead(userId);
+    }
+
+    res.send({
+      success: true,
+      message: `Notification marked as ${isCurrentlyRead ? 'unread' : 'read'}`,
+      data: {
+        notificationId: notification._id,
+        isRead: !isCurrentlyRead
+      }
+    });
+  } catch (error) {
+    console.error("Toggle notification read status error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// Get notification read status for a specific notification
+Userrouter.get("/notifications/:id/status", authenticateToken, async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const userId = req.user._id;
+
+    const notification = await Notification.findById(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    const readStatus = notification.getReadStatus(userId);
+
+    res.send({
+      success: true,
+      data: readStatus
+    });
+  } catch (error) {
+    console.error("Get notification status error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// Bulk mark notifications as read (by IDs)
+Userrouter.post("/notifications/bulk-read", authenticateToken, async (req, res) => {
+  try {
+    const { notificationIds } = req.body;
+    const userId = req.user._id;
+
+    if (!notificationIds || !Array.isArray(notificationIds) || notificationIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Notification IDs array is required",
+      });
+    }
+
+    const notifications = await Notification.find({
+      _id: { $in: notificationIds }
+    });
+
+    let markedCount = 0;
+
+    for (const notification of notifications) {
+      // Verify access for each notification
       const hasAccess =
         notification.targetType === "all" ||
         (notification.targetType === "specific" &&
-          notification.targetUsers.includes(userId)) ||
+          notification.targetUsers.some(id => id.toString() === userId.toString())) ||
         (notification.targetType === "role_based" &&
           notification.userRoles.includes(req.user.role));
 
-      if (!hasAccess) {
-        return res.status(403).json({
-          success: false,
-          message: "Access to this notification denied",
-        });
+      if (hasAccess) {
+        const alreadyRead = notification.isRead.some(
+          read => read.userId.toString() === userId.toString()
+        );
+        
+        if (!alreadyRead) {
+          await notification.markAsRead(userId);
+          markedCount++;
+        }
       }
-
-      await notification.markAsRead(userId);
-
-      res.send({
-        success: true,
-        message: "Notification marked as read",
-      });
-    } catch (error) {
-      console.error("Mark notification as read error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
     }
+
+    res.send({
+      success: true,
+      message: `${markedCount} notifications marked as read`,
+      data: { markedCount }
+    });
+  } catch (error) {
+    console.error("Bulk mark notifications as read error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
-);
+});
 
-// Mark all notifications as read
-Userrouter.post(
-  "/notifications/read-all",
-  authenticateToken,
-  async (req, res) => {
-    try {
-      const userId = req.user.userId;
-      const userRole = req.user.role || "user";
+// Get notification statistics for user
+Userrouter.get("/notifications/stats", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const userRole = req.user.role || "user";
 
-      // Get all unread notifications for the user
-      const query = {
-        $or: [
-          { targetType: "all" },
-          { targetType: "specific", targetUsers: userId },
-          { targetType: "role_based", userRoles: userRole },
-        ],
-        status: "sent",
-        $or: [
-          { expiresAt: { $exists: false } },
-          { expiresAt: { $gt: new Date() } },
-        ],
-        scheduledFor: { $lte: new Date() },
-        "isRead.userId": { $ne: userId },
-      };
+    // Get unread count
+    const unreadCount = await Notification.getUnreadCount(userId, userRole);
 
-      const unreadNotifications = await Notification.find(query);
+    // Get total notifications
+    const totalQuery = {
+      $or: [
+        { targetType: 'all' },
+        { targetType: 'specific', targetUsers: userId },
+        { targetType: 'role_based', userRoles: userRole }
+      ],
+      status: 'sent',
+      $or: [
+        { expiresAt: { $exists: false } },
+        { expiresAt: null },
+        { expiresAt: { $gt: new Date() } }
+      ],
+      scheduledFor: { $lte: new Date() }
+    };
 
-      // Mark each notification as read
-      for (const notification of unreadNotifications) {
-        await notification.markAsRead(userId);
+    const totalCount = await Notification.countDocuments(totalQuery);
+
+    // Get counts by priority
+    const priorityCounts = await Notification.aggregate([
+      {
+        $match: totalQuery
+      },
+      {
+        $group: {
+          _id: "$priority",
+          count: { $sum: 1 }
+        }
       }
+    ]);
 
-      res.send({
-        success: true,
-        message: "All notifications marked as read",
-        count: unreadNotifications.length,
-      });
-    } catch (error) {
-      console.error("Mark all notifications as read error:", error);
-      res.status(500).json({
+    // Get counts by type
+    const typeCounts = await Notification.aggregate([
+      {
+        $match: totalQuery
+      },
+      {
+        $group: {
+          _id: "$type",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    res.send({
+      success: true,
+      data: {
+        unreadCount,
+        totalCount,
+        readCount: totalCount - unreadCount,
+        byPriority: priorityCounts.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {}),
+        byType: typeCounts.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {})
+      }
+    });
+  } catch (error) {
+    console.error("Get notification stats error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// Delete old notifications (admin only - optional)
+Userrouter.delete("/notifications/cleanup", authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (!['admin', 'super_admin'].includes(req.user.role)) {
+      return res.status(403).json({
         success: false,
-        message: "Internal server error",
+        message: "Admin access required"
       });
     }
+
+    const { daysToKeep = 30 } = req.query;
+    const deletedCount = await Notification.cleanupExpired(parseInt(daysToKeep));
+
+    res.send({
+      success: true,
+      message: `Cleaned up ${deletedCount} old notifications`,
+      data: { deletedCount }
+    });
+  } catch (error) {
+    console.error("Cleanup notifications error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
-);
-
-// Get unread notifications count
-// Get unread notifications count
-Userrouter.get(
-  "/notifications/unread-count",
-  authenticateToken,
-  async (req, res) => {
-    try {
-      const userId = req.user.userId; // Changed from req.user.id to req.user._id
-      const userRole = req.user.role || "user";
-      console.log("fdf", userId);
-      // Convert userId to ObjectId safely
-
-      const query = {
-        $or: [
-          { targetType: "all" },
-          { targetType: "specific", targetUsers: { $in: [userId] } }, // Use ObjectId
-        ],
-        status: "sent",
-        $or: [
-          { expiresAt: { $exists: false } },
-          { expiresAt: null },
-          { expiresAt: { $gt: new Date() } },
-        ],
-        scheduledFor: { $lte: new Date() },
-        "isRead.userId": { $ne: userId }, // Use ObjectId
-      };
-
-      const count = await Notification.countDocuments(query);
-
-      res.send({
-        success: true,
-        data: { count },
-      });
-    } catch (error) {
-      console.error("Get unread count error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-);
+});
 
 // Add this route to your existing Userrouter
 
