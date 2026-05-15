@@ -15275,11 +15275,11 @@ Adminrouter.get("/bonus/stats", adminAuth, async (req, res) => {
 // ==================== DAILY BET BONUS ROUTE ====================
 
 // POST route for daily bonus - Simple route that accepts frontend data
-Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
+router.post("/bonus/daily", adminAuth, async (req, res) => {
   try {
     const {
-      bonusPercentage,  // e.g., 0.5 for 0.5%, or 1 for 1%
-      minBetAmount,     // Minimum bet amount required to qualify
+      bonusPercentage,  // e.g., 10 for 10%
+      minLossAmount,    // Minimum loss amount required to qualify
       maxBonusAmount,   // Maximum bonus amount limit (optional)
       processedBy,
       notes
@@ -15293,15 +15293,15 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
       });
     }
 
-    // Find all users with dailybetamount > 0
+    // Find all users with dailyLossAmount > 0
     const users = await User.find({
-      dailybet: { $gt: 0 }
+      dailyLossAmount: { $gt: 0 }
     });
 
     if (users.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "No users found with daily bet amount greater than 0"
+        message: "No users found with daily loss amount greater than 0"
       });
     }
 
@@ -15315,19 +15315,19 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
     // Process each user
     for (const user of users) {
       try {
-        // Apply min bet filter if provided
-        if (minBetAmount && user.dailybet < minBetAmount) {
+        // Apply min loss filter if provided
+        if (minLossAmount && user.dailyLossAmount < minLossAmount) {
           results.failed.push({
             userId: user._id,
             username: user.username,
-            betAmount: user.dailybet,
-            reason: `Bet amount (${user.dailybet}) is less than minimum required (${minBetAmount})`
+            lossAmount: user.dailyLossAmount,
+            reason: `Loss amount (${user.dailyLossAmount}) is less than minimum required (${minLossAmount})`
           });
           continue;
         }
 
-        // Calculate bonus amount
-        let bonusAmount = (bonusPercentage / 100) * user.dailybet;
+        // Calculate bonus amount (percentage of loss amount)
+        let bonusAmount = (bonusPercentage / 100) * user.dailyLossAmount;
         
         // Apply max bonus limit if provided
         if (maxBonusAmount && bonusAmount > maxBonusAmount) {
@@ -15341,7 +15341,7 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
           results.failed.push({
             userId: user._id,
             username: user.username,
-            betAmount: user.dailybet,
+            lossAmount: user.dailyLossAmount,
             reason: "Calculated bonus amount is zero or negative"
           });
           continue;
@@ -15359,8 +15359,9 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
         
         user.bonusHistory.push({
           type: 'daily',
+          subType: 'loss_based',
           amount: bonusAmount,
-          totalBet: user.dailybet,
+          totalLoss: user.dailyLossAmount,
           bonusRate: `${bonusPercentage}%`,
           bonusPercentage: `${bonusPercentage}%`,
           status: 'claimed',
@@ -15368,7 +15369,7 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
           claimedAt: new Date(),
           processedBy: processedBy || req.user?.username || 'admin',
           metadata: {
-            minBetAmount: minBetAmount || null,
+            minLossAmount: minLossAmount || null,
             maxBonusAmount: maxBonusAmount || null
           }
         });
@@ -15379,13 +15380,13 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
           amount: bonusAmount,
           balanceBefore: balanceBefore,
           balanceAfter: user.balance,
-          description: `Daily bonus (${bonusPercentage}% of ${user.dailybet} bet amount)`,
-          referenceId: `DAILY-BONUS-${Date.now()}-${user._id}`,
+          description: `Daily loss bonus (${bonusPercentage}% of ${user.dailyLossAmount} loss amount)`,
+          referenceId: `LOSS-BONUS-${Date.now()}-${user._id}`,
           createdAt: new Date()
         });
         
-        // RESET dailybet to 0 after bonus is given
-        user.dailybet = 0;
+        // RESET dailyLossAmount to 0 after bonus is given
+        user.dailyLossAmount = 0;
         
         await user.save();
         
@@ -15393,7 +15394,7 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
           userId: user._id,
           username: user.username,
           bonusAmount: bonusAmount,
-          betAmount: user.dailybet,
+          lossAmount: user.dailyLossAmount, // This will be 0 since we reset it
           oldBalance: balanceBefore,
           newBalance: user.balance
         });
@@ -15401,7 +15402,7 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
         results.totalBonusAmount += bonusAmount;
         
       } catch (error) {
-        console.error(`Error processing daily bonus for user ${user._id}:`, error);
+        console.error(`Error processing daily loss bonus for user ${user._id}:`, error);
         results.failed.push({
           userId: user._id,
           username: user.username,
@@ -15412,11 +15413,12 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: `Daily bonus successfully added to ${results.successful.length} users`,
+      message: `Daily loss bonus successfully added to ${results.successful.length} users`,
       data: {
         bonusType: 'daily',
+        bonusSubType: 'loss_based',
         bonusPercentage: `${bonusPercentage}%`,
-        minBetAmount: minBetAmount || null,
+        minLossAmount: minLossAmount || null,
         maxBonusAmount: maxBonusAmount || null,
         totalUsers: results.totalUsers,
         successfulCount: results.successful.length,
@@ -15428,37 +15430,36 @@ Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("Error calculating daily bonus:", error);
+    console.error("Error calculating daily loss bonus:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to calculate daily bonus",
+      message: "Failed to calculate daily loss bonus",
       error: error.message
     });
   }
 });
-
 // GET route to fetch eligible users for daily bonus
-Adminrouter.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
+router.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
   try {
-    const { bonusPercentage, minBetAmount, maxBonusAmount } = req.query;
+    const { bonusPercentage, minLossAmount, maxBonusAmount } = req.query;
     
-    // Find users with dailybet > 0
+    // Find users with dailyLossAmount > 0
     const users = await User.find({
-      dailybet: { $gt: 0 }
-    }).select(`_id username email player_id balance dailybet`);
+      dailyLossAmount: { $gt: 0 }
+    }).select(`_id username email player_id balance dailyLossAmount`);
     
     const eligibleUsers = [];
     
     for (const user of users) {
-      // Apply min bet filter if provided
-      if (minBetAmount && user.dailybet < parseFloat(minBetAmount)) {
+      // Apply min loss filter if provided
+      if (minLossAmount && user.dailyLossAmount < parseFloat(minLossAmount)) {
         continue;
       }
       
       // Calculate potential bonus
       let potentialBonus = 0;
       if (bonusPercentage) {
-        potentialBonus = (parseFloat(bonusPercentage) / 100) * user.dailybet;
+        potentialBonus = (parseFloat(bonusPercentage) / 100) * user.dailyLossAmount;
         
         // Apply max bonus limit if provided
         if (maxBonusAmount && potentialBonus > parseFloat(maxBonusAmount)) {
@@ -15474,7 +15475,7 @@ Adminrouter.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
         email: user.email,
         player_id: user.player_id,
         currentBalance: user.balance,
-        betAmount: user.dailybet,
+        dailyLossAmount: user.dailyLossAmount,
         potentialBonus: potentialBonus,
         newBalance: parseFloat((user.balance + potentialBonus).toFixed(2))
       });
@@ -15483,7 +15484,7 @@ Adminrouter.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
     // Calculate totals
     const totals = {
       totalUsers: eligibleUsers.length,
-      totalBetAmount: eligibleUsers.reduce((sum, user) => sum + user.betAmount, 0),
+      totalLossAmount: eligibleUsers.reduce((sum, user) => sum + user.dailyLossAmount, 0),
       totalPotentialBonus: eligibleUsers.reduce((sum, user) => sum + user.potentialBonus, 0),
       bonusPercentage: bonusPercentage ? `${bonusPercentage}%` : 'Not specified'
     };
@@ -15506,7 +15507,6 @@ Adminrouter.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
     });
   }
 });
-
 
 // routes/admin/emailRoutes.js
 const { ImapFlow } = require('imapflow');

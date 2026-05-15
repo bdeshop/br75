@@ -3,7 +3,7 @@ import {
   FaCalendarDay, FaPercentage, FaGift, FaSpinner, 
   FaInfoCircle, FaUsers, FaMoneyBillWave, FaClock, 
   FaSearch, FaCheckCircle, FaTimesCircle, FaChartLine,
-  FaAward, FaHistory, FaWallet, FaDollarSign
+  FaAward, FaHistory, FaWallet, FaDollarSign, FaArrowDown
 } from 'react-icons/fa';
 import { FiRefreshCw, FiSettings } from 'react-icons/fi';
 import Sidebar from '../../components/Sidebar';
@@ -25,8 +25,8 @@ const DailybetBonus = () => {
   
   // Bonus configuration state
   const [bonusConfig, setBonusConfig] = useState({
-    bonusPercentage: 0.1,
-    minBetAmount: 0,
+    bonusPercentage: 10, // Changed to 10% as default for loss-based bonus
+    minLossAmount: 0,    // Renamed from minBetAmount
     maxBonusAmount: null
   });
   const [showConfig, setShowConfig] = useState(false);
@@ -67,7 +67,7 @@ const DailybetBonus = () => {
     }
   };
 
-  // Fetch eligible users for daily bonus
+  // Fetch eligible users for daily bonus based on loss amount
   const fetchEligibleUsers = async () => {
     setLoadingUsers(true);
     try {
@@ -76,7 +76,7 @@ const DailybetBonus = () => {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           bonusPercentage: bonusConfig.bonusPercentage,
-          minBetAmount: bonusConfig.minBetAmount,
+          minLossAmount: bonusConfig.minLossAmount,
           maxBonusAmount: bonusConfig.maxBonusAmount
         }
       });
@@ -131,7 +131,7 @@ const DailybetBonus = () => {
     );
   };
 
-  // Distribute Daily Bonus
+  // Distribute Daily Bonus based on loss amount
   const handleDailyBonus = async () => {
     if (bonusConfig.bonusPercentage <= 0) {
       toast.error('Bonus percentage must be greater than 0');
@@ -148,10 +148,11 @@ const DailybetBonus = () => {
       const response = await axios.post(`${base_url}/api/admin/bonus/daily`, 
         {
           bonusPercentage: bonusConfig.bonusPercentage,
-          minBetAmount: bonusConfig.minBetAmount > 0 ? bonusConfig.minBetAmount : null,
+          minLossAmount: bonusConfig.minLossAmount > 0 ? bonusConfig.minLossAmount : null,
           maxBonusAmount: bonusConfig.maxBonusAmount > 0 ? bonusConfig.maxBonusAmount : null,
           processedBy: adminInfo.username,
-          notes: 'Daily bonus distribution'
+          notes: 'Daily loss-based bonus distribution',
+          bonusType: 'loss_based' // Indicate this is loss-based bonus
         },
         { 
           headers: { 
@@ -191,6 +192,7 @@ const DailybetBonus = () => {
 
   const filteredUsers = getFilteredUsers();
   const totalPotentialBonus = filteredUsers.reduce((sum, user) => sum + (user.potentialBonus || 0), 0);
+  const totalLossAmount = filteredUsers.reduce((sum, user) => sum + (user.dailyLossAmount || 0), 0);
 
   return (
     <section className="min-h-screen bg-[#0F111A] text-gray-200 font-poppins">
@@ -203,9 +205,9 @@ const DailybetBonus = () => {
           {/* Page Header */}
           <div className="mb-8 flex flex-col md:flex-row justify-between items-center">
             <div>
-              <h1 className="text-2xl font-semibold text-white tracking-tighter uppercase">Daily Bet Bonus</h1>
+              <h1 className="text-2xl font-semibold text-white tracking-tighter uppercase">Daily Loss Bonus</h1>
               <p className="text-xs font-bold text-gray-500 mt-1 flex items-center gap-2">
-                <FaAward className="text-amber-500" /> Automatically distribute daily bonuses based on user betting activity
+                <FaArrowDown className="text-rose-500" /> Automatically distribute daily bonuses based on user's daily loss amount
               </p>
             </div>
             <div className="flex gap-2 mt-4 md:mt-0">
@@ -228,33 +230,33 @@ const DailybetBonus = () => {
           {showConfig && (
             <div className="mb-6 bg-[#161B22] border border-amber-500/30 rounded-lg p-5">
               <h3 className="text-sm font-semibold text-amber-400 mb-4 flex items-center gap-2">
-                <FiSettings /> Bonus Configuration
+                <FiSettings /> Loss Bonus Configuration
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1">Bonus Percentage (%)</label>
                   <input
                     type="number"
-                    step="0.1"
+                    step="1"
                     min="0"
                     max="100"
                     value={bonusConfig.bonusPercentage}
                     onChange={(e) => setBonusConfig({...bonusConfig, bonusPercentage: parseFloat(e.target.value) || 0})}
                     className="w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500"
                   />
-                  <p className="text-[9px] text-gray-600 mt-1">Default: 0.1%</p>
+                  <p className="text-[9px] text-gray-600 mt-1">Percentage of loss amount to give as bonus</p>
                 </div>
                 <div>
-                  <label className="block text-[10px] text-gray-500 mb-1">Minimum Bet Amount (Optional)</label>
+                  <label className="block text-[10px] text-gray-500 mb-1">Minimum Loss Amount (Optional)</label>
                   <input
                     type="number"
                     step="100"
                     min="0"
-                    value={bonusConfig.minBetAmount}
-                    onChange={(e) => setBonusConfig({...bonusConfig, minBetAmount: parseFloat(e.target.value) || 0})}
+                    value={bonusConfig.minLossAmount}
+                    onChange={(e) => setBonusConfig({...bonusConfig, minLossAmount: parseFloat(e.target.value) || 0})}
                     className="w-full bg-[#0F111A] border border-gray-700 text-gray-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500"
                   />
-                  <p className="text-[9px] text-gray-600 mt-1">Users must bet at least this amount</p>
+                  <p className="text-[9px] text-gray-600 mt-1">Users must lose at least this amount</p>
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1">Maximum Bonus Amount (Optional)</label>
@@ -279,9 +281,9 @@ const DailybetBonus = () => {
                 <p className="text-[9px] text-gray-500 uppercase font-black">Eligible Users</p>
                 <p className="text-2xl font-bold text-amber-400">{summaryStats.totalUsers}</p>
               </div>
-              <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-500/20 rounded-lg p-4">
-                <p className="text-[9px] text-gray-500 uppercase font-black">Total Bet Amount</p>
-                <p className="text-2xl font-bold text-white">৳{summaryStats.totalBetAmount?.toLocaleString() || 0}</p>
+              <div className="bg-gradient-to-br from-rose-900/20 to-rose-800/10 border border-rose-500/20 rounded-lg p-4">
+                <p className="text-[9px] text-gray-500 uppercase font-black">Total Loss Amount</p>
+                <p className="text-2xl font-bold text-white">৳{totalLossAmount.toLocaleString() || 0}</p>
               </div>
               <div className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/10 border border-emerald-500/20 rounded-lg p-4">
                 <p className="text-[9px] text-gray-500 uppercase font-black">Bonus Rate</p>
@@ -304,30 +306,30 @@ const DailybetBonus = () => {
                 <div className="bg-[#1C2128] -mx-5 -mt-5 px-5 py-3 mb-5 border-b border-gray-800">
                   <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
                     <div className="w-1 h-4 bg-amber-500"></div> 
-                    <FaChartLine className="text-amber-500" /> 
-                    Distribute Daily Bonus
+                    <FaArrowDown className="text-rose-500" /> 
+                    Distribute Loss-Based Daily Bonus
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4">
+                  <div className="bg-rose-500/5 border border-rose-500/20 rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                        <FaPercentage className="text-amber-400" />
+                      <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center">
+                        <FaPercentage className="text-rose-400" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-white">
-                          Daily Bonus Rate: {bonusConfig.bonusPercentage}%
+                          Loss Bonus Rate: {bonusConfig.bonusPercentage}%
                         </p>
                         <p className="text-xs text-gray-500">
-                          Users receive {bonusConfig.bonusPercentage}% of their daily bet amount directly to their balance
+                          Users receive {bonusConfig.bonusPercentage}% of their daily loss amount directly to their balance
                         </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-center text-xs">
                       <div className="p-2 bg-[#0F111A] rounded">
-                        <p className="text-gray-500">Min Bet Amount</p>
-                        <p className="text-amber-400 font-bold">{bonusConfig.minBetAmount > 0 ? `৳${bonusConfig.minBetAmount}` : 'No minimum'}</p>
+                        <p className="text-gray-500">Min Loss Amount</p>
+                        <p className="text-rose-400 font-bold">{bonusConfig.minLossAmount > 0 ? `৳${bonusConfig.minLossAmount}` : 'No minimum'}</p>
                       </div>
                       <div className="p-2 bg-[#0F111A] rounded">
                         <p className="text-gray-500">Max Bonus</p>
@@ -339,18 +341,18 @@ const DailybetBonus = () => {
                   <button
                     onClick={handleDailyBonus}
                     disabled={isSubmitting || (summaryStats?.totalUsers === 0)}
-                    className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? (
-                      <><FaSpinner className="animate-spin" /> Distributing Bonus...</>
+                      <><FaSpinner className="animate-spin" /> Distributing Loss Bonus...</>
                     ) : (
-                      <><FaGift /> Distribute Daily Bonus Now</>
+                      <><FaGift /> Distribute Daily Loss Bonus Now</>
                     )}
                   </button>
 
                   {summaryStats?.totalUsers === 0 && (
                     <p className="text-center text-xs text-gray-500 mt-2">
-                      No eligible users found for daily bonus
+                      No eligible users found for loss-based daily bonus
                     </p>
                   )}
                 </div>
@@ -415,7 +417,7 @@ const DailybetBonus = () => {
                   <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
                     <div className="w-1 h-4 bg-amber-500"></div> 
                     <FaUsers className="text-amber-500" /> 
-                    Eligible Users ({bonusConfig.bonusPercentage}% Bonus)
+                    Eligible Users (Loss: {bonusConfig.bonusPercentage}% Bonus)
                   </p>
                 </div>
                 
@@ -456,8 +458,8 @@ const DailybetBonus = () => {
                                 {user.player_id && <span>{user.player_id}</span>}
                               </div>
                               <div className="flex gap-4 mt-2 text-xs">
-                                <span className="text-gray-500">Today's Bet:</span>
-                                <span className="text-amber-400 font-medium">৳{user.betAmount?.toLocaleString()}</span>
+                                <span className="text-gray-500">Daily Loss:</span>
+                                <span className="text-rose-400 font-medium">-৳{user.dailyLossAmount?.toLocaleString()}</span>
                               </div>
                               <div className="flex gap-4 mt-1 text-xs">
                                 <span className="text-gray-500">Current Balance:</span>
@@ -486,7 +488,7 @@ const DailybetBonus = () => {
             <div className="bg-[#161B22] border border-gray-800 rounded-lg">
               <div className="bg-[#1C2128] px-5 py-3 border-b border-gray-800 flex justify-between items-center">
                 <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
-                  <FaHistory className="text-amber-500" /> Recent Daily Bonus Distribution History
+                  <FaHistory className="text-amber-500" /> Recent Loss Bonus Distribution History
                 </p>
                 <button
                   onClick={() => fetchBonusHistory()}
@@ -502,7 +504,7 @@ const DailybetBonus = () => {
                   </div>
                 ) : bonusHistory.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 text-sm">
-                    No daily bonus distribution history available
+                    No loss bonus distribution history available
                   </div>
                 ) : (
                   <table className="w-full text-sm">
@@ -510,7 +512,7 @@ const DailybetBonus = () => {
                       <tr>
                         <th className="text-left py-3 px-2">Date</th>
                         <th className="text-left py-3 px-2">User</th>
-                        <th className="text-left py-3 px-2">Bet Amount</th>
+                        <th className="text-left py-3 px-2">Loss Amount</th>
                         <th className="text-left py-3 px-2">Bonus Amount</th>
                         <th className="text-left py-3 px-2">Rate</th>
                         <th className="text-left py-3 px-2">Processed By</th>
@@ -523,9 +525,9 @@ const DailybetBonus = () => {
                             {new Date(bonus.distributionDate).toLocaleDateString()}
                           </td>
                           <td className="py-3 px-2 text-xs text-white">{bonus.username}</td>
-                          <td className="py-3 px-2 text-xs text-amber-400">৳{bonus.betAmount?.toLocaleString()}</td>
+                          <td className="py-3 px-2 text-xs text-rose-400">-৳{bonus.lossAmount?.toLocaleString() || bonus.betAmount?.toLocaleString()}</td>
                           <td className="py-3 px-2 text-xs text-emerald-400">+৳{bonus.amount?.toLocaleString()}</td>
-                          <td className="py-3 px-2 text-[10px] text-gray-400">{bonus.bonusRate || '0.1%'}</td>
+                          <td className="py-3 px-2 text-[10px] text-gray-400">{bonus.bonusRate || `${bonusConfig.bonusPercentage}%`}</td>
                           <td className="py-3 px-2 text-[10px] text-gray-400">{bonus.processedBy || 'Admin'}</td>
                         </tr>
                       ))}
