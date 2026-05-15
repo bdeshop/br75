@@ -15,18 +15,30 @@ const AFFILIATE_JWT_SECRET = process.env.AFFILIATE_JWT_SECRET || "dfsdfsdf535345
 // ==================== EMAIL CONFIGURATION ====================
 // Configure nodemailer transporter
 const emailTransporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.hostinger.com',
+    port: 465,
+    secure: true,
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-    }
+        user: 'support@bir75.com',
+        pass: 'VnSnxC0+c2S'
+    },
+    tls: {
+        rejectUnauthorized: false  // This bypasses certificate validation
+    },
+    // Alternative: Try different TLS settings
+    // secure: false,
+    // requireTLS: true,
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000
 });
+
 
 // Helper function to send email
 async function sendEmail(to, subject, html) {
     try {
         await emailTransporter.sendMail({
-            from: `Bir75 <${process.env.EMAIL_USER}>`,
+            from: `Bir75 support@bir75.com`,
             to: to,
             subject: subject,
             html: html
