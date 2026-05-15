@@ -16237,4 +16237,495 @@ Adminrouter.get("/emails/thread/:threadId", adminAuth, async (req, res) => {
     }
 });
 
+// ==================== MANUAL WAGERING REQUIREMENT ROUTE ====================
+
+// PUT update user's wagering requirement (waigeringneed)
+Adminrouter.put("/users/:id/waigeringneed", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { waigeringneed, reason } = req.body;
+
+    // Validate input
+    if (waigeringneed === undefined || waigeringneed === null) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Wagering requirement amount is required" 
+      });
+    }
+
+    if (typeof waigeringneed !== 'number' || waigeringneed < 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Wagering requirement must be a non-negative number" 
+      });
+    }
+
+    // Find user
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    // Store old value for audit/logging
+    const oldWageringNeed = user.waigeringneed;
+
+    // Update wagering requirement
+    user.waigeringneed = waigeringneed;
+
+    // Also update bonusInfo.bonusWageringTotal if it exists and is relevant
+    if (user.bonusInfo) {
+      user.bonusInfo.bonusWageringTotal = waigeringneed;
+    }
+
+    // Add to transaction history for audit trail
+    if (!user.transactionHistory) {
+      user.transactionHistory = [];
+    }
+
+    user.transactionHistory.push({
+      type: "adjustment",
+      amount: 0,
+      balanceBefore: user.balance,
+      balanceAfter: user.balance,
+      description: `Manual wagering requirement update: ${oldWageringNeed} → ${waigeringneed}. Reason: ${reason || "No reason provided"}`,
+      referenceId: `WAGER-${Date.now()}`,
+      createdAt: new Date(),
+      metadata: {
+        field: "waigeringneed",
+        oldValue: oldWageringNeed,
+        newValue: waigeringneed,
+        reason: reason || null,
+        adminId: req.user?._id,
+        adminUsername: req.user?.username
+      }
+    });
+
+    // Also add to bonus activity logs if wagering is related to bonuses
+    if (!user.bonusActivityLogs) {
+      user.bonusActivityLogs = [];
+    }
+
+    user.bonusActivityLogs.push({
+      type: "wagering_update",
+      oldWagering: oldWageringNeed,
+      newWagering: waigeringneed,
+      reason: reason || "Manual update by admin",
+      updatedAt: new Date(),
+      updatedBy: req.user?.username || "admin"
+    });
+
+    user.updatedAt = new Date();
+    await user.save();
+
+    // Get updated user info (without sensitive data)
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.transactionPassword;
+    delete userResponse.moneyTransferPassword;
+    delete userResponse.twoFactorSecret;
+
+    res.json({
+      success: true,
+      message: `Wagering requirement updated successfully for ${user.username}`,
+      data: {
+        userId: user._id,
+        username: user.username,
+        oldWageringNeed: oldWageringNeed,
+        newWageringNeed: user.waigeringneed,
+        reason: reason || null,
+        updatedAt: user.updatedAt
+      },
+      user: userResponse
+    });
+
+  } catch (error) {
+    console.error("Error updating wagering requirement:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to update wagering requirement",
+      details: error.message 
+    });
+  }
+});
+
+// Alternative route using the correct spelling (wageringneed instead of waigeringneed)
+Adminrouter.put("/users/:id/wageringneed", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { wageringneed, reason } = req.body;
+
+    // Validate input
+    if (wageringneed === undefined || wageringneed === null) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Wagering requirement amount is required" 
+      });
+    }
+
+    if (typeof wageringneed !== 'number' || wageringneed < 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Wagering requirement must be a non-negative number" 
+      });
+    }
+
+    // Find user
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    // Store old value
+    const oldWageringNeed = user.waigeringneed;
+
+    // Update wagering requirement
+    user.waigeringneed = wageringneed;
+
+    // Update bonusInfo
+    if (user.bonusInfo) {
+      user.bonusInfo.bonusWageringTotal = wageringneed;
+    }
+
+    // Add transaction history
+    if (!user.transactionHistory) {
+      user.transactionHistory = [];
+    }
+
+    user.transactionHistory.push({
+      type: "adjustment",
+      amount: 0,
+      balanceBefore: user.balance,
+      balanceAfter: user.balance,
+      description: `Wagering requirement update: ${oldWageringNeed} → ${wageringneed}. ${reason || ""}`,
+      referenceId: `WAGER-${Date.now()}`,
+      createdAt: new Date(),
+      details: {
+        field: "wageringneed",
+        oldValue: oldWageringNeed,
+        newValue: wageringneed,
+        reason: reason || null
+      }
+    });
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `Wagering requirement updated successfully`,
+      data: {
+        userId: user._id,
+        username: user.username,
+        oldValue: oldWageringNeed,
+        newValue: user.waigeringneed,
+        reason: reason || null
+      }
+    });
+
+  } catch (error) {
+    console.error("Error updating wagering requirement:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to update wagering requirement",
+      details: error.message 
+    });
+  }
+});
+
+// GET user's current wagering requirement
+Adminrouter.get("/users/:id/waigeringneed", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id).select("username waigeringneed bonusInfo bonusBalance balance");
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        userId: user._id,
+        username: user.username,
+        waigeringneed: user.waigeringneed,
+        bonusWageringTotal: user.bonusInfo?.bonusWageringTotal || 0,
+        bonusBalance: user.bonusBalance,
+        mainBalance: user.balance
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching wagering requirement:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to fetch wagering requirement",
+      details: error.message 
+    });
+  }
+});
+
+// Batch update wagering requirements for multiple users
+Adminrouter.post("/users/batch/waigeringneed", async (req, res) => {
+  try {
+    const { userIds, waigeringneed, reason } = req.body;
+
+    // Validate input
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Valid array of user IDs is required" 
+      });
+    }
+
+    if (waigeringneed === undefined || typeof waigeringneed !== 'number' || waigeringneed < 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Valid non-negative wagering requirement is required" 
+      });
+    }
+
+    const results = {
+      total: userIds.length,
+      successful: [],
+      failed: [],
+      totalUpdated: 0
+    };
+
+    for (const userId of userIds) {
+      try {
+        const user = await User.findById(userId);
+        if (!user) {
+          results.failed.push({
+            userId,
+            reason: "User not found"
+          });
+          continue;
+        }
+
+        const oldWageringNeed = user.waigeringneed;
+        user.waigeringneed = waigeringneed;
+        
+        if (user.bonusInfo) {
+          user.bonusInfo.bonusWageringTotal = waigeringneed;
+        }
+
+        // Add transaction history
+        if (!user.transactionHistory) {
+          user.transactionHistory = [];
+        }
+
+        user.transactionHistory.push({
+          type: "adjustment",
+          amount: 0,
+          balanceBefore: user.balance,
+          balanceAfter: user.balance,
+          description: `Batch wagering requirement update: ${oldWageringNeed} → ${waigeringneed}. ${reason || ""}`,
+          referenceId: `BATCH-WAGER-${Date.now()}`,
+          createdAt: new Date(),
+          details: {
+            batchUpdate: true,
+            oldValue: oldWageringNeed,
+            newValue: waigeringneed
+          }
+        });
+
+        await user.save();
+
+        results.successful.push({
+          userId: user._id,
+          username: user.username,
+          oldValue: oldWageringNeed,
+          newValue: user.waigeringneed
+        });
+        results.totalUpdated++;
+
+      } catch (error) {
+        results.failed.push({
+          userId,
+          reason: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Batch update completed: ${results.totalUpdated} users updated, ${results.failed.length} failed`,
+      data: results
+    });
+
+  } catch (error) {
+    console.error("Error in batch wagering update:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to process batch update",
+      details: error.message 
+    });
+  }
+});
+// ==================== MANUAL WAGERING REQUIREMENT ROUTE ====================
+
+// PUT update user's wagering requirement (waigeringneed)
+Adminrouter.put("/users/:id/waigeringneed", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { waigeringneed, reason } = req.body;
+
+    // Validate input
+    if (waigeringneed === undefined || waigeringneed === null) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Wagering requirement amount is required" 
+      });
+    }
+
+    if (typeof waigeringneed !== 'number' || waigeringneed < 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Wagering requirement must be a non-negative number" 
+      });
+    }
+
+    // Find user
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    // Store old value for audit/logging
+    const oldWageringNeed = user.waigeringneed;
+
+    // Update wagering requirement
+    user.waigeringneed = waigeringneed;
+
+    // Also update bonusInfo.bonusWageringTotal if it exists and is relevant
+    if (user.bonusInfo) {
+      user.bonusInfo.bonusWageringTotal = waigeringneed;
+    }
+
+    // Add to transaction history for audit trail
+    if (!user.transactionHistory) {
+      user.transactionHistory = [];
+    }
+
+    user.transactionHistory.push({
+      type: "adjustment",
+      amount: 0,
+      balanceBefore: user.balance,
+      balanceAfter: user.balance,
+      description: `Manual wagering requirement update: ${oldWageringNeed} → ${waigeringneed}. Reason: ${reason || "No reason provided"}`,
+      referenceId: `WAGER-${Date.now()}`,
+      createdAt: new Date(),
+      metadata: {
+        field: "waigeringneed",
+        oldValue: oldWageringNeed,
+        newValue: waigeringneed,
+        reason: reason || null,
+        adminId: req.user?._id,
+        adminUsername: req.user?.username
+      }
+    });
+
+    // Also add to bonus activity logs if wagering is related to bonuses
+    if (!user.bonusActivityLogs) {
+      user.bonusActivityLogs = [];
+    }
+
+    user.bonusActivityLogs.push({
+      type: "wagering_update",
+      oldWagering: oldWageringNeed,
+      newWagering: waigeringneed,
+      reason: reason || "Manual update by admin",
+      updatedAt: new Date(),
+      updatedBy: req.user?.username || "admin"
+    });
+
+    user.updatedAt = new Date();
+    await user.save();
+
+    // Get updated user info (without sensitive data)
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.transactionPassword;
+    delete userResponse.moneyTransferPassword;
+    delete userResponse.twoFactorSecret;
+
+    res.json({
+      success: true,
+      message: `Wagering requirement updated successfully for ${user.username}`,
+      data: {
+        userId: user._id,
+        username: user.username,
+        oldWageringNeed: oldWageringNeed,
+        newWageringNeed: user.waigeringneed,
+        reason: reason || null,
+        updatedAt: user.updatedAt
+      },
+      user: userResponse
+    });
+
+  } catch (error) {
+    console.error("Error updating wagering requirement:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to update wagering requirement",
+      details: error.message 
+    });
+  }
+});
+
+// GET user's current wagering requirement with statistics
+Adminrouter.get("/users/:id/wagering-stats", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id).select("username waigeringneed totalWagered total_deposit total_bet bonusInfo");
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    const required = user.waigeringneed || 0;
+    const completed = user.totalWagered || 0;
+    const remaining = Math.max(0, required - completed);
+    const progress = required > 0 ? (completed / required) * 100 : 0;
+
+    res.json({
+      success: true,
+      data: {
+        userId: user._id,
+        username: user.username,
+        required,
+        completed,
+        remaining,
+        progress: progress.toFixed(2),
+        totalDeposit: user.total_deposit || 0,
+        totalBet: user.total_bet || 0,
+        activeBonuses: user.bonusInfo?.activeBonuses || []
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching wagering stats:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to fetch wagering statistics",
+      details: error.message 
+    });
+  }
+});
 module.exports = Adminrouter;

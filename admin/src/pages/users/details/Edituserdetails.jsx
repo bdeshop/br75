@@ -22,6 +22,13 @@ import {
   FaEye,
   FaEyeSlash,
   FaSpinner,
+  FaDice,
+  FaPercentage,
+  FaTachometerAlt,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaEdit,
+  FaSlidersH,
 } from 'react-icons/fa';
 import { FiRefreshCw } from 'react-icons/fi';
 import Sidebar from '../../../components/Sidebar';
@@ -37,6 +44,7 @@ const Edituserdetails = () => {
   const [error, setError] = useState(null);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showWageringModal, setShowWageringModal] = useState(false);
   const [balanceAction, setBalanceAction] = useState('add');
   const [balanceAmount, setBalanceAmount] = useState('');
   const [balanceReason, setBalanceReason] = useState('');
@@ -46,7 +54,20 @@ const Edituserdetails = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [processingBalance, setProcessingBalance] = useState(false);
   const [processingPassword, setProcessingPassword] = useState(false);
+  const [processingWagering, setProcessingWagering] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [wageringAmount, setWageringAmount] = useState('');
+  const [wageringReason, setWageringReason] = useState('');
+
+  // Wagering statistics
+  const [wageringStats, setWageringStats] = useState({
+    required: 0,
+    completed: 0,
+    remaining: 0,
+    progress: 0,
+    totalDeposit: 0,
+    totalWagered: 0
+  });
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -70,6 +91,15 @@ const Edituserdetails = () => {
       email: true,
       sms: false,
       push: true
+    },
+    waigeringneed: 0,
+    totalWagered: 0,
+    total_deposit: 0,
+    total_bet: 0,
+    total_wins: 0,
+    bonusInfo: {
+      bonusWageringTotal: 0,
+      activeBonuses: []
     }
   });
 
@@ -86,6 +116,10 @@ const Edituserdetails = () => {
         });
 
         setUser(response.data);
+        
+        // Calculate wagering statistics
+        calculateWageringStats(response.data);
+        
         setError(null);
       } catch (err) {
         setError(err.response?.data?.error || err.message || 'Failed to fetch user data');
@@ -99,6 +133,23 @@ const Edituserdetails = () => {
       fetchUser();
     }
   }, [id, base_url]);
+
+  // Calculate wagering statistics
+  const calculateWageringStats = (userData) => {
+    const required = userData.waigeringneed || userData.bonusInfo?.bonusWageringTotal || 0;
+    const completed = userData.totalWagered || 0;
+    const remaining = Math.max(0, required - completed);
+    const progress = required > 0 ? (completed / required) * 100 : 0;
+    
+    setWageringStats({
+      required,
+      completed,
+      remaining,
+      progress,
+      totalDeposit: userData.total_deposit || 0,
+      totalWagered: userData.totalWagered || 0
+    });
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -136,6 +187,7 @@ const Edituserdetails = () => {
 
       toast.success('User updated successfully!');
       setUser(response.data.user);
+      calculateWageringStats(response.data.user);
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Failed to update user');
     } finally {
@@ -143,7 +195,6 @@ const Edituserdetails = () => {
     }
   };
 
-  // Status toggle function (active -> inactive -> suspended -> active)
   const toggleUserStatus = async () => {
     try {
       setUpdatingStatus(true);
@@ -247,6 +298,44 @@ const Edituserdetails = () => {
     }
   };
 
+  // Handle wagering requirement update
+  const handleWageringUpdate = async () => {
+    if (!wageringAmount || parseFloat(wageringAmount) < 0) {
+      toast.error('Please enter a valid wagering amount');
+      return;
+    }
+
+    try {
+      setProcessingWagering(true);
+      const token = localStorage.getItem('adminToken');
+
+      const response = await axios.put(`${base_url}/api/admin/users/${id}/waigeringneed`, {
+        waigeringneed: parseFloat(wageringAmount),
+        reason: wageringReason || 'Manual adjustment by admin'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        setUser(prev => ({ ...prev, waigeringneed: parseFloat(wageringAmount) }));
+        calculateWageringStats({ ...user, waigeringneed: parseFloat(wageringAmount) });
+        toast.success(`Wagering requirement set to ${wageringAmount}`);
+        setShowWageringModal(false);
+        setWageringAmount('');
+        setWageringReason('');
+      } else {
+        toast.error(response.data.error || 'Failed to update wagering requirement');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to update wagering requirement');
+    } finally {
+      setProcessingWagering(false);
+    }
+  };
+
   const openBalanceModal = (action) => {
     setBalanceAction(action);
     setBalanceAmount('');
@@ -258,6 +347,12 @@ const Edituserdetails = () => {
     setNewPassword('');
     setConfirmPassword('');
     setShowPasswordModal(true);
+  };
+
+  const openWageringModal = () => {
+    setWageringAmount(wageringStats.required.toString());
+    setWageringReason('');
+    setShowWageringModal(true);
   };
 
   const getUserInitials = (username) => {
@@ -359,6 +454,12 @@ const Edituserdetails = () => {
                 </p>
               </div>
               <div className="flex gap-3">
+                <button
+                  onClick={openWageringModal}
+                  className="bg-[#1F2937] hover:bg-purple-600/20 border border-gray-700 hover:border-purple-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-purple-400"
+                >
+                  <FaDice /> SET WAGERING
+                </button>
                 <button
                   onClick={openPasswordModal}
                   className="bg-[#1F2937] hover:bg-blue-600/20 border border-gray-700 hover:border-blue-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-blue-400"
@@ -471,6 +572,81 @@ const Edituserdetails = () => {
                     </div>
                   </div>
 
+                  {/* WAGERING PROGRESS CARD - NEW */}
+                  <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <FaTachometerAlt className="text-purple-400 text-xl" />
+                        <h3 className="text-[12px] font-black uppercase tracking-widest text-purple-400">Wagering Progress</h3>
+                      </div>
+                      <button
+                        onClick={openWageringModal}
+                        className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 px-3 py-1.5 rounded text-[10px] font-bold transition-all flex items-center gap-1"
+                      >
+                        <FaEdit /> Set Wagering
+                      </button>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between text-xs mb-2">
+                        <span className="text-gray-400">Progress</span>
+                        <span className="text-purple-400 font-bold">{wageringStats.progress.toFixed(2)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-purple-500 to-indigo-500 h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, wageringStats.progress)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Wagering Stats Grid */}
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div className="text-center p-3 bg-[#0F111A] rounded-lg border border-gray-800">
+                        <p className="text-[9px] text-gray-500 uppercase tracking-wider">Required</p>
+                        <p className="text-lg font-bold text-purple-400">{formatCurrency(wageringStats.required)}</p>
+                        <p className="text-[8px] text-gray-600">{user.currency}</p>
+                      </div>
+                      <div className="text-center p-3 bg-[#0F111A] rounded-lg border border-gray-800">
+                        <p className="text-[9px] text-gray-500 uppercase tracking-wider">Completed</p>
+                        <p className="text-lg font-bold text-emerald-400">{formatCurrency(wageringStats.completed)}</p>
+                        <p className="text-[8px] text-gray-600">{user.currency}</p>
+                      </div>
+                      <div className="text-center p-3 bg-[#0F111A] rounded-lg border border-gray-800">
+                        <p className="text-[9px] text-gray-500 uppercase tracking-wider">Remaining</p>
+                        <p className={`text-lg font-bold ${wageringStats.remaining > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                          {formatCurrency(wageringStats.remaining)}
+                        </p>
+                        <p className="text-[8px] text-gray-600">{user.currency}</p>
+                      </div>
+                    </div>
+
+                    {/* Status Message */}
+                    {wageringStats.required > 0 && (
+                      <div className={`p-3 rounded-lg text-center text-xs font-medium ${wageringStats.remaining <= 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}>
+                        {wageringStats.remaining <= 0 ? (
+                          <span className="flex items-center justify-center gap-2"><FaCheckCircle /> Wagering requirement completed!</span>
+                        ) : (
+                          <span className="flex items-center justify-center gap-2"><FaTimesCircle /> Need to wager {formatCurrency(wageringStats.remaining)} more</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Bonus Info if available */}
+                    {user.bonusInfo?.activeBonuses?.length > 0 && (
+                      <div className="mt-4 pt-3 border-t border-gray-800">
+                        <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">Active Bonuses</p>
+                        {user.bonusInfo.activeBonuses.map((bonus, idx) => (
+                          <div key={idx} className="text-[10px] text-gray-400 flex justify-between items-center p-2 bg-[#0F111A] rounded">
+                            <span>{bonus.bonusType}: {formatCurrency(bonus.amount)}</span>
+                            <span className="text-[8px] text-gray-500">Wager: {bonus.wageringRequirement}x</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Financial Overview Boxes */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Balance Box */}
@@ -514,14 +690,25 @@ const Edituserdetails = () => {
                       <p className="text-emerald-200 text-[10px] mt-1">{user.currency}</p>
                     </div>
 
-                    {/* Referral Earnings Box */}
+                    {/* Wagering Info Box */}
                     <div className="bg-gradient-to-br from-purple-600 to-pink-700 rounded-lg p-5 border border-purple-500/30">
                       <div className="flex items-center justify-between mb-4">
-                        <FaUsers className="text-2xl opacity-90" />
-                        <span className="text-[8px] font-black uppercase tracking-wider bg-white/20 px-2 py-1 rounded">Referral Earnings</span>
+                        <FaDice className="text-2xl opacity-90" />
+                        <span className="text-[8px] font-black uppercase tracking-wider bg-white/20 px-2 py-1 rounded">Wagering Required</span>
                       </div>
-                      <p className="text-2xl font-bold">{formatCurrency(user.referralEarnings || 0)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(wageringStats.required)}</p>
                       <p className="text-purple-200 text-[10px] mt-1">{user.currency}</p>
+                      {wageringStats.required > 0 && (
+                        <div className="mt-2">
+                          <div className="w-full bg-white/20 rounded-full h-1.5">
+                            <div 
+                              className="bg-white/40 h-1.5 rounded-full"
+                              style={{ width: `${Math.min(100, (wageringStats.completed / wageringStats.required) * 100)}%` }}
+                            />
+                          </div>
+                          <p className="text-[8px] text-purple-200 mt-1">{formatCurrency(wageringStats.completed)} / {formatCurrency(wageringStats.required)} wagered</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -543,6 +730,10 @@ const Edituserdetails = () => {
                         <div className="flex justify-between items-center p-3 bg-[#0F111A] rounded-lg border border-gray-800">
                           <span className="text-[10px] text-gray-500">Total Bet:</span>
                           <span className="text-xs font-bold text-purple-400">{formatCurrency(user.total_bet)} {user.currency}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-[#0F111A] rounded-lg border border-gray-800">
+                          <span className="text-[10px] text-gray-500">Total Wagered:</span>
+                          <span className="text-xs font-bold text-yellow-400">{formatCurrency(user.totalWagered)} {user.currency}</span>
                         </div>
                         <div className="flex justify-between items-center p-3 bg-[#0F111A] rounded-lg border border-gray-800">
                           <span className="text-[10px] text-gray-500">Net Profit:</span>
@@ -737,6 +928,20 @@ const Edituserdetails = () => {
                 </div>
               </div>
             )}
+
+            {/* Save Button */}
+            {!loading && (
+              <div className="mt-8 flex justify-end">
+                <button
+                  onClick={handleSubmit}
+                  disabled={saving}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-lg font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? <FaSpinner className="animate-spin" /> : <FaSave />}
+                  {saving ? 'Saving...' : 'Save All Changes'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Balance Adjustment Modal */}
@@ -888,6 +1093,104 @@ const Edituserdetails = () => {
                   >
                     {processingPassword ? <FaSpinner className="animate-spin" /> : <FaKey />}
                     Update Password
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Wagering Requirement Modal */}
+          {showWageringModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
+              <div className="bg-[#161B22] border border-gray-700 rounded-xl shadow-2xl w-full max-w-md">
+                <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-400 flex items-center gap-2">
+                    <FaSlidersH /> Set Wagering Requirement
+                  </h3>
+                  <button onClick={() => setShowWageringModal(false)} className="text-gray-500 hover:text-gray-300">
+                    <CloseIcon />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className={labelClass}>Wagering Amount ({user.currency})</label>
+                    <input
+                      type="number"
+                      value={wageringAmount}
+                      onChange={(e) => setWageringAmount(e.target.value)}
+                      className={inputClass}
+                      placeholder="Enter wagering requirement amount"
+                      step="0.01"
+                      min="0"
+                    />
+                    <p className="text-[9px] text-gray-500 mt-1">This is the total amount user needs to wager</p>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Reason (Optional)</label>
+                    <input
+                      type="text"
+                      value={wageringReason}
+                      onChange={(e) => setWageringReason(e.target.value)}
+                      className={inputClass}
+                      placeholder="Enter reason for setting wagering requirement"
+                    />
+                  </div>
+
+                  <div className="bg-[#0F111A] p-4 rounded-lg border border-gray-800 space-y-2">
+                    <p className="text-xs text-gray-500">Current Wagering Status:</p>
+                    <div className="flex justify-between text-sm">
+                      <span>Required:</span>
+                      <span className="font-bold text-purple-400">{formatCurrency(wageringStats.required)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Completed:</span>
+                      <span className="font-bold text-emerald-400">{formatCurrency(wageringStats.completed)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Remaining:</span>
+                      <span className={`font-bold ${wageringStats.remaining > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {formatCurrency(wageringStats.remaining)}
+                      </span>
+                    </div>
+                    {wageringAmount && (
+                      <div className="border-t border-gray-800 pt-2 mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span>New Required:</span>
+                          <span className="font-bold text-amber-400">{formatCurrency(parseFloat(wageringAmount) || 0)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>New Remaining:</span>
+                          <span className={`font-bold ${(parseFloat(wageringAmount) || 0) > wageringStats.completed ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {formatCurrency(Math.max(0, (parseFloat(wageringAmount) || 0) - wageringStats.completed))}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg">
+                    <p className="text-[9px] text-yellow-400 flex items-center gap-2">
+                      <FaDice /> Setting a new wagering requirement will replace the existing one. The amount already wagered will be preserved.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#1C2128] px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowWageringModal(false)}
+                    className="px-4 py-2 bg-[#0F111A] border border-gray-700 text-gray-300 rounded text-xs font-bold hover:border-gray-500 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleWageringUpdate}
+                    disabled={processingWagering || !wageringAmount}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {processingWagering ? <FaSpinner className="animate-spin" /> : <FaSave />}
+                    Set Wagering Requirement
                   </button>
                 </div>
               </div>

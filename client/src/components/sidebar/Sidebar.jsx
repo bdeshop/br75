@@ -441,34 +441,54 @@ const Sidebar = ({
         {sidebarOpen && <LanguageSwitcherDesktop />}
       </div>
 
-      {/* Live Chat button */}
-      <div
-        className={`w-full flex justify-start items-center transition-all duration-300 ${
-          sidebarOpen ? "px-0 pb-3" : "px-0 pb-3"
-        }`}
-      >
-        {sidebarOpen ? (
-          <a 
-            href="https://wa.me/+60134935257" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="bg-theme_color2 p-2.5 rounded-[10px] text-center flex justify-center items-center gap-3 w-full transition-all duration-200 shadow-md"
-          >
-            <MdSupportAgent className="text-white text-[20px]" />
-            <span className="text-[13px] font-medium">{t.liveChat || "24/7 Live Chat"}</span>
-          </a>
-        ) : (
-          <a 
-            href="https://wa.me/+60134935257" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 p-2.5 rounded-lg text-center flex justify-center items-center gap-3 w-full transition-all duration-200"
-          >
-            <MdSupportAgent className="text-white text-[20px]" />
-          </a>
-        )}
-      </div>
+  <div
+  className={`w-full flex justify-start items-center transition-all duration-300 ${
+    sidebarOpen ? "px-0 pb-3" : "px-0 pb-3"
+  }`}
+>
+  <a
+    href="https://tawk.to/chat/6a07172310830f1c38f6947a/1jolr4piu"
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{
+      backgroundSize: '200% auto',
+      animation: 'gradient-move 4s linear infinite',
+    }}
+    className={`
+      group relative flex items-center justify-center w-full p-2.5 rounded-[8px] 
+      font-bold text-white transition-all duration-500 overflow-hidden
+      /* High-Vibrance Gradient */
+      bg-gradient-to-r from-[#bef264] via-[#22d3ee] to-[#bef264]
+      /* Bright Neon Glow */
+      shadow-[0_0_20px_-5px_rgba(190,242,100,0.8)]
+      hover:shadow-[0_0_30px_0px_rgba(34,211,238,0.7)]
+      hover:scale-[1.02]
+    `}
+  >
+    {/* Keyframe Definition (Inline Style Hack if you can't edit CSS files) */}
+    <style>{`
+      @keyframes gradient-move {
+        0% { background-position: 0% center; }
+        100% { background-position: 200% center; }
+      }
+    `}</style>
 
+    <span className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+
+    {sidebarOpen ? (
+      <div className="relative flex items-center gap-3">
+        <span className="text-[15px] font-extrabold tracking-tight drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.3)]">
+          {t.liveChat || "Let's Talk"}
+        </span>
+        <span className="text-xl transition-transform duration-300 group-hover:translate-x-1.5 drop-shadow-md">
+          →
+        </span>
+      </div>
+    ) : (
+      <MdSupportAgent className="relative text-white text-[22px] drop-shadow-md" />
+    )}
+  </a>
+</div>
       {/* Banner Image */}
       {sidebarOpen && (
         <div className="py-3">
