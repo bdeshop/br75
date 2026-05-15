@@ -710,6 +710,8 @@ Authrouter.post("/login", async (req, res) => {
 
 // ==================== EMAIL-BASED PASSWORD RESET ====================
 
+// ==================== EMAIL-BASED PASSWORD RESET (Using existing otp field) ====================
+
 // Request password reset via email (forgot password)
 Authrouter.post("/forgot-password-email", async (req, res) => {
   try {
@@ -746,10 +748,15 @@ Authrouter.post("/forgot-password-email", async (req, res) => {
 
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    user.passwordResetOTP = {
+    
+    // Use the existing otp field instead of passwordResetOTP
+    user.otp = {
       code: otp,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-      attempts: 0
+      purpose: 'email_password_reset',
+      verified: false,
+      attempts: 0,
+      createdAt: new Date()
     };
 
     await user.save();
@@ -824,33 +831,33 @@ Authrouter.post("/verify-reset-otp", async (req, res) => {
       });
     }
 
-    // Check OTP
-    if (!user.passwordResetOTP || !user.passwordResetOTP.code) {
+    // Check OTP - using otp field
+    if (!user.otp || !user.otp.code || user.otp.purpose !== 'email_password_reset') {
       return res.status(400).json({
         success: false,
         message: "No OTP request found. Please request a new password reset"
       });
     }
 
-    if (new Date() > user.passwordResetOTP.expiresAt) {
+    if (new Date() > new Date(user.otp.expiresAt)) {
       return res.status(400).json({
         success: false,
         message: "OTP has expired. Please request a new password reset"
       });
     }
 
-    if (user.passwordResetOTP.code !== otp) {
-      user.passwordResetOTP.attempts = (user.passwordResetOTP.attempts || 0) + 1;
+    if (user.otp.code !== otp) {
+      user.otp.attempts = (user.otp.attempts || 0) + 1;
       await user.save();
       
       return res.status(400).json({
         success: false,
-        message: `Invalid OTP. ${3 - (user.passwordResetOTP.attempts || 0)} attempts remaining`
+        message: `Invalid OTP. ${3 - (user.otp.attempts || 0)} attempts remaining`
       });
     }
 
     // Mark OTP as verified
-    user.passwordResetOTP.verified = true;
+    user.otp.verified = true;
     await user.save();
 
     res.json({
@@ -906,8 +913,8 @@ Authrouter.post("/reset-password-email", async (req, res) => {
       });
     }
 
-    // Check if OTP was verified
-    if (!user.passwordResetOTP || !user.passwordResetOTP.verified) {
+    // Check if OTP was verified - using otp field
+    if (!user.otp || !user.otp.verified || user.otp.purpose !== 'email_password_reset') {
       return res.status(400).json({
         success: false,
         message: "OTP not verified. Please verify OTP first."
@@ -918,8 +925,8 @@ Authrouter.post("/reset-password-email", async (req, res) => {
     user.password = newPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
-    user.passwordResetOTP = undefined;
-    user.passwordChangedAt = new Date();
+    user.otp = undefined; // Clear the OTP
+    user.lastPasswordChange = new Date();
 
     await user.save();
 
@@ -979,7 +986,7 @@ Authrouter.post("/resend-reset-otp", async (req, res) => {
     }
 
     // Check cooldown
-    const lastAttempt = user.passwordResetOTP?.lastAttemptAt;
+    const lastAttempt = user.otp?.createdAt;
     if (lastAttempt) {
       const timeSinceLastAttempt = Date.now() - new Date(lastAttempt);
       if (timeSinceLastAttempt < 30 * 1000) {
@@ -994,12 +1001,13 @@ Authrouter.post("/resend-reset-otp", async (req, res) => {
     // Generate new OTP
     const otp = generateOTP();
 
-    user.passwordResetOTP = {
+    user.otp = {
       code: otp,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      purpose: 'email_password_reset',
+      verified: false,
       attempts: 0,
-      lastAttemptAt: new Date(),
-      verified: false
+      createdAt: new Date()
     };
 
     await user.save();
@@ -1046,7 +1054,6 @@ Authrouter.post("/resend-reset-otp", async (req, res) => {
     });
   }
 });
-
 // ==================== SMS-BASED PASSWORD RESET (Fixed) ====================
 
 // Request OTP for password reset (SMS)
