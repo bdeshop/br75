@@ -1030,7 +1030,7 @@ const Profile = () => {
                                   {t?.otpSentTo || "Enter the OTP you received at"}
                                 </p>
                                 <p className="text-xs sm:text-sm font-semibold text-white text-center mb-4">
-                                  {maskPhone(personalInfoForm.phone)}
+                                  +88{personalInfoForm.phone}
                                 </p>
 
                                 <OtpBoxes
