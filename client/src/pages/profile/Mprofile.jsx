@@ -23,6 +23,11 @@ const Mprofile = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { t } = useContext(LanguageContext);
 
+  // ── State for badge counts ──────────────────────────────────────────────────
+  const [unclaimedBonusCount, setUnclaimedBonusCount] = useState(0);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  // ───────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -39,6 +44,89 @@ const Mprofile = () => {
     };
     fetchData();
   }, [token, base_url]);
+
+  // ── Fetch unclaimed bonus count ───────────────────────────────────────────
+  const fetchUnclaimedBonusCount = async (authToken) => {
+    if (!authToken) return;
+    try {
+      const [cashRes, bettingRes, levelRes] = await Promise.allSettled([
+        axios.get(`${base_url}/api/user/cash-bonus/available`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }),
+        axios.get(`${base_url}/api/user/betting-bonus/unclaimed`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }),
+        axios.get(`${base_url}/api/user/level-bonus/status`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }),
+      ]);
+
+      let count = 0;
+      if (cashRes.status === "fulfilled" && cashRes.value.data?.success) {
+        count += cashRes.value.data.data?.bonuses?.length || 0;
+      }
+      if (bettingRes.status === "fulfilled" && bettingRes.value.data?.success) {
+        count += bettingRes.value.data.data?.bonuses?.length || 0;
+      }
+      if (levelRes.status === "fulfilled" && levelRes.value.data?.success) {
+        count += levelRes.value.data.data?.pendingBonuses?.length || 0;
+      }
+      setUnclaimedBonusCount(count);
+    } catch (err) {
+      console.error("Error fetching unclaimed bonus count:", err);
+    }
+  };
+
+  // ── Fetch unread notification count ───────────────────────────────────────
+  const fetchUnreadNotificationCount = async (authToken) => {
+    if (!authToken) return;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return;
+      
+      const user = JSON.parse(userStr);
+      const userId = user?.id || user?._id;
+      
+      if (!userId) {
+        console.error("No user ID found");
+        return;
+      }
+      
+      const response = await axios.get(`${base_url}/api/user/notifications/unread-count/${userId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      
+      if (response.data.success) {
+        setUnreadNotificationCount(response.data.data?.count || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching unread notification count:", err);
+      setUnreadNotificationCount(0);
+    }
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
+  // ── Fetch counts when component mounts ────────────────────────────────────
+  useEffect(() => {
+    if (token) {
+      fetchUnclaimedBonusCount(token);
+      fetchUnreadNotificationCount(token);
+    }
+  }, [token]);
+
+  // ── Re-fetch counts whenever localStorage changes ─────────────────────────
+  useEffect(() => {
+    const handleStorage = () => {
+      const currentToken = localStorage.getItem("usertoken");
+      if (currentToken) {
+        fetchUnclaimedBonusCount(currentToken);
+        fetchUnreadNotificationCount(currentToken);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+  // ───────────────────────────────────────────────────────────────────────────
 
   // Logout function - clears token and redirects to login
   const handleLogout = () => {
@@ -165,20 +253,26 @@ const Mprofile = () => {
             </div>
           </div>
 
-          {/* MENU LIST WITH DIFFERENT BACKGROUND COLORS */}
+          {/* MENU LIST WITH BADGES FOR NOTIFICATIONS AND BONUSES */}
           <div className="space-y-3">
+            {/* NOTIFICATIONS - with badge count */}
             <MenuItem 
               icon={<FiBell className="text-yellow_theme" />} 
               label={t.notifications || "নোটিফিকেশন"} 
+              badge={unreadNotificationCount > 0 ? (unreadNotificationCount > 99 ? "99+" : unreadNotificationCount) : null}
               onClick={() => navigate("/member/inbox/notification")}
               bgColor="bg-gradient-to-r from-purple-900/20 to-transparent"
             />
+            
+            {/* BONUSES - with badge count */}
             <MenuItem 
               icon={<FiGift className="text-yellow_theme" />} 
               label={t.bonuses_text || "বোনাস"} 
+              badge={unclaimedBonusCount > 0 ? (unclaimedBonusCount > 99 ? "99+" : unclaimedBonusCount) : null}
               onClick={() => navigate("/member/bonuses")}
               bgColor="bg-gradient-to-r from-pink-900/20 to-transparent"
             />
+            
             <MenuItem 
               icon={<FiUser className="text-yellow_theme" />} 
               label={t.personalInfo || "ব্যক্তিগত তথ্য"} 
@@ -231,7 +325,7 @@ const Mprofile = () => {
               onClick={() => navigate("/member/transaction-password")}
               bgColor="bg-gradient-to-r from-teal-900/20 to-transparent"
             />
-            {/* NEW: Reset Transaction Password */}
+            {/* Reset Transaction Password */}
             <MenuItem 
               icon={<FiCreditCard className="text-yellow_theme" />} 
               label={t.resetTransactionPassword || "রিসেট ট্রানজেকশন পাসওয়ার্ড"} 
@@ -267,7 +361,8 @@ const MenuItem = ({ icon, label, badge, onClick, bgColor = "" }) => (
       <span className="text-lg text-yellow_theme">{icon}</span>
       <span className="text-[14px] text-gray-200 font-medium">{label}</span>
       {badge && (
-        <span className="bg-[#ff0000] text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-md" 
+              style={{ boxShadow: "0 0 6px rgba(239,68,68,0.7)" }}>
           {badge}
         </span>
       )}
