@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import {
   FaFacebook, FaInstagram, FaTwitter, FaYoutube, FaPinterest, FaWhatsapp,
   FaChevronDown, FaChevronUp, FaLinkedin, FaDiscord, FaReddit, FaMedium,
-  FaGithub, FaSnapchat, FaWeixin, FaSkype,
+  FaGithub, FaSnapchat, FaWeixin, FaSkype, FaRegEnvelope
 } from "react-icons/fa";
 import { SiTiktok, SiTelegram } from "react-icons/si";
 import { IoOpenOutline } from "react-icons/io5";
@@ -94,8 +94,6 @@ const Footer = () => {
         
         {/* ── Mobile Dropdown Sections ── */}
         <div className="md:hidden mb-3">
-
-          {/* Gaming Dropdown */}
           <div className=" py-3">
             <button
               className="flex justify-between cursor-pointer items-center w-full text-left font-medium text-gray-200 text-[14px]"
@@ -125,7 +123,6 @@ const Footer = () => {
             )}
           </div>
 
-          {/* About Dropdown */}
           <div className=" py-3">
             <button
               className="flex justify-between items-center cursor-pointer w-full text-left font-medium text-gray-200 text-[14px]"
@@ -153,7 +150,6 @@ const Footer = () => {
             )}
           </div>
 
-          {/* Features Dropdown */}
           <div className=" py-3">
             <button
               className="flex cursor-pointer justify-between items-center w-full text-left font-medium text-gray-200 text-[14px]"
@@ -174,10 +170,8 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* ── Desktop Grid Layout ── */}
+        {/* ── Desktop Grid Layout (Top) ── */}
         <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-
-          {/* Column 1: Gaming */}
           <div>
             <h3 className="font-medium mb-4 text-gray-200">{t.footerGaming}</h3>
             <ul className="space-y-2">
@@ -190,40 +184,16 @@ const Footer = () => {
               <li><NavLink to="/slots"  className="hover:text-white transition-colors duration-200">{t.footerLottery}</NavLink></li>
             </ul>
           </div>
-
-          {/* Column 2: About */}
           <div>
             <h3 className="font-medium mb-4 text-gray-200">{t.footerAbout}</h3>
             <ul className="space-y-2">
-              <li>
-                <NavLink to="/about-us" className="hover:text-white transition-colors duration-200 flex justify-start items-center gap-[2px]">
-                  {t.footerAboutUs} <span className="inline-block text-gray-500 text-[20px]"><IoOpenOutline /></span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/privacy-policy" className="hover:text-white transition-colors duration-200 flex justify-start items-center gap-[2px]">
-                  {t.footerPrivacyPolicy} <span className="inline-block text-gray-500 text-[20px]"><IoOpenOutline /></span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/terms-and-conditions" className="hover:text-white transition-colors duration-200 flex justify-start items-center gap-[2px]">
-                  {t.footerTerms} <span className="inline-block text-gray-500 text-[20px]"><IoOpenOutline /></span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/responsible-gaming" className="hover:text-white transition-colors duration-200 flex justify-start items-center gap-[2px]">
-                  {t.footerResponsibleGaming} <span className="inline-block text-gray-500 text-[20px]"><IoOpenOutline /></span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/kyc" className="hover:text-white transition-colors duration-200 flex justify-start items-center gap-[2px]">
-                  {t.footerKyc} <span className="inline-block text-gray-500 text-[20px]"><IoOpenOutline /></span>
-                </NavLink>
-              </li>
+              <li><NavLink to="/about-us" className="hover:text-white transition-colors duration-200 flex items-center gap-[2px]">{t.footerAboutUs} <span className="text-gray-500 text-[20px]"><IoOpenOutline /></span></NavLink></li>
+              <li><NavLink to="/privacy-policy" className="hover:text-white transition-colors duration-200 flex items-center gap-[2px]">{t.footerPrivacyPolicy} <span className="text-gray-500 text-[20px]"><IoOpenOutline /></span></NavLink></li>
+              <li><NavLink to="/terms-and-conditions" className="hover:text-white transition-colors duration-200 flex items-center gap-[2px]">{t.footerTerms} <span className="text-gray-500 text-[20px]"><IoOpenOutline /></span></NavLink></li>
+              <li><NavLink to="/responsible-gaming" className="hover:text-white transition-colors duration-200 flex items-center gap-[2px]">{t.footerResponsibleGaming} <span className="text-gray-500 text-[20px]"><IoOpenOutline /></span></NavLink></li>
+              <li><NavLink to="/kyc" className="hover:text-white transition-colors duration-200 flex items-center gap-[2px]">{t.footerKyc} <span className="text-gray-500 text-[20px]"><IoOpenOutline /></span></NavLink></li>
             </ul>
           </div>
-
-          {/* Column 3: Features */}
           <div>
             <h3 className="font-medium mb-4 text-gray-200">{t.footerFeatures}</h3>
             <ul className="space-y-2">
@@ -232,30 +202,17 @@ const Footer = () => {
               <li><NavLink to="/referral-program" className="hover:text-white transition-colors duration-200">{t.footerReferral}</NavLink></li>
             </ul>
           </div>
-{/* Column 4: Help */}
-<div>
-  <h3 className="font-medium mb-4 text-white">{t.footerHelp}</h3>
-  <ul className="space-y-2">
-    <li>
-      <a 
-        href="#" 
-        onClick={(e) => {
-          e.preventDefault();
-          // Add your live chat initialization logic here
-          // For example: window.LiveChatWidget?.call('maximize');
-          alert('Live chat will open here');
-        }}
-        className="hover:text-white transition-colors duration-200 flex justify-start items-center gap-[2px]"
-      >
-        Live Chat <span className="inline-block text-gray-500 text-xs ml-[2px] text-[20px]"><IoOpenOutline /></span>
-      </a>
-    </li>
-  </ul>
-</div>
+          <div>
+            <h3 className="font-medium mb-4 text-white">{t.footerHelp}</h3>
+            <ul className="space-y-2">
+              <li><a href="#" onClick={(e) => { e.preventDefault(); alert('Live chat will open here'); }} className="hover:text-white flex items-center gap-[2px]">Live Chat <span className="text-gray-500 text-[20px]"><IoOpenOutline /></span></a></li>
+            </ul>
+          </div>
         </div>
 
         <div className="h-[1px] bg-gray-700 my-4 md:my-8"></div>
-        {/* --- Desktop Navigation --- */}
+
+        {/* ── Desktop Navigation (Second Grid) ── */}
         <div className="hidden md:grid grid-cols-4 gap-8 mb-10">
           <div>
             <h3 className="text-gray-200 font-bold mb-4 uppercase text-[11px] tracking-widest">{t.footerGaming}</h3>
@@ -296,7 +253,68 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        {/* --- SEO / Main Text Section (Restored Logic) --- */}
+
+        {/* ── 24/7 SUPPORT SECTION: Colorful & Staggered Animation ── */}
+        <div className="mb-10">
+          <h3 className="text-white font-bold mb-4 text-[14px]">24/7 support</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 max-w-4xl">
+            {/* Email Button */}
+            <a href="mailto:support@bir75.com" 
+             target="_blank"
+               className="animate-bounce-custom flex items-center gap-3 bg-[#EA4335] border border-white/10 rounded-md py-3 px-4 hover:brightness-110 transition-all shadow-lg"
+               style={{ animationDelay: '0s' }}>
+               <FaRegEnvelope className="text-white" size={18} /> 
+               <span className="text-white font-bold">Email</span>
+            </a>
+
+            {/* Facebook 1 */}
+            <a href="https://www.facebook.com/bir75sports" 
+             target="_blank"
+               className="animate-bounce-custom flex items-center gap-3 bg-[#1877F2] border border-white/10 rounded-md py-3 px-4 hover:brightness-110 transition-all shadow-lg"
+               style={{ animationDelay: '0.1s' }}>
+               <FaFacebook className="text-white" size={18} /> 
+               <span className="text-white font-bold">Facebook 1</span>
+            </a>
+
+            {/* Facebook 2 */}
+            <a href="https://www.facebook.com/profile.php?id=61588813393466" 
+             target="_blank"
+               className="animate-bounce-custom flex items-center gap-3 bg-[#1877F2] border border-white/10 rounded-md py-3 px-4 hover:brightness-110 transition-all shadow-lg"
+               style={{ animationDelay: '0.2s' }}>
+               <FaFacebook className="text-white" size={18} /> 
+               <span className="text-white font-bold">Facebook 2</span>
+            </a>
+
+            {/* Instagram Button - ADDED HERE */}
+            <a href="https://www.instagram.com/bir75sports?igsh=MW5yOHN5dTBhNXB1Mg==" 
+               className="animate-bounce-custom flex items-center gap-3 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] border border-white/10 rounded-md py-3 px-4 hover:brightness-110 transition-all shadow-lg"
+               target="_blank" 
+               style={{ animationDelay: '0.3s' }}>
+               <FaInstagram className="text-white" size={18} /> 
+               <span className="text-white font-bold">Instagram</span>
+            </a>
+
+            {/* Telegram Button */}
+            <a href="https://t.me/+Hv8SAVMZoDU3MmY1" 
+             target="_blank"
+               className="animate-bounce-custom flex items-center gap-3 bg-[#0088CC] border border-white/10 rounded-md py-3 px-4 hover:brightness-110 transition-all shadow-lg"
+               style={{ animationDelay: '0.4s' }}>
+               <SiTelegram className="text-white" size={18} /> 
+               <span className="text-white font-bold">Telegram</span>
+            </a>
+
+            {/* WhatsApp Button */}
+            <a href="https://whatsapp.com/channel/0029VasaaAeK5cDCCOfgPl3S" 
+             target="_blank"
+               className="animate-bounce-custom flex items-center gap-3 bg-[#25D366] border border-white/10 rounded-md py-3 px-4 hover:brightness-110 transition-all shadow-lg"
+               style={{ animationDelay: '0.5s' }}>
+               <FaWhatsapp className="text-white" size={18} /> 
+               <span className="text-white font-bold">WhatsApp</span>
+            </a>
+          </div>
+        </div>
+
+        {/* --- SEO / Main Text Section --- */}
         <div className="mb-10">
           <h3 className="text-gray-200 font-semibold mb-2 text-sm uppercase tracking-tight">
             Bir75 - Leading Online Gaming and Betting Platform
@@ -332,6 +350,16 @@ const Footer = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes bounce-custom {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-custom {
+          animation: bounce-custom 2s infinite ease-in-out;
+        }
+      `}</style>
     </footer>
   );
 };
