@@ -455,12 +455,6 @@ const Edituserdetails = () => {
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={openWageringModal}
-                  className="bg-[#1F2937] hover:bg-purple-600/20 border border-gray-700 hover:border-purple-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-purple-400"
-                >
-                  <FaDice /> SET WAGERING
-                </button>
-                <button
                   onClick={openPasswordModal}
                   className="bg-[#1F2937] hover:bg-blue-600/20 border border-gray-700 hover:border-blue-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-blue-400"
                 >
@@ -579,12 +573,6 @@ const Edituserdetails = () => {
                         <FaTachometerAlt className="text-purple-400 text-xl" />
                         <h3 className="text-[12px] font-black uppercase tracking-widest text-purple-400">Wagering Progress</h3>
                       </div>
-                      <button
-                        onClick={openWageringModal}
-                        className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 px-3 py-1.5 rounded text-[10px] font-bold transition-all flex items-center gap-1"
-                      >
-                        <FaEdit /> Set Wagering
-                      </button>
                     </div>
 
                     {/* Progress Bar */}
@@ -823,9 +811,6 @@ const Edituserdetails = () => {
                           className={selectClass}
                         >
                           <option value="BDT">BDT</option>
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="INR">INR</option>
                         </select>
                       </div>
                     </div>
