@@ -17,7 +17,7 @@ import { LanguageContext } from "../../context/LanguageContext";
 // Flag images
 const BD_FLAG = "https://flagcdn.com/w320/bd.png";
 const US_FLAG = "https://flagcdn.com/w320/us.png";
-
+import banner_img from "../../assets/banner.jpg"
 // APK Download URL
 const APK_FILE = "https://bir75.com/Bir75.apk";
 
@@ -494,7 +494,7 @@ const Sidebar = ({
         <div className="py-3">
           <img
             className="w-full rounded-xl shadow-lg"
-            src="https://img.b112j.com/upload/h5Announcement/image_182702.jpg"
+            src={banner_img}
             alt="Promotion Banner"
           />
         </div>
