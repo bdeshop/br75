@@ -2022,6 +2022,7 @@ Adminrouter.get("/promotionals/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch promotional content" });
   }
 });
+// POST create new promotional content - UPDATED with category
 Adminrouter.post(
   "/promotionals",
   uploadPromotional.single("image"),
@@ -2039,15 +2040,11 @@ Adminrouter.post(
 
       // Optional: Sanitize HTML content to prevent XSS attacks
       const sanitizedDescription = req.body.description;
-      // If you have a sanitization library like DOMPurify on backend:
-      // const sanitizedDescription = DOMPurify.sanitize(req.body.description, {
-      //   ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'strike', 'ul', 'ol', 'li', 'a', 'img', 'div', 'span', 'blockquote', 'code', 'pre', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
-      //   ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'width', 'height', 'class', 'style', 'rel', 'title']
-      // });
 
       const promotionalData = {
         title: req.body.title.trim(),
         description: sanitizedDescription,
+        category: req.body.category || 'sale',  // ADD THIS LINE
         targetUrl: req.body.targetUrl || "",
         image: `/uploads/promotionals/${req.file.filename}`,
         status: req.body.status === "true" || req.body.status === true,
@@ -2121,6 +2118,7 @@ Adminrouter.put("/promotionals/:id/status", async (req, res) => {
 });
 
 // PUT update promotional content (full update)
+// PUT update promotional content (full update)
 Adminrouter.put(
   "/promotionals/:id",
   uploadPromotional.single("image"),
@@ -2145,6 +2143,10 @@ Adminrouter.put(
           });
         }
         promotional.title = req.body.title.trim();
+      }
+
+      if (req.body.category !== undefined) {
+        promotional.category = req.body.category;
       }
 
       if (req.body.description !== undefined) {

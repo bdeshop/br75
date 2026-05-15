@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaUpload, FaTimes, FaEdit, FaTrash, FaPlus, FaCalendarAlt, FaLink, FaSearch, FaSort, FaSortUp, FaSortDown, FaSpinner } from 'react-icons/fa';
+import { FaUpload, FaTimes, FaEdit, FaTrash, FaPlus, FaCalendarAlt, FaLink, FaSearch, FaSort, FaSortUp, FaSortDown, FaSpinner, FaTag } from 'react-icons/fa';
 import { FiRefreshCw, FiTrendingUp } from 'react-icons/fi';
 import { FaRegFileImage } from "react-icons/fa6";
 import { toast, Toaster } from 'react-hot-toast';
@@ -14,6 +14,7 @@ const Promotional = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    category: 'sale',
     targetUrl: '',
     startDate: '',
     endDate: '',
@@ -30,7 +31,25 @@ const Promotional = () => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  
+
+  // Category options
+const categoryOptions = [
+  { value: 'sports', label: 'Sports Betting' },
+  { value: 'live-casino', label: 'Live Casino' },
+  { value: 'slots', label: 'Slots' },
+  { value: 'jackpot', label: 'Jackpot' },
+  { value: 'tournament', label: 'Tournament' },
+  { value: 'bonus', label: 'Bonus Offer' },
+  { value: 'reload-bonus', label: 'Reload Bonus' },
+  { value: 'cashback', label: 'Cashback' },
+  { value: 'free-bet', label: 'Free Bet' },
+  { value: 'referral', label: 'Referral Program' },
+  { value: 'vip', label: 'VIP Program' },
+  { value: 'cricket', label: 'Cricket' },
+  { value: 'football', label: 'Football' },
+  { value: 'tennis', label: 'Tennis' },
+  { value: 'esports', label: 'Esports' }
+];
   // Quill modules configuration
   const quillModules = {
     toolbar: [
@@ -119,7 +138,6 @@ const Promotional = () => {
           newPreviews.push(reader.result);
           newImages.push(file);
           
-          // When all files are processed
           if (newPreviews.length === files.length) {
             setFormData({
               ...formData,
@@ -156,6 +174,7 @@ const Promotional = () => {
       const uploadData = new FormData();
       uploadData.append('title', formData.title);
       uploadData.append('description', formData.description);
+      uploadData.append('category', formData.category);
       uploadData.append('targetUrl', formData.targetUrl);
       uploadData.append('startDate', formData.startDate);
       uploadData.append('endDate', formData.endDate);
@@ -169,12 +188,11 @@ const Promotional = () => {
       
       if (response.ok) {
         const result = await response.json();
-        console.log('Promotion created:', result);
         
-        // Reset form and refresh promotions
         setFormData({
           title: '',
           description: '',
+          category: 'sale',
           targetUrl: '',
           startDate: '',
           endDate: '',
@@ -206,7 +224,7 @@ const Promotional = () => {
       });
       
       if (response.ok) {
-        fetchPromotions(); // Refresh the list
+        fetchPromotions();
         toast.success('Promotion status updated successfully');
       } else {
         toast.error('Failed to update promotion status');
@@ -236,7 +254,7 @@ const Promotional = () => {
       });
       
       if (response.ok) {
-        fetchPromotions(); // Refresh the list
+        fetchPromotions();
         toast.success('Promotion deleted successfully');
       } else {
         toast.error('Failed to delete promotion');
@@ -255,6 +273,7 @@ const Promotional = () => {
     setFormData({
       title: promotion.title,
       description: promotion.description,
+      category: promotion.category || 'sale',
       targetUrl: promotion.targetUrl,
       startDate: promotion.startDate ? new Date(promotion.startDate).toISOString().split('T')[0] : '',
       endDate: promotion.endDate ? new Date(promotion.endDate).toISOString().split('T')[0] : '',
@@ -269,6 +288,7 @@ const Promotional = () => {
     setFormData({
       title: '',
       description: '',
+      category: 'sale',
       targetUrl: '',
       startDate: '',
       endDate: '',
@@ -286,6 +306,7 @@ const Promotional = () => {
       const editData = new FormData();
       editData.append('title', formData.title);
       editData.append('description', formData.description);
+      editData.append('category', formData.category);
       editData.append('targetUrl', formData.targetUrl);
       editData.append('startDate', formData.startDate);
       editData.append('endDate', formData.endDate);
@@ -302,13 +323,12 @@ const Promotional = () => {
       
       if (response.ok) {
         const result = await response.json();
-        console.log('Promotion updated:', result);
         
-        // Reset form and refresh promotions
         setEditingPromotion(null);
         setFormData({
           title: '',
           description: '',
+          category: 'sale',
           targetUrl: '',
           startDate: '',
           endDate: '',
@@ -341,6 +361,21 @@ const Promotional = () => {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
     return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
+  // Get category badge color
+  const getCategoryColor = (category) => {
+    const colors = {
+      sale: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+      discount: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+      event: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+      announcement: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+      featured: 'bg-rose-500/10 text-rose-400 border-rose-500/30',
+      holiday: 'bg-red-500/10 text-red-400 border-red-500/30',
+      clearance: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
+      'new-arrival': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+    };
+    return colors[category] || 'bg-gray-500/10 text-gray-400 border-gray-500/30';
   };
 
   // Sorting logic
@@ -404,14 +439,8 @@ const Promotional = () => {
     return pages;
   };
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSortConfig({ key: null, direction: 'ascending' });
-    setCurrentPage(1);
-  };
-
   const inputClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 rounded px-3 py-3 text-sm focus:outline-none focus:border-indigo-500 placeholder-gray-600';
-  const selectClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200  rounded px-3 py-2 focus:outline-none focus:border-indigo-500';
+  const selectClass = 'w-full bg-[#0F111A] border border-gray-700 text-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500';
 
   if (loading && promotions.length === 0) {
     return (
@@ -486,12 +515,13 @@ const Promotional = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             {[
               { label: 'TOTAL PROMOTIONS', value: promotions.length, color: 'border-indigo-500', valueClass: 'text-white' },
               { label: 'ACTIVE', value: promotions.filter(p => p.status).length, color: 'border-emerald-500', valueClass: 'text-emerald-400' },
               { label: 'INACTIVE', value: promotions.filter(p => !p.status).length, color: 'border-amber-500', valueClass: 'text-amber-400' },
               { label: 'ONGOING', value: promotions.filter(p => p.status && (!p.endDate || new Date(p.endDate) > new Date())).length, color: 'border-rose-500', valueClass: 'text-rose-400' },
+              { label: 'CATEGORIES', value: [...new Set(promotions.map(p => p.category).filter(Boolean))].length, color: 'border-purple-500', valueClass: 'text-purple-400' },
             ].map((card, i) => (
               <div key={i} className={`bg-[#161B22] border-l-4 ${card.color} p-5 rounded shadow-lg border-y border-r border-gray-800`}>
                 <div className="flex justify-between items-start mb-3">
@@ -524,6 +554,31 @@ const Promotional = () => {
                   />
                 </div>
                 
+                {/* Category Field */}
+                <div>
+                  <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Category *</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FaTag className="text-gray-500 text-xs" />
+                    </div>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className={`${selectClass} pl-8`}
+                      required
+                    >
+                      {categoryOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 {/* Target URL Field */}
                 <div>
                   <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Target URL</label>
@@ -541,9 +596,10 @@ const Promotional = () => {
                     />
                   </div>
                 </div>
+   
               </div>
               
-              {/* Description Field with Rich Text Editor - INCREASED HEIGHT */}
+              {/* Description Field with Rich Text Editor */}
               <div className="mb-5">
                 <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Description *</label>
                 <div className="quill-wrapper">
@@ -594,20 +650,6 @@ const Promotional = () => {
                     />
                   </div>
                 </div>
-              </div>
-              
-              {/* Status Field */}
-              <div className="mb-6">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="status"
-                    checked={formData.status}
-                    onChange={handleInputChange}
-                    className="rounded border-gray-700 bg-[#0F111A] text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0"
-                  />
-                  <span className="ml-2 text-xs text-gray-300 font-medium">Active Promotion</span>
-                </label>
               </div>
               
               {/* Image Upload Section */}
@@ -709,6 +751,7 @@ const Promotional = () => {
                     <th className="px-5 py-3 cursor-pointer" onClick={() => requestSort('title')}>
                       Title {getSortIcon('title')}
                     </th>
+                    <th className="px-5 py-3">Category</th>
                     <th className="px-5 py-3">Description</th>
                     <th className="px-5 py-3 cursor-pointer" onClick={() => requestSort('startDate')}>
                       Period {getSortIcon('startDate')}
@@ -735,6 +778,11 @@ const Promotional = () => {
                           {promotion.targetUrl && (
                             <div className="text-[9px] text-gray-500 truncate max-w-[150px]">{promotion.targetUrl}</div>
                           )}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded text-[9px] font-bold border ${getCategoryColor(promotion.category)}`}>
+                            {promotion.category ? promotion.category.toUpperCase() : 'SALE'}
+                          </span>
                         </td>
                         <td className="px-5 py-4">
                           <div 
@@ -790,7 +838,7 @@ const Promotional = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-6 py-16 text-center">
+                      <td colSpan="7" className="px-6 py-16 text-center">
                         <div className="flex flex-col items-center text-gray-600">
                           <FaSearch className="text-4xl mb-3 opacity-20" />
                           <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">No promotions found</p>
@@ -860,7 +908,7 @@ const Promotional = () => {
         </main>
       </div>
 
-      {/* Custom CSS for Quill Editor to match dark theme and increased height */}
+      {/* Custom CSS for Quill Editor */}
       <style jsx>{`
         .quill-wrapper .ql-toolbar.ql-snow {
           border-color: #374151;
@@ -910,7 +958,6 @@ const Promotional = () => {
           border-color: #374151;
           color: #E5E7EB;
         }
-        /* Scrollbar styling for the editor */
         .quill-wrapper .ql-editor::-webkit-scrollbar {
           width: 8px;
         }

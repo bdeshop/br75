@@ -25,6 +25,11 @@ const promotionalSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  category: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   startDate: {
     type: Date,
     default: Date.now
@@ -42,6 +47,7 @@ const promotionalSchema = new mongoose.Schema({
 
 // Index for efficient querying
 promotionalSchema.index({ status: 1, startDate: 1, endDate: 1 });
+promotionalSchema.index({ category: 1, status: 1 }); // Added index for category queries
 
 // Optional: Text index for searching description content
 promotionalSchema.index({ title: 'text', descriptionPlainText: 'text' });

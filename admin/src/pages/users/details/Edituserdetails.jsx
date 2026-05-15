@@ -46,6 +46,7 @@ const Edituserdetails = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [processingBalance, setProcessingBalance] = useState(false);
   const [processingPassword, setProcessingPassword] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -139,6 +140,35 @@ const Edituserdetails = () => {
       toast.error(err.response?.data?.error || err.message || 'Failed to update user');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Status toggle function (active -> inactive -> suspended -> active)
+  const toggleUserStatus = async () => {
+    try {
+      setUpdatingStatus(true);
+      const token = localStorage.getItem('adminToken');
+      
+      let newStatus;
+      if (user.status === 'active') {
+        newStatus = 'inactive';
+      } else if (user.status === 'inactive') {
+        newStatus = 'suspended';
+      } else {
+        newStatus = 'active';
+      }
+      
+      await axios.put(`${base_url}/api/admin/users/${id}/status`,
+        { status: newStatus },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      setUser(prev => ({ ...prev, status: newStatus }));
+      toast.success(`User status changed to ${newStatus.toUpperCase()}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error updating user status');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -268,6 +298,24 @@ const Edituserdetails = () => {
     return statusConfig[status] || 'bg-gray-500/10 text-gray-400 border border-gray-500/20';
   };
 
+  const getStatusButtonText = (status) => {
+    if (status === 'active') return 'Set Inactive';
+    if (status === 'inactive') return 'Set Suspended';
+    return 'Set Active';
+  };
+
+  const getNextStatus = (status) => {
+    if (status === 'active') return 'inactive';
+    if (status === 'inactive') return 'suspended';
+    return 'active';
+  };
+
+  const getStatusButtonColor = (status) => {
+    if (status === 'active') return 'bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border-yellow-500/30';
+    if (status === 'inactive') return 'bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border-rose-500/30';
+    return 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border-emerald-500/30';
+  };
+
   const getKycBadge = (status) => {
     const kycConfig = {
       verified: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
@@ -291,7 +339,7 @@ const Edituserdetails = () => {
   return (
     <section className="min-h-screen bg-[#0F111A] text-gray-200 font-poppins">
       <Header toggleSidebar={toggleSidebar} />
-      <Toaster position="top-right" toastOptions={{ style: { background: '#161B22', color: '#e5e7eb', border: '1px solid #374151' } }} />
+      <Toaster toastOptions={{ style: { background: '#161B22', color: '#e5e7eb', border: '1px solid #374151' } }} />
 
       <div className="flex pt-[10vh]">
         <Sidebar isOpen={isSidebarOpen} />
@@ -315,7 +363,15 @@ const Edituserdetails = () => {
                   onClick={openPasswordModal}
                   className="bg-[#1F2937] hover:bg-blue-600/20 border border-gray-700 hover:border-blue-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-blue-400"
                 >
-                  CHANGE PASSWORD
+                  <FaKey /> CHANGE PASSWORD
+                </button>
+                <button
+                  onClick={toggleUserStatus}
+                  disabled={updatingStatus}
+                  className={`bg-[#1F2937] ${getStatusButtonColor(user.status)} border px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {updatingStatus ? <FaSpinner className="animate-spin" /> : <FaUser />}
+                  {getStatusButtonText(user.status)}
                 </button>
               </div>
             </div>
@@ -338,12 +394,24 @@ const Edituserdetails = () => {
                         {getUserInitials(user.username)}
                       </div>
                       <div className="flex-1">
-                        <h2 className="text-xl font-bold text-white">{user.username}</h2>
+                        <div className="flex items-center justify-between">
+                          <h2 className="text-xl font-bold text-white">{user.username}</h2>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase ${getStatusBadge(user.status)}`}>
+                              {user.status}
+                            </span>
+                            <button
+                              onClick={toggleUserStatus}
+                              disabled={updatingStatus}
+                              className="text-[9px] px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 transition-colors"
+                              title={`Change to ${getNextStatus(user.status)}`}
+                            >
+                              <FiRefreshCw className={`inline text-[8px] ${updatingStatus ? 'animate-spin' : ''}`} /> Change
+                            </button>
+                          </div>
+                        </div>
                         <p className="text-[10px] text-gray-500 mt-1 font-mono">Player ID: {user.player_id}</p>
                         <div className="flex space-x-3 mt-3">
-                          <span className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase ${getStatusBadge(user.status)}`}>
-                            {user.status}
-                          </span>
                           <span className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase ${getKycBadge(user.kycStatus)}`}>
                             KYC: {user.kycStatus}
                           </span>
@@ -384,18 +452,21 @@ const Edituserdetails = () => {
                       </div>
                       <div>
                         <label className={labelClass}>Status</label>
-                        <select
-                          name="status"
-                          value={user.status}
-                          onChange={handleInputChange}
-                          className={selectClass}
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="suspended">Suspended</option>
-                          <option value="banned">Banned</option>
-                          <option value="pending">Pending</option>
-                        </select>
+                        <div className="flex items-center gap-3">
+                          <select
+                            name="status"
+                            value={user.status}
+                            onChange={handleInputChange}
+                            className={selectClass}
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="suspended">Suspended</option>
+                          </select>
+                        </div>
+                        <p className="text-[9px] text-gray-500 mt-1">
+                          Status cycle: Active → Inactive → Suspended → Active
+                        </p>
                       </div>
                     </div>
                   </div>
