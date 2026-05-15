@@ -14665,9 +14665,9 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
     const { 
       processedBy, 
       notes, 
-      bonusPercentage,  // New: Custom percentage from frontend
-      minBetAmount,     // New: Minimum bet amount filter
-      maxBonusAmount    // New: Maximum bonus limit
+      bonusPercentage,  // Custom percentage from frontend
+      minLossAmount,    // Changed: Minimum loss amount filter
+      maxBonusAmount    // Maximum bonus limit
     } = req.body;
 
     // Validate bonus percentage
@@ -14681,11 +14681,11 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
     const bonusRateDecimal = bonusPercentage / 100;
 
     // Build query for eligible users
-    let query = { weeklybetamount: { $gt: 0 } };
+    let query = { weeklyLossAmount: { $gt: 0 } };
     
-    // Add min bet filter if provided
-    if (minBetAmount && minBetAmount > 0) {
-      query.weeklybetamount = { $gt: minBetAmount };
+    // Add min loss filter if provided
+    if (minLossAmount && minLossAmount > 0) {
+      query.weeklyLossAmount = { $gt: minLossAmount };
     }
 
     // Find eligible users
@@ -14694,7 +14694,7 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
     if (users.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "No users found with weekly bet amount greater than 0"
+        message: "No users found with weekly loss amount greater than 0"
       });
     }
     
@@ -14714,7 +14714,7 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
     for (const user of users) {
       try {
         // Calculate bonus amount with custom percentage
-        let bonusAmount = bonusRateDecimal * user.weeklybetamount;
+        let bonusAmount = bonusRateDecimal * user.weeklyLossAmount;
         
         // Apply max bonus limit if provided
         if (maxBonusAmount && bonusAmount > maxBonusAmount) {
@@ -14728,7 +14728,7 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           results.failed.push({
             userId: user._id,
             username: user.username,
-            betAmount: user.weeklybetamount,
+            lossAmount: user.weeklyLossAmount,
             reason: "Calculated bonus amount is zero or negative"
           });
           continue;
@@ -14746,16 +14746,19 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
         
         user.bonusHistory.push({
           type: 'weekly',
+          subType: 'loss_based',
           amount: bonusAmount,
-          totalBet: user.weeklybetamount,
+          totalLoss: user.weeklyLossAmount,
           bonusRate: `${bonusPercentage}%`,
           bonusPercentage: `${bonusPercentage}%`,
           status: 'claimed',
           createdAt: new Date(),
           claimedAt: new Date(),
           processedBy: processedBy || req.user?.username || 'admin',
+          weekNumber: weekNumber,
+          year: year,
           metadata: {
-            minBetAmount: minBetAmount || null,
+            minLossAmount: minLossAmount || null,
             maxBonusAmount: maxBonusAmount || null
           }
         });
@@ -14766,8 +14769,8 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           amount: bonusAmount,
           balanceBefore: balanceBefore,
           balanceAfter: user.balance,
-          description: `Weekly bonus (${bonusPercentage}% of ${user.weeklybetamount} bet amount)`,
-          referenceId: `WEEKLY-BONUS-${Date.now()}-${user._id}`,
+          description: `Weekly loss bonus (${bonusPercentage}% of ${user.weeklyLossAmount} loss amount)`,
+          referenceId: `WEEKLY-LOSS-BONUS-${Date.now()}-${user._id}`,
           createdAt: new Date()
         });
         
@@ -14776,8 +14779,9 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           userId: user._id,
           username: user.username,
           bonusType: 'weekly',
+          subType: 'loss_based',
           amount: bonusAmount,
-          betAmount: user.weeklybetamount,
+          lossAmount: user.weeklyLossAmount,
           status: 'claimed',
           processedBy: processedBy || req.user?.username || 'admin',
           weekNumber: weekNumber,
@@ -14785,18 +14789,18 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           distributionDate: new Date(),
           claimedAt: new Date(),
           claimedBy: processedBy || req.user?.username || 'admin',
-          notes: notes || 'Weekly bonus distribution',
+          notes: notes || 'Weekly loss bonus distribution',
           metadata: {
             bonusPercentage: bonusPercentage,
-            minBetAmount: minBetAmount,
+            minLossAmount: minLossAmount,
             maxBonusAmount: maxBonusAmount
           }
         });
         
         await bettingBonus.save();
         
-        // RESET weeklybetamount to 0 after bonus is given
-        user.weeklybetamount = 0;
+        // RESET weeklyLossAmount to 0 after bonus is given
+        user.weeklyLossAmount = 0;
         
         await user.save();
         
@@ -14804,7 +14808,7 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           userId: user._id,
           username: user.username,
           bonusAmount: bonusAmount,
-          betAmount: user.weeklybetamount,
+          lossAmount: user.weeklyLossAmount, // This will be 0 since we reset it
           oldBalance: balanceBefore,
           newBalance: user.balance
         });
@@ -14812,7 +14816,7 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
         results.totalBonusAmount += bonusAmount;
         
       } catch (error) {
-        console.error(`Error processing weekly bonus for user ${user._id}:`, error);
+        console.error(`Error processing weekly loss bonus for user ${user._id}:`, error);
         results.failed.push({
           userId: user._id,
           username: user.username,
@@ -14823,11 +14827,12 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: `Weekly bonus (${bonusPercentage}%) successfully added to ${results.successful.length} users`,
+      message: `Weekly loss bonus (${bonusPercentage}%) successfully added to ${results.successful.length} users`,
       data: {
         bonusType: 'weekly',
+        bonusSubType: 'loss_based',
         bonusPercentage: `${bonusPercentage}%`,
-        minBetAmount: minBetAmount || null,
+        minLossAmount: minLossAmount || null,
         maxBonusAmount: maxBonusAmount || null,
         weekNumber: weekNumber,
         year: year,
@@ -14841,14 +14846,23 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("Error calculating weekly bonus:", error);
+    console.error("Error calculating weekly loss bonus:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to calculate weekly bonus",
+      message: "Failed to calculate weekly loss bonus",
       error: error.message
     });
   }
 });
+
+// Helper function to get week number
+function getWeekNumber(date) {
+  const d = new Date(date);
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
 
 // POST route for monthly bonus with custom percentage
 Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
@@ -15049,32 +15063,32 @@ Adminrouter.get("/bonus/eligible-users", adminAuth, async (req, res) => {
   try {
     const { 
       bonusType = 'weekly',
-      minBetAmount,
+      minLossAmount,     // Changed from minBetAmount
       maxBonusAmount,
       bonusPercentage 
     } = req.query;
     
     // Determine which field to check based on bonus type
-    const betField = bonusType === 'weekly' ? 'weeklybetamount' : 'monthlybetamount';
+    const lossField = bonusType === 'weekly' ? 'weeklyLossAmount' : 'monthlyLossAmount';
     
     // Build query
-    let query = { [betField]: { $gt: 0 } };
+    let query = { [lossField]: { $gt: 0 } };
     
-    // Add min bet filter if provided
-    if (minBetAmount && parseFloat(minBetAmount) > 0) {
-      query[betField] = { $gt: parseFloat(minBetAmount) };
+    // Add min loss filter if provided
+    if (minLossAmount && parseFloat(minLossAmount) > 0) {
+      query[lossField] = { $gt: parseFloat(minLossAmount) };
     }
     
-    // Find users with bet amount > 0
-    const users = await User.find(query).select(`_id username email player_id balance ${betField}`);
+    // Find users with loss amount > 0
+    const users = await User.find(query).select(`_id username email player_id balance ${lossField}`);
     
-    // Parse bonus percentage
-    const bonusPercent = bonusPercentage ? parseFloat(bonusPercentage) : (bonusType === 'weekly' ? 0.8 : 0.5);
+    // Parse bonus percentage (default 10% for weekly, 8% for monthly)
+    const bonusPercent = bonusPercentage ? parseFloat(bonusPercentage) : (bonusType === 'weekly' ? 10 : 8);
     const bonusRateDecimal = bonusPercent / 100;
     
     // Calculate potential bonus for each user
     const eligibleUsers = users.map(user => {
-      let potentialBonus = bonusRateDecimal * user[betField];
+      let potentialBonus = bonusRateDecimal * user[lossField];
       
       // Apply max bonus limit if provided
       if (maxBonusAmount && parseFloat(maxBonusAmount) > 0 && potentialBonus > parseFloat(maxBonusAmount)) {
@@ -15089,7 +15103,7 @@ Adminrouter.get("/bonus/eligible-users", adminAuth, async (req, res) => {
         email: user.email,
         player_id: user.player_id,
         currentBalance: user.balance,
-        betAmount: user[betField],
+        lossAmount: user[lossField],  // Changed from betAmount
         potentialBonus: potentialBonus,
         newBalance: parseFloat((user.balance + potentialBonus).toFixed(2))
       };
@@ -15098,7 +15112,7 @@ Adminrouter.get("/bonus/eligible-users", adminAuth, async (req, res) => {
     // Calculate totals
     const totals = {
       totalUsers: eligibleUsers.length,
-      totalBetAmount: eligibleUsers.reduce((sum, user) => sum + user.betAmount, 0),
+      totalLossAmount: eligibleUsers.reduce((sum, user) => sum + user.lossAmount, 0),  // Changed from totalBetAmount
       totalPotentialBonus: eligibleUsers.reduce((sum, user) => sum + user.potentialBonus, 0),
       bonusPercentage: `${bonusPercent}%`
     };

@@ -3,7 +3,7 @@ import {
   FaCalendarWeek, FaPercentage, FaGift, FaSpinner, 
   FaInfoCircle, FaUsers, FaMoneyBillWave, FaClock, 
   FaSearch, FaCheckCircle, FaTimesCircle, FaChartLine,
-  FaAward, FaHistory, FaWallet, FaSlidersH
+  FaAward, FaHistory, FaWallet, FaSlidersH, FaArrowDown
 } from 'react-icons/fa';
 import { FiRefreshCw } from 'react-icons/fi';
 import Sidebar from '../../components/Sidebar';
@@ -11,24 +11,23 @@ import Header from '../../components/Header';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
-import { MdCalendarMonth } from "react-icons/md";
 
 const WeeklyMonthlyBonus = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState('weekly');
   const [eligibleUsers, setEligibleUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [bonusHistory, setBonusHistory] = useState([]);
   const [summaryStats, setSummaryStats] = useState(null);
   const [distributionResult, setDistributionResult] = useState(null);
+  const [bonusPeriod, setBonusPeriod] = useState('weekly'); // 'weekly' or 'monthly'
   
   // Custom bonus settings
   const [bonusSettings, setBonusSettings] = useState({
-    bonusPercentage: 0.8,
-    minBetAmount: 0,
+    bonusPercentage: 10, // Changed to 10% for loss-based bonus
+    minLossAmount: 0,    // Changed from minBetAmount
     maxBonusAmount: 0,
     useCustomSettings: false
   });
@@ -67,18 +66,18 @@ const WeeklyMonthlyBonus = () => {
     }
   };
 
-  // Fetch eligible users based on active tab and custom settings
+  // Fetch eligible users based on custom settings
   const fetchEligibleUsers = async () => {
     setLoadingUsers(true);
     try {
       const token = localStorage.getItem('admintoken') || localStorage.getItem('token');
       const params = { 
-        bonusType: activeTab,
-        bonusPercentage: bonusSettings.useCustomSettings ? bonusSettings.bonusPercentage : (activeTab === 'weekly' ? 0.8 : 0.5)
+        bonusType: bonusPeriod,
+        bonusPercentage: bonusSettings.useCustomSettings ? bonusSettings.bonusPercentage : 10
       };
       
-      if (bonusSettings.useCustomSettings && bonusSettings.minBetAmount > 0) {
-        params.minBetAmount = bonusSettings.minBetAmount;
+      if (bonusSettings.useCustomSettings && bonusSettings.minLossAmount > 0) {
+        params.minLossAmount = bonusSettings.minLossAmount;
       }
       if (bonusSettings.useCustomSettings && bonusSettings.maxBonusAmount > 0) {
         params.maxBonusAmount = bonusSettings.maxBonusAmount;
@@ -108,7 +107,7 @@ const WeeklyMonthlyBonus = () => {
       const token = localStorage.getItem('admintoken') || localStorage.getItem('token');
       const response = await axios.get(`${base_url}/api/admin/bonus/history`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 50 }
+        params: { limit: 50, bonusType: bonusPeriod }
       });
       
       if (response.data.success) {
@@ -124,7 +123,7 @@ const WeeklyMonthlyBonus = () => {
   useEffect(() => {
     fetchEligibleUsers();
     fetchBonusHistory();
-  }, [activeTab, bonusSettings.useCustomSettings]);
+  }, [bonusSettings.useCustomSettings, bonusPeriod]);
 
   // Filter users based on search term
   const getFilteredUsers = () => {
@@ -137,8 +136,8 @@ const WeeklyMonthlyBonus = () => {
     );
   };
 
-  // Distribute Weekly Bonus with custom settings
-  const handleWeeklyBonus = async () => {
+  // Distribute Weekly/Monthly Bonus based on loss amount
+  const handleBonusDistribution = async () => {
     setIsSubmitting(true);
     setDistributionResult(null);
     
@@ -148,16 +147,19 @@ const WeeklyMonthlyBonus = () => {
       
       const payload = {
         processedBy: adminInfo.username,
-        notes: 'Weekly bonus distribution',
-        bonusPercentage: bonusSettings.useCustomSettings ? bonusSettings.bonusPercentage : 0.8
+        notes: `${bonusPeriod.charAt(0).toUpperCase() + bonusPeriod.slice(1)} loss-based bonus distribution`,
+        bonusPercentage: bonusSettings.useCustomSettings ? bonusSettings.bonusPercentage : 10,
+        bonusType: bonusPeriod
       };
       
       if (bonusSettings.useCustomSettings) {
-        if (bonusSettings.minBetAmount > 0) payload.minBetAmount = bonusSettings.minBetAmount;
+        if (bonusSettings.minLossAmount > 0) payload.minLossAmount = bonusSettings.minLossAmount;
         if (bonusSettings.maxBonusAmount > 0) payload.maxBonusAmount = bonusSettings.maxBonusAmount;
       }
       
-      const response = await axios.post(`${base_url}/api/admin/bonus/weekly`, payload, { 
+      const endpoint = bonusPeriod === 'weekly' ? '/api/admin/bonus/weekly' : '/api/admin/bonus/monthly';
+      
+      const response = await axios.post(`${base_url}${endpoint}`, payload, { 
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -174,54 +176,8 @@ const WeeklyMonthlyBonus = () => {
         setDistributionResult({ success: false, message: response.data.message });
       }
     } catch (error) {
-      console.error('Error distributing weekly bonus:', error);
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to distribute weekly bonus';
-      toast.error(errorMsg);
-      setDistributionResult({ success: false, message: errorMsg });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Distribute Monthly Bonus with custom settings
-  const handleMonthlyBonus = async () => {
-    setIsSubmitting(true);
-    setDistributionResult(null);
-    
-    try {
-      const token = localStorage.getItem('admintoken') || localStorage.getItem('token');
-      const adminInfo = getAdminInfo();
-      
-      const payload = {
-        processedBy: adminInfo.username,
-        notes: 'Monthly bonus distribution',
-        bonusPercentage: bonusSettings.useCustomSettings ? bonusSettings.bonusPercentage : 0.5
-      };
-      
-      if (bonusSettings.useCustomSettings) {
-        if (bonusSettings.minBetAmount > 0) payload.minBetAmount = bonusSettings.minBetAmount;
-        if (bonusSettings.maxBonusAmount > 0) payload.maxBonusAmount = bonusSettings.maxBonusAmount;
-      }
-      
-      const response = await axios.post(`${base_url}/api/admin/bonus/monthly`, payload, { 
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } 
-      });
-      
-      if (response.data.success) {
-        toast.success(response.data.message);
-        setDistributionResult({ success: true, data: response.data.data });
-        fetchEligibleUsers();
-        fetchBonusHistory();
-      } else {
-        toast.error(response.data.message);
-        setDistributionResult({ success: false, message: response.data.message });
-      }
-    } catch (error) {
-      console.error('Error distributing monthly bonus:', error);
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to distribute monthly bonus';
+      console.error(`Error distributing ${bonusPeriod} bonus:`, error);
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || `Failed to distribute ${bonusPeriod} bonus`;
       toast.error(errorMsg);
       setDistributionResult({ success: false, message: errorMsg });
     } finally {
@@ -232,13 +188,9 @@ const WeeklyMonthlyBonus = () => {
   const filteredUsers = getFilteredUsers();
   const currentBonusPercentage = bonusSettings.useCustomSettings 
     ? bonusSettings.bonusPercentage 
-    : (activeTab === 'weekly' ? 0.8 : 0.5);
+    : 10;
   const totalPotentialBonus = filteredUsers.reduce((sum, user) => sum + (user.potentialBonus || 0), 0);
-
-  const getMonthName = (month) => {
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    return monthNames[month - 1];
-  };
+  const totalLossAmount = filteredUsers.reduce((sum, user) => sum + (user.lossAmount || 0), 0);
 
   return (
     <section className="min-h-screen bg-[#0F111A] text-gray-200 font-poppins">
@@ -251,41 +203,43 @@ const WeeklyMonthlyBonus = () => {
           {/* Page Header */}
           <div className="mb-8 flex flex-col md:flex-row justify-between items-center">
             <div>
-              <h1 className="text-2xl font-semibold text-white tracking-tighter uppercase">Weekly & Monthly Bonus</h1>
+              <h1 className="text-2xl font-semibold text-white tracking-tighter uppercase">
+                {bonusPeriod === 'weekly' ? 'Weekly' : 'Monthly'} Loss Bonus
+              </h1>
               <p className="text-xs font-bold text-gray-500 mt-1 flex items-center gap-2">
-                <FaAward className="text-amber-500" /> Configure and distribute bonuses based on betting activity
+                <FaArrowDown className="text-rose-500" /> Configure and distribute {bonusPeriod} loss bonuses based on user's loss amount
               </p>
             </div>
-            <button
-              onClick={() => { fetchEligibleUsers(); fetchBonusHistory(); }}
-              className="mt-4 md:mt-0 flex items-center gap-2 px-4 py-2 bg-[#1F2937] rounded-lg hover:bg-[#374151] transition-colors text-sm"
-            >
-              <FiRefreshCw className="text-amber-400" /> Refresh
-            </button>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="flex gap-2 mb-6 border-b border-gray-800">
-            <button
-              onClick={() => { setActiveTab('weekly'); setDistributionResult(null); }}
-              className={`px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
-                activeTab === 'weekly'
-                  ? 'text-amber-400 border-b-2 border-amber-400'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              <FaCalendarWeek /> Weekly Bonus
-            </button>
-            <button
-              onClick={() => { setActiveTab('monthly'); setDistributionResult(null); }}
-              className={`px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
-                activeTab === 'monthly'
-                  ? 'text-amber-400 border-b-2 border-amber-400'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              <MdCalendarMonth /> Monthly Bonus
-            </button>
+            <div className="flex gap-2 mt-4 md:mt-0">
+              <div className="flex gap-2 bg-[#1F2937] rounded-lg p-1">
+                <button
+                  onClick={() => setBonusPeriod('weekly')}
+                  className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                    bonusPeriod === 'weekly' 
+                      ? 'bg-amber-600 text-white' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Weekly
+                </button>
+                <button
+                  onClick={() => setBonusPeriod('monthly')}
+                  className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                    bonusPeriod === 'monthly' 
+                      ? 'bg-amber-600 text-white' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Monthly
+                </button>
+              </div>
+              <button
+                onClick={() => { fetchEligibleUsers(); fetchBonusHistory(); }}
+                className="flex items-center gap-2 px-4 py-2 bg-[#1F2937] rounded-lg hover:bg-[#374151] transition-colors text-sm"
+              >
+                <FiRefreshCw className="text-amber-400" /> Refresh
+              </button>
+            </div>
           </div>
 
           {/* Custom Bonus Settings Card */}
@@ -307,19 +261,45 @@ const WeeklyMonthlyBonus = () => {
             </div>
             
             {bonusSettings.useCustomSettings && (
-              <div className="grid grid-cols-1 gap-4 mt-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                 <div>
                   <label className="text-[11px] text-gray-500 uppercase block mb-1">Bonus Percentage (%)</label>
                   <input
                     type="number"
-                    step="0.1"
+                    step="1"
                     min="0.1"
                     max="100"
                     value={bonusSettings.bonusPercentage}
                     onChange={(e) => setBonusSettings({ ...bonusSettings, bonusPercentage: parseFloat(e.target.value) })}
                     className="w-full bg-[#0F111A] border border-gray-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
                   />
-                  <p className="text-[8px] text-gray-500 mt-1">Percentage of bet amount to give as bonus</p>
+                  <p className="text-[8px] text-gray-500 mt-1">Percentage of loss amount to give as bonus</p>
+                </div>
+                <div>
+                  <label className="text-[11px] text-gray-500 uppercase block mb-1">Minimum Loss Amount</label>
+                  <input
+                    type="number"
+                    step="100"
+                    min="0"
+                    value={bonusSettings.minLossAmount}
+                    onChange={(e) => setBonusSettings({ ...bonusSettings, minLossAmount: parseFloat(e.target.value) })}
+                    className="w-full bg-[#0F111A] border border-gray-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                    placeholder="0 = No minimum"
+                  />
+                  <p className="text-[8px] text-gray-500 mt-1">Minimum loss amount required to qualify</p>
+                </div>
+                <div>
+                  <label className="text-[11px] text-gray-500 uppercase block mb-1">Maximum Bonus Amount</label>
+                  <input
+                    type="number"
+                    step="100"
+                    min="0"
+                    value={bonusSettings.maxBonusAmount}
+                    onChange={(e) => setBonusSettings({ ...bonusSettings, maxBonusAmount: parseFloat(e.target.value) })}
+                    className="w-full bg-[#0F111A] border border-gray-700 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                    placeholder="0 = Unlimited"
+                  />
+                  <p className="text-[8px] text-gray-500 mt-1">Maximum bonus amount per user</p>
                 </div>
               </div>
             )}
@@ -332,9 +312,9 @@ const WeeklyMonthlyBonus = () => {
                 <p className="text-[9px] text-gray-500 uppercase font-black">Eligible Users</p>
                 <p className="text-2xl font-bold text-amber-400">{summaryStats.totalUsers}</p>
               </div>
-              <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-500/20 rounded-lg p-4">
-                <p className="text-[9px] text-gray-500 uppercase font-black">Total Bet Amount</p>
-                <p className="text-2xl font-bold text-white">৳{summaryStats.totalBetAmount?.toLocaleString() || 0}</p>
+              <div className="bg-gradient-to-br from-rose-900/20 to-rose-800/10 border border-rose-500/20 rounded-lg p-4">
+                <p className="text-[9px] text-gray-500 uppercase font-black">Total Loss Amount</p>
+                <p className="text-2xl font-bold text-white">৳{totalLossAmount.toLocaleString() || 0}</p>
               </div>
               <div className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/10 border border-emerald-500/20 rounded-lg p-4">
                 <p className="text-[9px] text-gray-500 uppercase font-black">Bonus Rate</p>
@@ -358,33 +338,31 @@ const WeeklyMonthlyBonus = () => {
                   <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
                     <div className="w-1 h-4 bg-amber-500"></div> 
                     <FaChartLine className="text-amber-500" /> 
-                    Distribute {activeTab === 'weekly' ? 'Weekly' : 'Monthly'} Bonus
+                    Distribute {bonusPeriod.charAt(0).toUpperCase() + bonusPeriod.slice(1)} Loss Bonus
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4">
+                  <div className="bg-rose-500/5 border border-rose-500/20 rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                        <FaPercentage className="text-amber-400" />
+                      <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center">
+                        <FaPercentage className="text-rose-400" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-white">
-                          {activeTab === 'weekly' 
-                            ? `Weekly Bonus Rate: ${currentBonusPercentage}%` 
-                            : `Monthly Bonus Rate: ${currentBonusPercentage}%`}
+                          {bonusPeriod.charAt(0).toUpperCase() + bonusPeriod.slice(1)} Loss Bonus Rate: {currentBonusPercentage}%
                         </p>
                         <p className="text-xs text-gray-500">
-                          Users receive {currentBonusPercentage}% of their {activeTab} bet amount directly to their balance
+                          Users receive {currentBonusPercentage}% of their {bonusPeriod} loss amount directly to their balance
                         </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-center text-xs">
                       <div className="p-2 bg-[#0F111A] rounded">
-                        <p className="text-gray-500">Min Bet Amount</p>
-                        <p className="text-amber-400 font-bold">
-                          {bonusSettings.useCustomSettings && bonusSettings.minBetAmount > 0 
-                            ? `৳${bonusSettings.minBetAmount.toLocaleString()}` 
+                        <p className="text-gray-500">Min Loss Amount</p>
+                        <p className="text-rose-400 font-bold">
+                          {bonusSettings.useCustomSettings && bonusSettings.minLossAmount > 0 
+                            ? `৳${bonusSettings.minLossAmount.toLocaleString()}` 
                             : 'Any amount > 0'}
                         </p>
                       </div>
@@ -400,20 +378,20 @@ const WeeklyMonthlyBonus = () => {
                   </div>
 
                   <button
-                    onClick={activeTab === 'weekly' ? handleWeeklyBonus : handleMonthlyBonus}
+                    onClick={handleBonusDistribution}
                     disabled={isSubmitting || (summaryStats?.totalUsers === 0)}
-                    className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? (
-                      <><FaSpinner className="animate-spin" /> Distributing Bonus...</>
+                      <><FaSpinner className="animate-spin" /> Distributing {bonusPeriod} Loss Bonus...</>
                     ) : (
-                      <><FaGift /> Distribute {activeTab === 'weekly' ? 'Weekly' : 'Monthly'} Bonus Now</>
+                      <><FaGift /> Distribute {bonusPeriod.charAt(0).toUpperCase() + bonusPeriod.slice(1)} Loss Bonus Now</>
                     )}
                   </button>
 
                   {summaryStats?.totalUsers === 0 && (
                     <p className="text-center text-xs text-gray-500 mt-2">
-                      No eligible users found for {activeTab} bonus
+                      No eligible users found for {bonusPeriod} loss bonus
                     </p>
                   )}
                 </div>
@@ -457,12 +435,12 @@ const WeeklyMonthlyBonus = () => {
                       </div>
                       <div className="p-3 bg-purple-500/10 rounded">
                         <p className="text-[9px] text-gray-500 uppercase">Bonus Rate Used</p>
-                        <p className="text-sm font-bold text-purple-400">{distributionResult.data.bonusPercentage}</p>
+                        <p className="text-sm font-bold text-purple-400">{distributionResult.data.bonusPercentage}%</p>
                       </div>
-                      {distributionResult.data.minBetAmount && (
+                      {distributionResult.data.minLossAmount && (
                         <div className="p-3 bg-[#0F111A] rounded">
-                          <p className="text-[9px] text-gray-500 uppercase">Min Bet Applied</p>
-                          <p className="text-xs text-gray-300">৳{distributionResult.data.minBetAmount.toLocaleString()}</p>
+                          <p className="text-[9px] text-gray-500 uppercase">Min Loss Applied</p>
+                          <p className="text-xs text-gray-300">৳{distributionResult.data.minLossAmount.toLocaleString()}</p>
                         </div>
                       )}
                       {distributionResult.data.maxBonusAmount && (
@@ -490,7 +468,7 @@ const WeeklyMonthlyBonus = () => {
                   <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
                     <div className="w-1 h-4 bg-amber-500"></div> 
                     <FaUsers className="text-amber-500" /> 
-                    Eligible Users ({currentBonusPercentage}% Bonus)
+                    Eligible Users ({currentBonusPercentage}% Loss Bonus)
                   </p>
                 </div>
                 
@@ -515,7 +493,7 @@ const WeeklyMonthlyBonus = () => {
                   <div className="max-h-96 overflow-y-auto border border-gray-800 rounded-lg bg-[#0F111A]">
                     {filteredUsers.length === 0 ? (
                       <div className="text-center py-8 text-gray-500 text-sm">
-                        {searchTerm ? 'No users found matching your search' : 'No eligible users found for this period'}
+                        {searchTerm ? 'No users found matching your search' : `No eligible users found for ${bonusPeriod} period`}
                       </div>
                     ) : (
                       filteredUsers.map((user) => (
@@ -531,8 +509,8 @@ const WeeklyMonthlyBonus = () => {
                                 {user.player_id && <span>{user.player_id}</span>}
                               </div>
                               <div className="flex gap-4 mt-2 text-xs">
-                                <span className="text-gray-500">Bet Amount:</span>
-                                <span className="text-amber-400 font-medium">৳{user.betAmount?.toLocaleString()}</span>
+                                <span className="text-gray-500">{bonusPeriod === 'weekly' ? 'Weekly' : 'Monthly'} Loss:</span>
+                                <span className="text-rose-400 font-medium">-৳{user.lossAmount?.toLocaleString()}</span>
                               </div>
                               <div className="flex gap-4 mt-1 text-xs">
                                 <span className="text-gray-500">Current Balance:</span>
@@ -560,7 +538,7 @@ const WeeklyMonthlyBonus = () => {
             <div className="bg-[#161B22] border border-gray-800 rounded-lg">
               <div className="bg-[#1C2128] px-5 py-3 border-b border-gray-800 flex justify-between items-center">
                 <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
-                  <FaHistory className="text-amber-500" /> Recent Bonus Distribution History
+                  <FaHistory className="text-amber-500" /> Recent {bonusPeriod.charAt(0).toUpperCase() + bonusPeriod.slice(1)} Loss Bonus Distribution History
                 </p>
                 <button
                   onClick={() => fetchBonusHistory()}
@@ -576,16 +554,15 @@ const WeeklyMonthlyBonus = () => {
                   </div>
                 ) : bonusHistory.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 text-sm">
-                    No bonus distribution history available
+                    No {bonusPeriod} loss bonus distribution history available
                   </div>
                 ) : (
                   <table className="w-full text-sm">
                     <thead className="text-[9px] text-gray-500 uppercase tracking-wider border-b border-gray-800">
                       <tr>
                         <th className="text-left py-3 px-2">Date</th>
-                        <th className="text-left py-3 px-2">Bonus Type</th>
                         <th className="text-left py-3 px-2">User</th>
-                        <th className="text-left py-3 px-2">Bet Amount</th>
+                        <th className="text-left py-3 px-2">Loss Amount</th>
                         <th className="text-left py-3 px-2">Bonus Rate</th>
                         <th className="text-left py-3 px-2">Bonus Amount</th>
                         <th className="text-left py-3 px-2">Period</th>
@@ -597,26 +574,16 @@ const WeeklyMonthlyBonus = () => {
                           <td className="py-3 px-2 text-[10px] text-gray-400">
                             {new Date(bonus.distributionDate).toLocaleDateString()}
                           </td>
-                          <td className="py-3 px-2">
-                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${
-                              bonus.bonusType === 'weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
-                            }`}>
-                              {bonus.bonusType}
-                            </span>
-                          </td>
                           <td className="py-3 px-2 text-xs text-white">{bonus.username}</td>
-                          <td className="py-3 px-2 text-xs text-amber-400">৳{bonus.betAmount?.toLocaleString()}</td>
+                          <td className="py-3 px-2 text-xs text-rose-400">-৳{bonus.lossAmount?.toLocaleString()}</td>
                           <td className="py-3 px-2 text-xs text-emerald-400">
-                            {bonus.metadata?.bonusPercentage || (bonus.bonusType === 'weekly' ? '0.8' : '0.5')}%
-                          </td>
+                            {bonus.metadata?.bonusPercentage || '10'}%
+                           </td>
                           <td className="py-3 px-2 text-xs text-emerald-400">+৳{bonus.amount?.toLocaleString()}</td>
                           <td className="py-3 px-2 text-[10px] text-gray-400">
-                            {bonus.bonusType === 'weekly' 
-                              ? `Week ${bonus.weekNumber}, ${bonus.year}`
-                              : `${getMonthName(bonus.month)} ${bonus.year}`
-                            }
-                          </td>
-                        </tr>
+                            {bonusPeriod === 'weekly' ? `Week ${bonus.weekNumber}, ${bonus.year}` : `${bonus.monthName} ${bonus.year}`}
+                           </td>
+                         </tr>
                       ))}
                     </tbody>
                   </table>
