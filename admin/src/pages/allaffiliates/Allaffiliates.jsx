@@ -25,6 +25,8 @@ import {
   FaDollarSign,
   FaLink,
   FaCog,
+  FaFileExcel,
+  FaDownload,
 } from 'react-icons/fa';
 import { FiRefreshCw } from 'react-icons/fi';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -33,6 +35,7 @@ import Header from '../../components/Header';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 const AllAffiliates = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -72,6 +75,7 @@ const AllAffiliates = () => {
     notes: '',
     tags: [],
   });
+  const [exporting, setExporting] = useState(false);
 
   const navigate = useNavigate();
   const itemsPerPage = 10;
@@ -110,6 +114,96 @@ const AllAffiliates = () => {
       toast.error('Failed to fetch affiliates');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllAffiliatesForExport = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      // Fetch all affiliates without pagination for export
+      const response = await axios.get(`${base_url}/api/admin/affiliates?limit=10000`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      return response.data.affiliates || [];
+    } catch (err) {
+      console.error('Error fetching all affiliates for export:', err);
+      throw err;
+    }
+  };
+
+  const exportToExcel = async () => {
+    try {
+      setExporting(true);
+      toast.loading('Preparing Excel file...', { id: 'export-toast' });
+      
+      // Fetch all affiliates data
+      let allAffiliates = affiliates;
+      
+      // If current page doesn't have all records, fetch all
+      if (totalAffiliates > affiliates.length) {
+        allAffiliates = await fetchAllAffiliatesForExport();
+      }
+      
+      // Prepare data for Excel
+      const excelData = allAffiliates.map(affiliate => ({
+        'ID': affiliate._id,
+        'Affiliate Code': affiliate.affiliateCode || 'N/A',
+        'First Name': affiliate.firstName || '',
+        'Last Name': affiliate.lastName || '',
+        'Full Name': `${affiliate.firstName || ''} ${affiliate.lastName || ''}`.trim(),
+        'Email': affiliate.email || '',
+        'Phone': affiliate.phone || 'N/A',
+        'Company': affiliate.company || 'N/A',
+        'Website': affiliate.website || 'N/A',
+        'Promo Method': affiliate.promoMethod || 'N/A',
+        'Status': affiliate.status || 'pending',
+        'Verification Status': affiliate.verificationStatus || 'unverified',
+        'Commission Rate (%)': affiliate.commissionRate || 0,
+        'Commission Type': affiliate.commissionType || 'N/A',
+        'CPA Rate (BDT)': affiliate.cpaRate || 0,
+        'Deposit Rate (%)': affiliate.depositRate || 0,
+        'Pending Earnings (BDT)': affiliate.pendingEarnings || 0,
+        'Total Earnings (BDT)': affiliate.totalEarnings || 0,
+        'Total Clicks': affiliate.totalClicks || 0,
+        'Total Registrations': affiliate.totalRegistrations || 0,
+        'Total Deposits': affiliate.totalDeposits || 0,
+        'Total Withdrawals': affiliate.totalWithdrawals || 0,
+        'Payment Method': affiliate.paymentMethod || 'N/A',
+        'Minimum Payout (BDT)': affiliate.minimumPayout || 0,
+        'Payout Schedule': affiliate.payoutSchedule || 'N/A',
+        'Auto Payout': affiliate.autoPayout ? 'Yes' : 'No',
+        'Notes': affiliate.notes || 'N/A',
+        'Tags': affiliate.tags?.join(', ') || 'N/A',
+        'Registered Date': affiliate.createdAt ? new Date(affiliate.createdAt).toLocaleString() : 'N/A',
+        'Last Login': affiliate.lastLogin ? new Date(affiliate.lastLogin).toLocaleString() : 'N/A',
+        'Last Updated': affiliate.updatedAt ? new Date(affiliate.updatedAt).toLocaleString() : 'N/A',
+      }));
+      
+      // Create worksheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      
+      // Auto-size columns (basic approach - set column widths)
+      const maxWidth = 20;
+      worksheet['!cols'] = Object.keys(excelData[0] || {}).map(() => ({ wch: maxWidth }));
+      
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Affiliates');
+      
+      // Generate filename with current date
+      const date = new Date();
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+      const filename = `affiliates_export_${dateStr}.xlsx`;
+      
+      // Export file
+      XLSX.writeFile(workbook, filename);
+      
+      toast.success(`Exported ${excelData.length} affiliates successfully!`, { id: 'export-toast' });
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error(err.response?.data?.message || 'Failed to export affiliates', { id: 'export-toast' });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -409,6 +503,14 @@ const AllAffiliates = () => {
               </div>
               <div className="flex gap-3 mt-4 md:mt-0">
                 <button
+                  onClick={exportToExcel}
+                  disabled={exporting}
+                  className="bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 px-6 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exporting ? <FaSpinner className="animate-spin" /> : <FaFileExcel className="text-base" />}
+                  {exporting ? 'EXPORTING...' : 'EXPORT TO EXCEL'}
+                </button>
+                <button
                   onClick={fetchAffiliates}
                   className="bg-[#1F2937] hover:bg-amber-600/30 border border-gray-700 hover:border-amber-500/40 px-6 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-amber-400"
                 >
@@ -490,12 +592,20 @@ const AllAffiliates = () => {
               <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
                 Showing {affiliates.length} of {totalAffiliates} affiliates
               </p>
+              <button
+                onClick={exportToExcel}
+                disabled={exporting}
+                className="text-emerald-400 hover:text-emerald-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
+              >
+                <FaFileExcel /> Export All
+              </button>
             </div>
 
             {/* Affiliates Table */}
             <div className="bg-[#161B22] border border-gray-800 rounded-lg overflow-hidden shadow-2xl">
-              <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-amber-400 uppercase tracking-widest">
-                Affiliate List
+              <div className="bg-[#1C2128] px-6 py-4 border-b border-gray-800 font-black text-[10px] text-amber-400 uppercase tracking-widest flex justify-between items-center">
+                <span>Affiliate List</span>
+                <span className="text-gray-500 text-[9px]">{totalAffiliates} total records</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left">
