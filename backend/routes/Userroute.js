@@ -4157,13 +4157,15 @@ Userrouter.post("/callback-data-game", async (req, res) => {
           commissionType = 'bet_commission';
           description = `Commission from user ${matchedUser.username}'s losing bet (SETTLE)`;
           status = 'approved';
-
+             matchedUser.dailyLossAmount = (matchedUser.dailyLossAmount || 0) + betAmount;
+              // Add to weekly loss
+          matchedUser.weeklyLossAmount = (matchedUser.weeklyLossAmount || 0) + betAmount;
           // Add to affiliate's balance
           affiliate.pendingEarnings += commissionAmount;
           affiliate.totalEarnings += commissionAmount;
 
           console.log(`✅ SETTLE: Commission ${commissionAmount} BDT added to affiliate balance for losing bet`);
-
+         matchedUser.save();
         } else if (isUserWin) {
           console.log("---------------------------user-win-------------------------------------", processedData);
 

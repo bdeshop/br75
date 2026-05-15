@@ -322,6 +322,15 @@ const UserSchema = new Schema({
         default: 0,
         min: 0
     },
+    // Add these to your UserSchema
+dailyLossAmount: {
+    type: Number,
+    default: 0
+},
+weeklyLossAmount: {
+    type: Number,
+    default: 0
+},
     net_profit: {
         type: Number,
         default: 0
