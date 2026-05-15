@@ -15275,7 +15275,7 @@ Adminrouter.get("/bonus/stats", adminAuth, async (req, res) => {
 // ==================== DAILY BET BONUS ROUTE ====================
 
 // POST route for daily bonus - Simple route that accepts frontend data
-router.post("/bonus/daily", adminAuth, async (req, res) => {
+Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
   try {
     const {
       bonusPercentage,  // e.g., 10 for 10%
@@ -15439,7 +15439,7 @@ router.post("/bonus/daily", adminAuth, async (req, res) => {
   }
 });
 // GET route to fetch eligible users for daily bonus
-router.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
+Adminrouter.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
   try {
     const { bonusPercentage, minLossAmount, maxBonusAmount } = req.query;
     
