@@ -8,6 +8,7 @@ import {
   FiKey, FiCreditCard, FiLock as FiLockPassword
 } from "react-icons/fi";
 import { MdSportsSoccer } from "react-icons/md";
+import { GoTrophy } from "react-icons/go";
 import { Header } from "../../components/header/Header";
 import { LanguageContext } from "../../context/LanguageContext";
 import user_img from "../../assets/user.png";
@@ -26,6 +27,11 @@ const Mprofile = () => {
   // ── State for badge counts ──────────────────────────────────────────────────
   const [unclaimedBonusCount, setUnclaimedBonusCount] = useState(0);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  
+  // ── State for user level ────────────────────────────────────────────────────
+  const [userLevel, setUserLevel] = useState(null);
+  const [userLevelName, setUserLevelName] = useState(null);
+  const [userLevelIcon, setUserLevelIcon] = useState(null);
   // ───────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -44,6 +50,45 @@ const Mprofile = () => {
     };
     fetchData();
   }, [token, base_url]);
+
+  // ── Fetch user level status ────────────────────────────────────────────────
+  const fetchUserLevelStatus = async (authToken) => {
+    if (!authToken) return;
+    try {
+      const response = await axios.get(`${base_url}/api/user/level-bonus/status`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      
+      if (response.data.success && response.data.data) {
+        const levelData = response.data.data;
+        if (levelData.currentLevel) {
+          setUserLevel(levelData.currentLevel.level);
+          setUserLevelName(levelData.currentLevel.name);
+          setUserLevelIcon(levelData.currentLevel.icon);
+        } else if (levelData.allLevels && levelData.allLevels.length > 0) {
+          // Find current level or highest level
+          const currentLevelObj = levelData.allLevels.find(l => l.isCurrent);
+          if (currentLevelObj) {
+            setUserLevel(currentLevelObj.level);
+            setUserLevelName(currentLevelObj.name);
+            setUserLevelIcon(currentLevelObj.icon);
+          } else {
+            const highestLevel = levelData.allLevels[levelData.allLevels.length - 1];
+            setUserLevel(highestLevel.level);
+            setUserLevelName(highestLevel.name);
+            setUserLevelIcon(highestLevel.icon);
+          }
+        } else {
+          setUserLevel(1);
+          setUserLevelName("Bronze");
+          setUserLevelIcon("🥉");
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching user level status:", err);
+    }
+  };
+  // ───────────────────────────────────────────────────────────────────────────
 
   // ── Fetch unclaimed bonus count ───────────────────────────────────────────
   const fetchUnclaimedBonusCount = async (authToken) => {
@@ -106,11 +151,12 @@ const Mprofile = () => {
   };
   // ───────────────────────────────────────────────────────────────────────────
 
-  // ── Fetch counts when component mounts ────────────────────────────────────
+  // ── Fetch counts and level when component mounts ──────────────────────────
   useEffect(() => {
     if (token) {
       fetchUnclaimedBonusCount(token);
       fetchUnreadNotificationCount(token);
+      fetchUserLevelStatus(token);
     }
   }, [token]);
 
@@ -121,6 +167,7 @@ const Mprofile = () => {
       if (currentToken) {
         fetchUnclaimedBonusCount(currentToken);
         fetchUnreadNotificationCount(currentToken);
+        fetchUserLevelStatus(currentToken);
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -200,14 +247,13 @@ const Mprofile = () => {
 
         <div className="max-w-md mx-auto px-4 pt-4">
           
-          {/* USER INFO */}
+          {/* USER INFO - Updated with Level Display */}
           <div className="flex items-start justify-start gap-[30px] mb-2">
             <div className="flex items-center gap-3">
               <img src={user_img} alt="Profile" className="w-12 h-12 rounded-full object-cover bg-emerald-900/30" />
-          
             </div>
             <div className="flex justify-start items-center gap-[50px]">
-             {userData?.fullName && (
+              {userData?.fullName && (
                 <div>
                   <p className="text-orange-200 text-[13px] mb-0.5">{t.fullLegalName || "সম্পূর্ণ লিগ্যাল নাম"}</p>
                   <h2 className="text-sm font-medium flex items-center gap-1.5">
@@ -215,14 +261,30 @@ const Mprofile = () => {
                   </h2>
                 </div>
               )}
-           <div>
-               <p className="text-orange-200 text-[13px] mb-0.5">{t.username || "ব্যবহারকারীর নাম"}</p>
-              <p className="text-sm font-medium flex items-center justify-end gap-1.5">
-                {userData?.username} <FiCopy className="text-gray-500 text-[10px]" />
-              </p>
-           </div>
+              <div>
+                <p className="text-orange-200 text-[13px] mb-0.5">{t.username || "ব্যবহারকারীর নাম"}</p>
+                <p className="text-sm font-medium flex items-center justify-end gap-1.5">
+                  {userData?.username} <FiCopy className="text-gray-500 text-[10px]" />
+                </p>
+              </div>
             </div>
           </div>
+
+          {/* ── NEW: User Level Display Section ── */}
+          {userLevel && userLevelName && (
+            <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
+              <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <GoTrophy className="text-yellow-500 text-base" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">{t.userLevel || "User Level"}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400 font-medium text-sm">{userLevelName}</span>
+                  <span className="text-gray-500 text-xs">(Lv.{userLevel})</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <p className="text-gray-500 text-[11px] mb-6">
             {t.signupDateLabel || "সাইন আপ এর তারিখ"} : {signupDate}
