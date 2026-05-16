@@ -896,17 +896,6 @@ const fetchUnreadNotificationCount = async (token) => {
           )}
         </div>
       </div>
-
-      {/* Floating Social Buttons */}
-      <div className="fixed bottom-32 md:bottom-20 right-4 z-[1000] flex flex-col gap-2">
-        <a href="https://t.me/+Hv8SAVMZoDU3MmY1" target="_blank" rel="noopener noreferrer" className="transition-all duration-300 animate-bounce hover:animate-pulse" aria-label="Join Telegram Channel" style={{ animationDelay: "0.1s" }}>
-          <img src={telegram_icon} className="w-[65px] md:w-[80px]" alt="Telegram" />
-        </a>
-        <a href="https://whatsapp.com/channel/0029VasaaAeK5cDCCOfgPl3S" target="_blank" rel="noopener noreferrer" className="transition-all duration-300 animate-bounce hover:animate-pulse" aria-label="Contact Support on WhatsApp" style={{ animationDelay: "0.2s" }}>
-          <img src={whatsapp_icon} className="w-[65px] md:w-[80px]" alt="WhatsApp" />
-        </a>
-      </div>
-
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
