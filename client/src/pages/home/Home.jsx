@@ -287,21 +287,18 @@ const HomeContent = () => {
     <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Loading Overlay */}
       {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full bg-[#0a0a0a] flex justify-center items-center z-[10000000]">
-          <div className="relative w-36 h-36 md:w-44 md:h-44 flex justify-center items-center">
-            <div 
-              className="absolute w-full h-full rounded-full border-[5px] border-transparent border-t-[#ff0000] border-b-[#ff0000] animate-spin"
-              style={{
-                filter: 'drop-shadow(0 0 10px #ff0000) drop-shadow(0 0 4px #ff0000)',
-                animationDuration: '1s'
-              }}
-            ></div>
-            <div className="z-10 flex justify-center items-center">
-              <img 
-                className="w-[130px] md:w-[160px] object-contain" 
-                src={dynamicLogo} 
-                alt="Logo" 
-              />
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 z-30">
+          {/* Main loader container */}
+          <div className="relative flex flex-col items-center justify-center">
+        
+            {/* Loading text */}
+            <div className="flex justify-center items-center text-center mt-8 space-y-2">
+              <img className="w-[150px]" src={logo} alt="" />
+            </div>
+    
+            {/* Progress bar */}
+            <div className="w-64 h-1.5 bg-gray-700 rounded-full mt-6 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full animate-progress"></div>
             </div>
           </div>
         </div>

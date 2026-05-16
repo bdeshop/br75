@@ -825,23 +825,10 @@ const Deposit = () => {
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-xs text-[#8a9ba8] text-left w-full mt-1">
-                                      {t.bonusCode || "Code"}: {bonus.bonusCode}
-                                    </span>
                                     {bonus.minDeposit > 0 && (
                                       <span className="text-xs text-[#e6db74] text-left w-full">
                                         Min Deposit: ৳{bonus.minDeposit}
                                       </span>
-                                    )}
-                                    <span className="text-xs text-[#3a8a6f] text-left w-full">
-                                      {bonus.description}
-                                    </span>
-                                    {!meetsMinDeposit && amount && (
-                                      <div className="absolute inset-0 bg-black/50 rounded-[5px] flex items-center justify-center">
-                                        <span className="text-xs text-[#e6db74] font-medium">
-                                          Need ৳{bonus.minDeposit}
-                                        </span>
-                                      </div>
                                     )}
                                   </button>
                                 );
