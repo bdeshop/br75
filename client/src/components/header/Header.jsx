@@ -56,6 +56,7 @@ import refer_img from "../../assets/refer.png";
 import BD_FLAG from "../../assets/flag/Flag-Bangladesh.webp";
 import US_FLAG from "../../assets/flag/us.webp";
 import { FiPower } from "react-icons/fi";
+import { GoTrophy } from "react-icons/go";
 
 const APK_FILE = "https://bir75.com/Bir75.apk";
 
@@ -255,6 +256,10 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const [unclaimedBonusCount, setUnclaimedBonusCount] = useState(0);
   // ── Unread notification count ──────────────────────────────────────────────
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  // ── User Level & Rank ──────────────────────────────────────────────────────
+  const [userLevel, setUserLevel] = useState(null);
+  const [userLevelName, setUserLevelName] = useState(null);
+  const [userLevelIcon, setUserLevelIcon] = useState(null);
   // ───────────────────────────────────────────────────────────────────────────
 
   const navigate = useNavigate();
@@ -306,6 +311,45 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
+  // ── Fetch user level status ────────────────────────────────────────────────
+  const fetchUserLevelStatus = async (token) => {
+    if (!token) return;
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/user/level-bonus/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success && response.data.data) {
+        const levelData = response.data.data;
+        if (levelData.currentLevel) {
+          setUserLevel(levelData.currentLevel.level);
+          setUserLevelName(levelData.currentLevel.name);
+          setUserLevelIcon(levelData.currentLevel.icon);
+        } else if (levelData.allLevels && levelData.allLevels.length > 0) {
+          // Find current level or highest level
+          const currentLevelObj = levelData.allLevels.find(l => l.isCurrent);
+          if (currentLevelObj) {
+            setUserLevel(currentLevelObj.level);
+            setUserLevelName(currentLevelObj.name);
+            setUserLevelIcon(currentLevelObj.icon);
+          } else {
+            const highestLevel = levelData.allLevels[levelData.allLevels.length - 1];
+            setUserLevel(highestLevel.level);
+            setUserLevelName(highestLevel.name);
+            setUserLevelIcon(highestLevel.icon);
+          }
+        } else {
+          setUserLevel(1);
+          setUserLevelName("Bronze");
+          setUserLevelIcon("🥉");
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching user level status:", err);
+    }
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
   // ── Fetch total unclaimed bonus count (cash + betting + level) ─────────────
   const fetchUnclaimedBonusCount = async (token) => {
     if (!token) return;
@@ -339,35 +383,32 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   // ── Fetch unread notification count ───────────────────────────────────────
-// ── Fetch unread notification count ───────────────────────────────────────
-const fetchUnreadNotificationCount = async (token) => {
-  if (!token) return;
-  try {
-    // Get user from localStorage
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return;
-    
-    const user = JSON.parse(userStr);
-    const userId = user?.id || user?._id;
-    
-    if (!userId) {
-      console.error("No user ID found");
-      return;
+  const fetchUnreadNotificationCount = async (token) => {
+    if (!token) return;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return;
+      
+      const user = JSON.parse(userStr);
+      const userId = user?.id || user?._id;
+      
+      if (!userId) {
+        console.error("No user ID found");
+        return;
+      }
+      
+      const response = await axios.get(`${API_BASE_URL}/api/user/notifications/unread-count/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setUnreadNotificationCount(response.data.data?.count || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching unread notification count:", err);
+      setUnreadNotificationCount(0);
     }
-    
-    // Use the correct endpoint with userId parameter
-    const response = await axios.get(`${API_BASE_URL}/api/user/notifications/unread-count/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    if (response.data.success) {
-      setUnreadNotificationCount(response.data.data?.count || 0);
-    }
-  } catch (err) {
-    console.error("Error fetching unread notification count:", err);
-    setUnreadNotificationCount(0);
-  }
-};
+  };
   // ───────────────────────────────────────────────────────────────────────────
 
   const checkAuthStatus = () => {
@@ -378,13 +419,16 @@ const fetchUnreadNotificationCount = async (token) => {
       setUserData(JSON.parse(user));
       verifyToken(token);
       fetchUnclaimedBonusCount(token);
-      // ── NEW: fetch notification count on auth ──
       fetchUnreadNotificationCount(token);
+      fetchUserLevelStatus(token); // ── NEW: fetch user level
     } else {
       setIsLoggedIn(false);
       setUserData(null);
       setUnclaimedBonusCount(0);
       setUnreadNotificationCount(0);
+      setUserLevel(null);
+      setUserLevelName(null);
+      setUserLevelIcon(null);
     }
   };
 
@@ -409,6 +453,9 @@ const fetchUnreadNotificationCount = async (token) => {
     setUserData(null);
     setUnclaimedBonusCount(0);
     setUnreadNotificationCount(0);
+    setUserLevel(null);
+    setUserLevelName(null);
+    setUserLevelIcon(null);
     delete axios.defaults.headers.common["Authorization"];
     setProfileDropdownOpen(false);
     setShowLogoutConfirm(false);
@@ -457,7 +504,6 @@ const fetchUnreadNotificationCount = async (token) => {
   // ───────────────────────────────────────────────────────────────────────────
 
   const menuItems = [
-    // ── notifications now has badge: "notification" ──
     { id: "notifications", label: t.notifications, icon: <FiBell />, path: "/member/inbox/notification", badgeType: "notification" },
     { id: "personal-info", label: t.personalInfo, icon: <FiUser />, path: "/member/profile/info" },
     { id: "login-security", label: t.loginSecurity, icon: <FiLock />, path: "/member/profile/account" },
@@ -468,7 +514,6 @@ const fetchUnreadNotificationCount = async (token) => {
     { id: "betting-records", label: t.bettingRecords, icon: <MdSportsSoccer />, path: "/member/betting-records/settled" },
     { id: "turnover", label: t.turnover, icon: <FiTrendingUp />, path: "/member/turnover/uncomplete" },
     { id: "referral", label: t.myReferral, icon: <FiUsers />, path: "/referral-program/details" },
-    // ── bonuses badge ──
     { id: "bonuses", label: t.bonuses_text || "Bonuses", icon: <FaGift />, path: "/member/bonuses", badgeType: "bonus" },
   ];
 
@@ -481,13 +526,14 @@ const fetchUnreadNotificationCount = async (token) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // ── Re-fetch counts whenever localStorage changes (e.g. after visiting bonus/notification pages) ──
+  // ── Re-fetch counts and level whenever localStorage changes ──
   useEffect(() => {
     const handleStorage = () => {
       const token = localStorage.getItem("usertoken");
       if (token) {
         fetchUnclaimedBonusCount(token);
         fetchUnreadNotificationCount(token);
+        fetchUserLevelStatus(token);
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -616,9 +662,17 @@ const fetchUnreadNotificationCount = async (token) => {
                         alt=""
                       />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="font-[500] text-sm">{t.username}: {userData?.username || "N/A"}</div>
                       <div className="text-xs text-gray-500 mt-1">{t.playerId}: {userData?.player_id || "N/A"}</div>
+                      {/* ── NEW: User Level Display ── */}
+                      {userLevel && userLevelName && (
+                        <div className="flex items-center gap-1 mt-1.5 text-xs">
+                          <GoTrophy className="text-yellow-500 text-[10px]" />
+                          <span className="text-yellow-400 font-medium">{userLevelName}</span>
+                          <span className="text-gray-500">(Lv.{userLevel})</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col py-3">
@@ -636,13 +690,13 @@ const fetchUnreadNotificationCount = async (token) => {
                           onClick={() => {
                             setActiveTab(item.id);
                             setProfileDropdownOpen(false);
-                            // Re-fetch counts after visiting bonus or notification page
                             if (item.id === "bonuses" || item.id === "notifications") {
                               setTimeout(() => {
                                 const token = localStorage.getItem("usertoken");
                                 if (token) {
                                   fetchUnclaimedBonusCount(token);
                                   fetchUnreadNotificationCount(token);
+                                  fetchUserLevelStatus(token);
                                 }
                               }, 2000);
                             }
@@ -650,7 +704,6 @@ const fetchUnreadNotificationCount = async (token) => {
                         >
                           <span className="text-lg">{item.icon}</span>
                           <span className="flex-1">{item.label}</span>
-                          {/* ── Badge for bonus OR notification items ── */}
                           {badgeCount > 0 && (
                             <span
                               className="inline-flex items-center justify-center min-w-[20px] h-[20px] px-[6px] rounded-full text-[10px] font-bold leading-none bg-red-500 text-white ml-auto"
