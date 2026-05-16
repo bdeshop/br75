@@ -287,7 +287,7 @@ const HomeContent = () => {
     <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 z-30">
+        <div className="fixed top-0 left-0  z-[100000] flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 z-30">
           {/* Main loader container */}
           <div className="relative flex flex-col items-center justify-center">
         
