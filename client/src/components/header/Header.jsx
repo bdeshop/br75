@@ -18,7 +18,8 @@ import {
   FaCoins,
   FaSignOutAlt,
   FaEye,
-  FaEyeSlash
+  FaEyeSlash,
+  FaSyncAlt
 } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
 import { MdSupportAgent } from "react-icons/md";
@@ -251,6 +252,8 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     const saved = localStorage.getItem("isBalanceHidden");
     return saved !== null ? saved === "true" : true;
   });
+  // Mobile balance refresh state
+  const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
 
   // ── Unclaimed bonus count ──────────────────────────────────────────────────
   const [unclaimedBonusCount, setUnclaimedBonusCount] = useState(0);
@@ -311,6 +314,51 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
+  // ── Fetch user balance and update state ────────────────────────────────────
+  const fetchUserBalance = async (token) => {
+    if (!token) return null;
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/user/my-information`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success && response.data.data) {
+        const updatedUser = response.data.data;
+        setUserData(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        return updatedUser.balance;
+      }
+      return null;
+    } catch (err) {
+      console.error("Error fetching user balance:", err);
+      return null;
+    }
+  };
+
+  // ── Refresh mobile balance (exposed for manual refresh) ────────────────────
+  const refreshMobileBalance = async () => {
+    const token = localStorage.getItem("usertoken");
+    if (!token || !isLoggedIn) {
+      toast.error(t.pleaseLogin || "Please login first");
+      return;
+    }
+    
+    setIsRefreshingBalance(true);
+    try {
+      const newBalance = await fetchUserBalance(token);
+      if (newBalance !== null) {
+        toast.success(t.balanceUpdated || "Balance updated successfully!");
+      } else {
+        toast.error(t.failedToUpdateBalance || "Failed to update balance");
+      }
+    } catch (err) {
+      console.error("Balance refresh error:", err);
+      toast.error(t.failedToUpdateBalance || "Failed to update balance");
+    } finally {
+      setIsRefreshingBalance(false);
+    }
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
   // ── Fetch user level status ────────────────────────────────────────────────
   const fetchUserLevelStatus = async (token) => {
     if (!token) return;
@@ -326,7 +374,6 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
           setUserLevelName(levelData.currentLevel.name);
           setUserLevelIcon(levelData.currentLevel.icon);
         } else if (levelData.allLevels && levelData.allLevels.length > 0) {
-          // Find current level or highest level
           const currentLevelObj = levelData.allLevels.find(l => l.isCurrent);
           if (currentLevelObj) {
             setUserLevel(currentLevelObj.level);
@@ -420,7 +467,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       verifyToken(token);
       fetchUnclaimedBonusCount(token);
       fetchUnreadNotificationCount(token);
-      fetchUserLevelStatus(token); // ── NEW: fetch user level
+      fetchUserLevelStatus(token);
     } else {
       setIsLoggedIn(false);
       setUserData(null);
@@ -773,7 +820,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 </div>
               </div>
 
-              {/* Mobile Balance & Actions */}
+              {/* Mobile Balance & Actions - Updated with Refresh Button */}
               <div className="md:hidden flex pl-[10px] items-center gap-2">
                 <div className="bg-box_bg rounded-[5px] border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm">
@@ -794,6 +841,20 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
                   </button>
                 </div>
+                
+                {/* Mobile Balance Refresh Button */}
+                <button
+                  onClick={refreshMobileBalance}
+                  disabled={isRefreshingBalance}
+                  className="bg-[#2a2e5e] text-white p-2 rounded-full transition-all duration-300 flex items-center justify-center shadow-md active:scale-95 hover:bg-[#3a3f7e] disabled:opacity-50 disabled:active:scale-100"
+                  aria-label={t.refreshBalance || "Refresh Balance"}
+                >
+                  <FaSyncAlt 
+                    size={14} 
+                    className={isRefreshingBalance ? "animate-spin" : ""}
+                  />
+                </button>
+                
                 <NavLink
                   to="/member/deposit"
                   className="bg-red-500 text-[12px] px-3 py-2 rounded-[3px] hover:bg-theme_color/80 transition-all duration-200 cursor-pointer font-medium text-white"
@@ -960,6 +1021,13 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
           50% { transform: translateY(-10px); }
         }
         .animate-bounce { animation: bounce 1s infinite; }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
       `}</style>
     </>
   );
