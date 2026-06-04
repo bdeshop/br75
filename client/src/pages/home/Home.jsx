@@ -26,6 +26,22 @@ let userCache = null;
 let cacheTimestamp = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Function to clear all auth data and logout
+const logoutAndClearData = () => {
+  // Clear localStorage
+  localStorage.removeItem('token');
+  localStorage.removeItem('branding_logo');
+  localStorage.removeItem('branding_cache_time');
+  localStorage.removeItem('notice_data');
+  
+  // Clear cache
+  userCache = null;
+  cacheTimestamp = null;
+  
+  // Optional: Redirect to login page
+  window.location.href = '/login';
+};
+
 // Auth Provider Component
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -46,6 +62,14 @@ const AuthProvider = ({ children }) => {
     }
 
     if (userCache && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
+      // Check cached user status
+      if (userCache.status !== 'active') {
+        console.log("User status is not active, logging out...");
+        logoutAndClearData();
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       setUser(userCache);
       setLoading(false);
       return;
@@ -60,20 +84,27 @@ const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Check if user status is active
+        if (data.data.status !== 'active') {
+          console.log("User status is not active, logging out...");
+          logoutAndClearData();
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        
         userCache = data.data;
         cacheTimestamp = Date.now();
         setUser(data.data);
       } else {
-        localStorage.removeItem('token');
-        userCache = null;
-        cacheTimestamp = null;
+        // If response is not ok, clear everything
+        logoutAndClearData();
         setUser(null);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('token');
-      userCache = null;
-      cacheTimestamp = null;
+      logoutAndClearData();
       setUser(null);
     } finally {
       setLoading(false);
@@ -81,15 +112,28 @@ const AuthProvider = ({ children }) => {
   };
 
   const login = (token, userData) => {
+    // Check if user is active before logging in
+    if (userData.status !== 'active') {
+      console.log("Cannot login: User status is not active");
+      return false;
+    }
+    
     localStorage.setItem('token', token);
     userCache = userData;
     cacheTimestamp = Date.now();
     setUser(userData);
+    return true;
+  };
+
+  const logout = () => {
+    logoutAndClearData();
+    setUser(null);
   };
 
   const value = {
     user,
     login,
+    logout,
     checkAuthStatus,
     loading
   };
@@ -118,6 +162,9 @@ const HomeContent = () => {
 
   // Cache for branding data
   const [brandingCache, setBrandingCache] = useState(null);
+
+  // Get auth context
+  const { user, logout } = useAuth();
 
   // Function to fetch providers
   const fetchProviders = async (categoryName) => {
@@ -230,6 +277,35 @@ const HomeContent = () => {
     }
   };
 
+  // Check user status periodically (every 5 minutes)
+  useEffect(() => {
+    const checkUserStatusInterval = setInterval(() => {
+      if (user) {
+        // Re-check user status
+        const token = localStorage.getItem('token');
+        if (token) {
+          fetch(`${base_url}/api/user/my-information`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success && data.data.status !== 'active') {
+                console.log("User status changed to inactive, logging out...");
+                logout();
+              }
+            })
+            .catch(error => {
+              console.error("Error checking user status:", error);
+            });
+        }
+      }
+    }, 5 * 60 * 1000); // Check every 5 minutes
+
+    return () => clearInterval(checkUserStatusInterval);
+  }, [user, logout, base_url]);
+
   // Use useEffect to handle loading state
   useEffect(() => {
     let mounted = true;
@@ -283,6 +359,11 @@ const HomeContent = () => {
     }
   }, [sidebarOpen]);
 
+  // If user is not active, don't render the main content
+  if (user && user.status !== 'active') {
+    return null; // or redirect component
+  }
+
   return (
     <div className="h-screen overflow-hidden font-poppins bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] text-white">
       {/* Loading Overlay */}
@@ -315,13 +396,13 @@ const HomeContent = () => {
       {/* Main Content */}
       <div className="flex h-[calc(100vh-56px)]">
         {/* Sidebar - Pass active category and handlers */}
-<Sidebar
-  sidebarOpen={sidebarOpen}
-  setSidebarOpen={setSidebarOpen} 
-  onCategorySelect={handleCategorySelect}
-  onExpandAndActivate={handleExpandAndActivate}
-  activeCategory={activeCategory}
-/>
+        <Sidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen} 
+          onCategorySelect={handleCategorySelect}
+          onExpandAndActivate={handleExpandAndActivate}
+          activeCategory={activeCategory}
+        />
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto transition-all duration-300">
           <div className="">
