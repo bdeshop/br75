@@ -141,7 +141,6 @@ Userrouter.get("/my-information", authenticateToken, async (req, res) => {
         username: user.username,
         email: user.email,
         phone: user.phone,
-        status:status,
         currency: user.currency,
         balance: user.balance,
         bonusBalance: user.bonusBalance,
