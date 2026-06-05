@@ -252,7 +252,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     const saved = localStorage.getItem("isBalanceHidden");
     return saved !== null ? saved === "true" : true;
   });
-  // Mobile balance refresh state
+  // Balance refresh states
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
 
   // ── Unclaimed bonus count ──────────────────────────────────────────────────
@@ -334,8 +334,8 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
-  // ── Refresh mobile balance (exposed for manual refresh) ────────────────────
-  const refreshMobileBalance = async () => {
+  // ── Refresh balance (works for both desktop and mobile) ────────────────────
+  const refreshBalance = async () => {
     const token = localStorage.getItem("usertoken");
     if (!token || !isLoggedIn) {
       toast.error(t.pleaseLogin || "Please login first");
@@ -781,7 +781,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex items-center space-x-2 md:space-x-3">
           {isLoggedIn ? (
             <>
-              {/* Balance Display for Desktop */}
+              {/* Balance Display for Desktop - WITH REFRESH BUTTON (icon only, no text) */}
               <div className="hidden md:flex items-center rounded overflow-hidden gap-2">
                 <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm bg-[#1f1f1f] text-white">
@@ -802,6 +802,19 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
                   </button>
                 </div>
+
+                {/* Desktop Refresh Balance Button - Icon only, no text (same as mobile) */}
+                <button
+                  onClick={refreshBalance}
+                  disabled={isRefreshingBalance}
+                  className="bg-[#2a2e5e] text-white p-2 rounded-[5px] transition-all duration-300 flex items-center justify-center shadow-md hover:bg-[#3a3f7e] disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={t.refreshBalance || "Refresh Balance"}
+                >
+                  <FaSyncAlt 
+                    size={16} 
+                    className={isRefreshingBalance ? "animate-spin" : ""}
+                  />
+                </button>
                 
                 {/* Withdraw & Deposit Buttons */}
                 <div className="flex justify-center items-center gap-2">
@@ -820,7 +833,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 </div>
               </div>
 
-              {/* Mobile Balance & Actions - Updated with Refresh Button */}
+              {/* Mobile Balance & Actions */}
               <div className="md:hidden flex pl-[10px] items-center gap-2">
                 <div className="bg-box_bg rounded-[5px] border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm">
@@ -844,7 +857,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 
                 {/* Mobile Balance Refresh Button */}
                 <button
-                  onClick={refreshMobileBalance}
+                  onClick={refreshBalance}
                   disabled={isRefreshingBalance}
                   className="bg-[#2a2e5e] text-white p-2 rounded-full transition-all duration-300 flex items-center justify-center shadow-md active:scale-95 hover:bg-[#3a3f7e] disabled:opacity-50 disabled:active:scale-100"
                   aria-label={t.refreshBalance || "Refresh Balance"}
