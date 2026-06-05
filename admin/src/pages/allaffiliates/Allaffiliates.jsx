@@ -162,7 +162,7 @@ const AllAffiliates = () => {
         'Commission Rate (%)': affiliate.commissionRate || 0,
         'Commission Type': affiliate.commissionType/100 || 'N/A',
         'CPA Rate (BDT)': affiliate.cpaRate || 0,
-        'Deposit Rate (%)': affiliate.depositRate || 0,
+        'Deposit Rate (%)': affiliate.depositRate*10 || 0,
         'Pending Earnings (BDT)': affiliate.pendingEarnings || 0,
         'Total Earnings (BDT)': affiliate.totalEarnings || 0,
         'Total Clicks': affiliate.totalClicks || 0,
