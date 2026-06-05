@@ -254,6 +254,8 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
   });
   // Mobile balance refresh state
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
+  // Desktop balance refresh state
+  const [isDesktopRefreshingBalance, setIsDesktopRefreshingBalance] = useState(false);
 
   // ── Unclaimed bonus count ──────────────────────────────────────────────────
   const [unclaimedBonusCount, setUnclaimedBonusCount] = useState(0);
@@ -355,6 +357,30 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
       toast.error(t.failedToUpdateBalance || "Failed to update balance");
     } finally {
       setIsRefreshingBalance(false);
+    }
+  };
+
+  // ── Refresh desktop balance ────────────────────────────────────────────────
+  const refreshDesktopBalance = async () => {
+    const token = localStorage.getItem("usertoken");
+    if (!token || !isLoggedIn) {
+      toast.error(t.pleaseLogin || "Please login first");
+      return;
+    }
+    
+    setIsDesktopRefreshingBalance(true);
+    try {
+      const newBalance = await fetchUserBalance(token);
+      if (newBalance !== null) {
+        toast.success(t.balanceUpdated || "Balance updated successfully!");
+      } else {
+        toast.error(t.failedToUpdateBalance || "Failed to update balance");
+      }
+    } catch (err) {
+      console.error("Balance refresh error:", err);
+      toast.error(t.failedToUpdateBalance || "Failed to update balance");
+    } finally {
+      setIsDesktopRefreshingBalance(false);
     }
   };
   // ───────────────────────────────────────────────────────────────────────────
@@ -781,7 +807,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex items-center space-x-2 md:space-x-3">
           {isLoggedIn ? (
             <>
-              {/* Balance Display for Desktop */}
+              {/* Balance Display for Desktop - WITH REFRESH BUTTON */}
               <div className="hidden md:flex items-center rounded overflow-hidden gap-2">
                 <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm bg-[#1f1f1f] text-white">
@@ -802,6 +828,22 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
                   </button>
                 </div>
+
+                {/* Desktop Refresh Balance Button */}
+                <button
+                  onClick={refreshDesktopBalance}
+                  disabled={isDesktopRefreshingBalance}
+                  className="bg-[#2a2e5e] text-white px-3 py-2 rounded-[5px] transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:bg-[#3a3f7e] disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={t.refreshBalance || "Refresh Balance"}
+                >
+                  <FaSyncAlt 
+                    size={14} 
+                    className={isDesktopRefreshingBalance ? "animate-spin" : ""}
+                  />
+                  <span className="text-xs font-medium hidden lg:inline">
+                    {isDesktopRefreshingBalance ? (t.refreshing || "Refreshing...") : (t.refreshBalance || "Refresh")}
+                  </span>
+                </button>
                 
                 {/* Withdraw & Deposit Buttons */}
                 <div className="flex justify-center items-center gap-2">
