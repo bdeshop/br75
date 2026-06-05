@@ -1117,6 +1117,7 @@ const Profile = () => {
                                 </button>
                               )}
                             </div>
+                            {/* ---------------------this for number verification */}
                             {userData?.isPhoneVerified && (
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <p className="text-sm sm:text-base text-white flex items-center gap-2">
