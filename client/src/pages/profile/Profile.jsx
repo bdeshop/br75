@@ -1120,7 +1120,7 @@ const Profile = () => {
                             {userData?.isPhoneVerified && (
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <p className="text-sm sm:text-base text-white flex items-center gap-2">
-                                  +880{userData?.phone?.toString().replace(/^\+880/, '').replace(/^880/, '')}
+                                  +88{userData?.phone}
                                   <span className="text-green-400 text-xs flex items-center gap-1">
                                     <FiCheck /> {t?.verified || "Verified"}
                                   </span>
