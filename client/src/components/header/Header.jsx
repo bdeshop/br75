@@ -252,10 +252,8 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     const saved = localStorage.getItem("isBalanceHidden");
     return saved !== null ? saved === "true" : true;
   });
-  
-  // Balance refresh states (like bajiHeader)
+  // Mobile balance refresh state
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
-  const [isRefreshingCoinBalance, setIsRefreshingCoinBalance] = useState(false);
 
   // ── Unclaimed bonus count ──────────────────────────────────────────────────
   const [unclaimedBonusCount, setUnclaimedBonusCount] = useState(0);
@@ -316,7 +314,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
-  // ── Fetch user balance and update state (like bajiHeader) ────────────────────
+  // ── Fetch user balance and update state ────────────────────────────────────
   const fetchUserBalance = async (token) => {
     if (!token) return null;
     try {
@@ -327,7 +325,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
         const updatedUser = response.data.data;
         setUserData(updatedUser);
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        return updatedUser;
+        return updatedUser.balance;
       }
       return null;
     } catch (err) {
@@ -336,52 +334,27 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
-  // ── Refresh Main Balance (like bajiHeader) ────────────────────
-  const refreshBalance = async () => {
-    if (!isLoggedIn) return;
-
+  // ── Refresh mobile balance (exposed for manual refresh) ────────────────────
+  const refreshMobileBalance = async () => {
+    const token = localStorage.getItem("usertoken");
+    if (!token || !isLoggedIn) {
+      toast.error(t.pleaseLogin || "Please login first");
+      return;
+    }
+    
+    setIsRefreshingBalance(true);
     try {
-      setIsRefreshingBalance(true);
-      const token = localStorage.getItem("usertoken");
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      const response = await axios.get(`${API_BASE_URL}/api/user/my-information`);
-
-      if (response.data.success) {
-        setUserData(response.data.data);
-        localStorage.setItem("user", JSON.stringify(response.data.data));
+      const newBalance = await fetchUserBalance(token);
+      if (newBalance !== null) {
         toast.success(t.balanceUpdated || "Balance updated successfully!");
       } else {
-        toast.error(t.failedRefreshBalance || "Failed to refresh balance");
+        toast.error(t.failedToUpdateBalance || "Failed to update balance");
       }
-    } catch (error) {
-      console.error("Error refreshing balance:", error);
-      toast.error(t.failedRefreshBalance || "Failed to refresh balance");
+    } catch (err) {
+      console.error("Balance refresh error:", err);
+      toast.error(t.failedToUpdateBalance || "Failed to update balance");
     } finally {
       setIsRefreshingBalance(false);
-    }
-  };
-
-  // ── Refresh Coin Balance (like bajiHeader) ────────────────────
-  const refreshCoinBalance = async () => {
-    if (!isLoggedIn) return;
-
-    try {
-      setIsRefreshingCoinBalance(true);
-      const token = localStorage.getItem("usertoken");
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      const response = await axios.get(`${API_BASE_URL}/api/user/my-information`);
-      if (response.data.success) {
-        setUserData(response.data.data);
-        localStorage.setItem("user", JSON.stringify(response.data.data));
-        toast.success(t.coinBalanceUpdated || "Coin balance updated!");
-      }
-    } catch (error) {
-      console.error("Error refreshing coin balance:", error);
-      toast.error(t.failedRefreshBalance || "Failed to refresh coin balance");
-    } finally {
-      setIsRefreshingCoinBalance(false);
     }
   };
   // ───────────────────────────────────────────────────────────────────────────
@@ -739,7 +712,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     <div className="flex-1">
                       <div className="font-[500] text-sm">{t.username}: {userData?.username || "N/A"}</div>
                       <div className="text-xs text-gray-500 mt-1">{t.playerId}: {userData?.player_id || "N/A"}</div>
-                      {/* User Level Display */}
+                      {/* ── NEW: User Level Display ── */}
                       {userLevel && userLevelName && (
                         <div className="flex items-center gap-1 mt-1.5 text-xs">
                           <GoTrophy className="text-yellow-500 text-[10px]" />
@@ -808,12 +781,9 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex items-center space-x-2 md:space-x-3">
           {isLoggedIn ? (
             <>
-              {/* Balance Display for Desktop - WITH REFRESH BUTTONS (like bajiHeader) */}
+              {/* Balance Display for Desktop */}
               <div className="hidden md:flex items-center rounded overflow-hidden gap-2">
-      
-                {/* Main Balance Box */}
-          <div className="flex items-center gap-2">
-                  <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
+                <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm bg-[#1f1f1f] text-white">
                     <img
                       src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/currency-type/bdt.png?v=1755600713311&source=drccdnsrc"
@@ -824,43 +794,19 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                       {isBalanceHidden ? "******" : parseFloat(userData?.balance || 0).toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex">
-                    <button
-                      className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800"
-                      onClick={toggleBalanceVisibility}
-                      aria-label={isBalanceHidden ? t.showBalance : t.hideBalance}
-                    >
-                      {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
-                    </button>
-                  </div>
-                </div>
-                         <div className="bg-box_bg rounded-[5px]  border-[1px] border-gray-800 flex items-center">
-                  <div className="flex items-center space-x-2 px-3 py-2 text-sm">
-                    <img
-                      src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/currency-type/bdt.png?v=1755600713311&source=drccdnsrc"
-                      className="w-4 h-4"
-                      alt="BDT"
-                    />
-                    <span className="text-white min-w-[40px]">
-                      {parseFloat(userData?.balance || 0).toFixed(2)}
-                    </span>
-                  </div>
                   <button
-                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={refreshBalance}
-                    disabled={isRefreshingBalance}
-                    aria-label={t.refreshBalance}
+                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800"
+                    onClick={toggleBalanceVisibility}
+                    aria-label={isBalanceHidden ? t.showBalance : t.hideBalance}
                   >
-                    <FiRefreshCw
-                      className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`}
-                    />
+                    {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
                   </button>
                 </div>
-          </div>
+                
                 {/* Withdraw & Deposit Buttons */}
                 <div className="flex justify-center items-center gap-2">
                   <button
-                    onClick={()=>{navigate("/member/withdraw")}}
+                   onClick={()=>{navigate("/member/withdraw")}}
                     className="text-white text-[12px] md:text-sm px-5 py-2 border-[1px] bg-[#FF9700] cursor-pointer border-gray-700 rounded hover:bg-[#333] transition-all duration-200"
                   >
                     {t.withdrawal}
@@ -874,7 +820,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 </div>
               </div>
 
-              {/* Mobile Balance & Actions */}
+              {/* Mobile Balance & Actions - Updated with Refresh Button */}
               <div className="md:hidden flex pl-[10px] items-center gap-2">
                 <div className="bg-box_bg rounded-[5px] border-[1px] border-gray-800 flex items-center">
                   <div className="flex items-center space-x-2 px-3 py-2 text-sm">
@@ -894,17 +840,20 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   >
                     {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
                   </button>
-                  <button
-                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={refreshBalance}
-                    disabled={isRefreshingBalance}
-                    aria-label={t.refreshBalance || "Refresh Balance"}
-                  >
-                    <FiRefreshCw
-                      className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`}
-                    />
-                  </button>
                 </div>
+                
+                {/* Mobile Balance Refresh Button */}
+                <button
+                  onClick={refreshMobileBalance}
+                  disabled={isRefreshingBalance}
+                  className="bg-[#2a2e5e] text-white p-2 rounded-full transition-all duration-300 flex items-center justify-center shadow-md active:scale-95 hover:bg-[#3a3f7e] disabled:opacity-50 disabled:active:scale-100"
+                  aria-label={t.refreshBalance || "Refresh Balance"}
+                >
+                  <FaSyncAlt 
+                    size={14} 
+                    className={isRefreshingBalance ? "animate-spin" : ""}
+                  />
+                </button>
                 
                 <NavLink
                   to="/member/deposit"
@@ -1037,7 +986,7 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
             <span className="text-[11px] whitespace-nowrap">{t.refer || "Refer"}</span>
           </div>
 
-          {/* Mobile Profile with combined badge */}
+          {/* Mobile Profile with combined badge (bonus + notifications) */}
           {isLoggedIn ? (
             <NavLink to="/my-profile" className="flex flex-col items-center justify-center p-2 text-sm text-white hover:text-yellow-400 transition-colors min-w-[60px] relative">
               <span className="relative">
