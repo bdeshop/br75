@@ -206,7 +206,7 @@ Authrouter.post("/request-signup-otp", async (req, res) => {
         }
 
         // Check if phone is already registered
-        const existingUser = await User.findOne({ phone: formattedPhone });
+        const existingUser = await User.findOne({ phone: phone });
         if (existingUser) {
             return res.status(400).json({
                 success: false,
