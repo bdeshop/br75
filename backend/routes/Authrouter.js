@@ -491,7 +491,7 @@ Authrouter.post("/verify-signup-otp", async (req, res) => {
 
         // Check if user already exists
         const existingUser = await User.findOne({
-            $or: [{ username }, { phone: formattedPhone }, { email }]
+            $or: [{ username }, { phone: phone }, { email }]
         });
 
         if (existingUser) {
@@ -501,7 +501,7 @@ Authrouter.post("/verify-signup-otp", async (req, res) => {
                     message: "Username already exists." 
                 });
             }
-            if (existingUser.phone === formattedPhone) {
+            if (existingUser.phone === phone) {
                 return res.status(400).json({ 
                     success: false,
                     message: "Phone number already registered." 
@@ -556,7 +556,7 @@ Authrouter.post("/verify-signup-otp", async (req, res) => {
 
         // Create new user
         const newUser = new User({
-            phone: formattedPhone,
+            phone: phone,
             username,
             password,
             fullName,
