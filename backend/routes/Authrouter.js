@@ -949,7 +949,7 @@ Authrouter.post("/request-password-reset-otp", async (req, res) => {
         }
 
         // Find user by phone
-        const user = await User.findOne({ phone: formattedPhone });
+        const user = await User.findOne({ phone: phone });
 
         if (!user) {
             // Don't reveal that user doesn't exist for security
@@ -1015,7 +1015,7 @@ Authrouter.post("/forgot-password/request-otp", async (req, res) => {
         }
 
         // Check if user exists with this phone
-        const user = await User.findOne({ phone: formattedPhone });
+        const user = await User.findOne({ phone: phone });
         
         if (!user) {
             // For security, don't reveal that user doesn't exist
@@ -1188,7 +1188,7 @@ Authrouter.post("/forgot-password/verify-otp", async (req, res) => {
             message: 'OTP verified successfully',
             data: {
                 resetToken,
-                phone: formattedPhone
+                phone: phone
             }
         });
 
@@ -1323,7 +1323,7 @@ Authrouter.post("/forgot-password/resend-otp", async (req, res) => {
         }
 
         // Find user
-        const user = await User.findOne({ phone: formattedPhone });
+        const user = await User.findOne({ phone: phone });
 
         if (!user) {
             return res.json({
@@ -1435,7 +1435,7 @@ Authrouter.post("/reset-password-with-otp", async (req, res) => {
         const formattedPhone = formatBangladeshPhone(phone);
 
         // Find user by phone
-        const user = await User.findOne({ phone: formattedPhone }).select('+password');
+        const user = await User.findOne({ phone: phone }).select('+password');
 
         if (!user) {
             return res.status(404).json({
