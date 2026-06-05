@@ -811,56 +811,27 @@ export const Header = ({ sidebarOpen, setSidebarOpen }) => {
               {/* Balance Display for Desktop - WITH REFRESH BUTTONS (like bajiHeader) */}
               <div className="hidden md:flex items-center rounded overflow-hidden gap-2">
                 {/* Coin Balance Box */}
-                <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
-                  <div className="flex items-center space-x-2 px-3 py-2 text-sm bg-[#1f1f1f] text-white">
-                    <FaCoins className="w-4 h-4 text-yellow-400" />
-                    <span className="min-w-[60px] font-medium">
-                      {userData?.coinBalance?.toLocaleString() || 0}
-                    </span>
-                  </div>
-                  <button
-                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={refreshCoinBalance}
-                    disabled={isRefreshingCoinBalance}
-                    aria-label={t.refreshCoinBalance || "Refresh Coin Balance"}
-                  >
-                    <FiRefreshCw
-                      className={`w-4 h-4 ${isRefreshingCoinBalance ? 'animate-spin' : ''}`}
-                    />
-                  </button>
-                </div>
-
-                {/* Main Balance Box */}
-                <div className="bg-box_bg rounded-[5px] h-10 border-[1px] border-gray-800 flex items-center">
-                  <div className="flex items-center space-x-2 px-3 py-2 text-sm bg-[#1f1f1f] text-white">
+               <div className="bg-box_bg rounded-[5px] border-[1px] border-gray-800 flex items-center">
+                  <div className="flex items-center space-x-2 px-3 py-2 text-sm">
                     <img
                       src="https://img.b112j.com/bj/h5/assets/v3/images/icon-set/currency-type/bdt.png?v=1755600713311&source=drccdnsrc"
                       className="w-4 h-4"
                       alt="BDT"
                     />
-                    <span className="min-w-[60px]">
-                      {isBalanceHidden ? "******" : parseFloat(userData?.balance || 0).toFixed(2)}
+                    <span className="text-white min-w-[40px]">
+                      {parseFloat(userData?.balance || 0).toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex">
-                    <button
-                      className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800"
-                      onClick={toggleBalanceVisibility}
-                      aria-label={isBalanceHidden ? t.showBalance : t.hideBalance}
-                    >
-                      {isBalanceHidden ? <FaEye size={16} /> : <FaEyeSlash size={16} />}
-                    </button>
-                    <button
-                      className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={refreshBalance}
-                      disabled={isRefreshingBalance}
-                      aria-label={t.refreshBalance || "Refresh Balance"}
-                    >
-                      <FiRefreshCw
-                        className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`}
-                      />
-                    </button>
-                  </div>
+                  <button
+                    className="px-3 py-2 hover:bg-[#444] cursor-pointer text-white transition-colors duration-200 border-l border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={refreshBalance}
+                    disabled={isRefreshingBalance}
+                    aria-label={t.refreshBalance}
+                  >
+                    <FiRefreshCw
+                      className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`}
+                    />
+                  </button>
                 </div>
                 
                 {/* Withdraw & Deposit Buttons */}
