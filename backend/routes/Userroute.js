@@ -30,7 +30,7 @@ const emailTransporter = nodemailer.createTransport({
     secure: true,
     auth: {
         user: 'support@bir75.com',
-        pass: 'VnSnxC0+c2S'
+        pass: 'wgst-ehll-elhg-57bb'
     },
     tls: {
         rejectUnauthorized: false  // This bypasses certificate validation
