@@ -17,7 +17,7 @@ import { LanguageContext } from "../../../context/LanguageContext"; // adjust pa
 const SkeletonItem = ({ type }) => {
   if (type === "category") {
     return (
-      <div className="flex flex-col relative items-center justify-center p-3 rounded-[5px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] animate-pulse h-[80px] w-full">
+      <div className="flex flex-col relative items-center justify-center p-3 rounded-[5px] bg-[#222424] animate-pulse h-[80px] w-full">
         <div className="w-[45px] h-[45px] absolute top-[-30%] rounded-full bg-[#333] border-2 border-[#1a1a1a]"></div>
         <div className="h-3 w-16 bg-[#333] mt-4 rounded"></div>
       </div>
@@ -25,7 +25,7 @@ const SkeletonItem = ({ type }) => {
   }
   return (
     <div className="flex flex-col items-center rounded-[8px] overflow-hidden animate-pulse w-full">
-      <div className="w-full aspect-[3/4] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] rounded-[6px]"></div>
+      <div className="w-full aspect-[3/4] bg-[#222424] rounded-[6px]"></div>
     </div>
   );
 };
@@ -115,7 +115,6 @@ const CategoryContent = () => {
   const [gamesPage, setGamesPage] = useState(1);
   const [hasMoreGames, setHasMoreGames] = useState(false);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showDepositPopup, setShowDepositPopup] = useState(false); // New state for deposit popup
   const [selectedGame, setSelectedGame] = useState(null);
   const [gameLoading, setGameLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -129,11 +128,11 @@ const CategoryContent = () => {
   });
 
   // ── Translate category name using translation keys ──
-const translateCategoryName = (name) => {
-  if (!name) return name;
-  const key = name.toLowerCase();
-  return t[key] || name; // fallback to original name if no translation found
-};
+  const translateCategoryName = (name) => {
+    if (!name) return name;
+    const key = name.toLowerCase();
+    return t[key] || name; // fallback to original name if no translation found
+  };
 
   // Fetch branding data for dynamic logo with caching
   const fetchBrandingData = async () => {
@@ -346,11 +345,11 @@ const translateCategoryName = (name) => {
     }
   };
 
-  // Handle game click - Direct navigation to game page with first_deposit validation
+  // Handle game click - Direct navigation to game page
   const handleGameClick = (game) => {
     setSelectedGame(game);
     console.log("Selected game:", game);
-    console.log("game",game);
+    console.log("game",game)
     
     // Check if user is logged in
     if (!user) {
@@ -358,21 +357,15 @@ const translateCategoryName = (name) => {
       return;
     }
     
-    // Check if user has completed first deposit
-    if (user.first_deposit === false) {
-      setShowDepositPopup(true);
-      return;
-    }
-    
-    // If user is logged in and has completed first deposit, open game in new window
+    // If user is logged in, navigate directly to game
     if (game.gameApiID || game.gameId) {
-      const gameUrl = `/game/${game.gameApiID || game.gameId}?provider=${game.provider}&category=${game.categoryname}`;
-      window.open(gameUrl, '_blank');
+      navigate(`/game/${game.gameApiID || game.gameId}?provider=${game.provider}&category=${game.categoryname}`);
+      
     } else {
       toast.error("Game ID not found");
     }
   };
-  
+
   // Handle opening the game
   const handleOpenGame = async (game) => {
     console.log("Attempting to open game:", game);
@@ -381,12 +374,6 @@ const translateCategoryName = (name) => {
     if (!user) {
       toast.error("Please login to play games");
       setShowLoginPopup(true);
-      return;
-    }
-
-    // Check if user has completed first deposit
-    if (user.first_deposit === false) {
-      setShowDepositPopup(true);
       return;
     }
 
@@ -421,12 +408,6 @@ const translateCategoryName = (name) => {
     navigate("/register");
   };
 
-  // Handle deposit from deposit popup
-  const handleDepositFromPopup = () => {
-    setShowDepositPopup(false);
-    navigate("/member/deposit");
-  };
-
   const handleShowMore = () => {
     const nextPage = gamesPage + 1;
     const gamesPerLoad = calculateGamesPerPage();
@@ -450,16 +431,13 @@ const translateCategoryName = (name) => {
       if (showLoginPopup && !event.target.closest(".popup-content")) {
         setShowLoginPopup(false);
       }
-      if (showDepositPopup && !event.target.closest(".popup-content")) {
-        setShowDepositPopup(false);
-      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showLoginPopup, showDepositPopup]);
+  }, [showLoginPopup]);
 
   // Get game image URL
   const getGameImageUrl = (game) => {
@@ -557,7 +535,7 @@ const translateCategoryName = (name) => {
           {providers.map((provider) => (
             <div
               key={provider._id}
-              className="flex justify-start items-center gap-[10px] px-4 py-2 border-[1px] border-indigo-500 rounded-[3px] bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e] hover:bg-[#333333] transition-all cursor-pointer text-white"
+              className="flex justify-start items-center gap-[10px] px-4 py-2 rounded-[3px] bg-[#222424] hover:bg-[#333333] transition-all cursor-pointer text-white"
               onClick={() => handleProviderClick(provider)}
             >
               <img
@@ -649,10 +627,10 @@ const translateCategoryName = (name) => {
                 {categories.map((category) => (
                   <div
                     key={category._id}
-                    className={`embla__slide flex-shrink-0 w-[calc(25.333%-0.5rem)] border-[1px] border-blue-500  min-w-0 flex flex-col relative items-center justify-center p-3 rounded-[5px] transition-all group cursor-pointer ${
+                    className={`embla__slide flex-shrink-0 w-[calc(25.333%-0.5rem)] min-w-0 flex flex-col relative items-center justify-center p-3 rounded-[5px] transition-all group cursor-pointer ${
                       activeCategory?._id === category._id
                         ? "bg-theme_color text-white"
-                        : "bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]"
+                        : "bg-box_bg hover:bg-[#333333]"
                     }`}
                     onClick={() => handleCategoryClick(category)}
                   >
@@ -663,7 +641,7 @@ const translateCategoryName = (name) => {
                     />
                     
                     <span
-                      className={`text-[13px] md:text-sm mt-4 font-semibold ${
+                      className={`text-[13px] md:text-sm mt-4 font-[500] ${
                         activeCategory?._id === category._id
                           ? "text-white"
                           : "text-gray-400"
@@ -682,10 +660,10 @@ const translateCategoryName = (name) => {
             {categories.map((category) => (
               <div
                 key={category._id}
-                className={`flex flex-col relative items-center justify-center p-3 border-[1px] border-blue-500 rounded-[5px] transition-all group cursor-pointer ${
+                className={`flex flex-col relative items-center justify-center p-3 rounded-[5px] transition-all group cursor-pointer ${
                   activeCategory?._id === category._id
-                    ? "bg-blue-600 text-white"
-                    : "bg-gradient-to-br from-[#121212] via-[#1a2344] to-[#1e2b5e]"
+                    ? "bg-theme_color text-white"
+                    : "bg-box_bg hover:bg-[#333333]"
                 }`}
                 onClick={() => handleCategoryClick(category)}
               >
@@ -695,7 +673,7 @@ const translateCategoryName = (name) => {
                   className="w-[45px] absolute top-[-30%] rounded-full transition-transform duration-300 ease-in-out group-hover:rotate-[360deg]"
                 />
                 <span
-                  className={`text-sm mt-4 font-semibold ${
+                  className={`text-sm mt-4 font-[500] ${
                     activeCategory?._id === category._id
                       ? "text-white"
                       : "text-gray-400"
@@ -769,78 +747,6 @@ const translateCategoryName = (name) => {
                 className="bg-[#333] text-center hover:bg-[#444] text-[14px] text-white font-medium py-3 px-4 transition-colors"
               >
                 Log in
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* First Deposit Required Popup */}
-      {showDepositPopup && (
-        <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-70 backdrop-blur-md flex items-center justify-center z-[10000] p-4">
-          <div className="popup-content bg-gradient-to-b cursor-pointer from-[#1a1a1a] to-[#0f0f0f] border border-[#333] rounded-lg p-6 max-w-md w-full relative">
-            {/* Close button */}
-            <button
-              onClick={() => setShowDepositPopup(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-
-            {/* Logo */}
-            <div className="flex justify-center mb-6">
-              <img 
-                src={dynamicLogo} 
-                className="w-[100px]" 
-                alt=""
-                onError={(e) => {
-                  e.target.src = logo;
-                }}
-              />
-            </div>
-
-            {/* Description */}
-            <div className="text-center mb-6">
-              <div className="text-yellow-500 mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p className="text-gray-300 text-xs md:text-[15px] mb-2">
-                First Deposit Required!
-              </p>
-              <p className="text-gray-400 text-xs md:text-[13px]">
-                Please complete your first deposit to play games and unlock all features.
-              </p>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleDepositFromPopup}
-                className="bg-theme_color text-center hover:bg-theme_color/90 text-[14px] text-white font-medium py-3 px-4 transition-colors"
-              >
-                Make First Deposit
-              </button>
-
-              <button
-                onClick={() => setShowDepositPopup(false)}
-                className="bg-[#333] text-center hover:bg-[#444] text-[14px] text-white font-medium py-3 px-4 transition-colors"
-              >
-                Cancel
               </button>
             </div>
           </div>
