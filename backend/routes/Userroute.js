@@ -1,5 +1,5 @@
 const express = require("express");
-const { User } = require("../models/User");
+const { User, generateGamingId } = require("../models/User");
 const Userrouter = express.Router();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
