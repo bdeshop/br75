@@ -131,7 +131,7 @@ const Menugames = () => {
       setLoading(true);
       
       const formDataObj = new FormData();
-      formDataObj.append('uuid', formData.uuid);
+      formDataObj.append('uuid', formData.uuid || '');
       formDataObj.append('category', formData.category);
       formDataObj.append('categoryname', formData.categoryname);
       formDataObj.append('name', formData.name);
@@ -139,7 +139,6 @@ const Menugames = () => {
       formDataObj.append('provider', formData.provider);
       formDataObj.append('status', 'true');
       
-      // Include serial if editing and provided
       if (isEditing && formData.serial !== '') {
         formDataObj.append('serial', formData.serial);
       }
@@ -214,8 +213,12 @@ const Menugames = () => {
 
   const editGame = async (game) => {
     try {
+      // Fetch fresh data from API
       const freshGameData = await fetchSingleGame(game._id);
+      
       if (freshGameData) {
+        console.log('Fresh game data:', freshGameData); // Debug log
+        
         setFormData({
           uuid: freshGameData.uuid || '',
           category: freshGameData.category || 'exclusive',
@@ -223,11 +226,19 @@ const Menugames = () => {
           name: freshGameData.name || '',
           gameId: freshGameData.gameId || '',
           provider: freshGameData.provider || '',
-          serial: freshGameData.serial !== undefined ? freshGameData.serial.toString() : ''
+          serial: freshGameData.serial !== undefined && freshGameData.serial !== null 
+            ? freshGameData.serial.toString() 
+            : ''
         });
         
+        // Handle image
         if (freshGameData.image) {
-          setCurrentImage(`${base_url}${freshGameData.image}`);
+          // Check if image is already a full URL
+          if (freshGameData.image.startsWith('http')) {
+            setCurrentImage(freshGameData.image);
+          } else {
+            setCurrentImage(`${base_url}${freshGameData.image}`);
+          }
           setImagePreview(null);
           setImageFile(null);
         } else {
@@ -237,6 +248,7 @@ const Menugames = () => {
         setIsEditing(true);
         setEditingId(game._id);
         
+        // Scroll to form
         const formElement = document.querySelector('form');
         if (formElement) {
           formElement.scrollIntoView({ behavior: 'smooth' });
@@ -725,37 +737,37 @@ const Menugames = () => {
                                           </span>
                                         </label>
                                       </td>
-                                {/* Action buttons */}
-<td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-  <div className="flex items-center space-x-2">
-    {/* View Button - Deep Blue */}
-    <button
-      onClick={() => window.open(getImageUrl(game.image), '_blank')}
-      className="p-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded transition-colors shadow-sm hover:shadow-md"
-      title="View Image"
-    >
-      <FaEye className="w-4 h-4" />
-    </button>
-    
-    {/* Edit Button - Deep Green */}
-    <button
-      onClick={() => editGame(game)}
-      className="p-1.5 bg-[#059669] hover:bg-[#047857] text-white rounded transition-colors shadow-sm hover:shadow-md"
-      title="Edit Game"
-    >
-      <MdOutlineEdit className="w-4 h-4" />
-    </button>
-    
-    {/* Delete Button - Deep Red */}
-    <button
-      onClick={() => confirmDelete(game)}
-      className="p-1.5 bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded transition-colors cursor-pointer shadow-sm hover:shadow-md"
-      title="Delete Game"
-    >
-      <RiDeleteBin6Line className="w-4 h-4" />
-    </button>
-  </div>
-</td>
+                                      {/* Action buttons */}
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div className="flex items-center space-x-2">
+                                          {/* View Button - Deep Blue */}
+                                          <button
+                                            onClick={() => window.open(getImageUrl(game.image), '_blank')}
+                                            className="p-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded transition-colors shadow-sm hover:shadow-md"
+                                            title="View Image"
+                                          >
+                                            <FaEye className="w-4 h-4" />
+                                          </button>
+                                          
+                                          {/* Edit Button - Deep Green */}
+                                          <button
+                                            onClick={() => editGame(game)}
+                                            className="p-1.5 bg-[#059669] hover:bg-[#047857] text-white rounded transition-colors shadow-sm hover:shadow-md"
+                                            title="Edit Game"
+                                          >
+                                            <MdOutlineEdit className="w-4 h-4" />
+                                          </button>
+                                          
+                                          {/* Delete Button - Deep Red */}
+                                          <button
+                                            onClick={() => confirmDelete(game)}
+                                            className="p-1.5 bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded transition-colors cursor-pointer shadow-sm hover:shadow-md"
+                                            title="Delete Game"
+                                          >
+                                            <RiDeleteBin6Line className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </td>
                                     </tr>
                                   )}
                                 </Draggable>
