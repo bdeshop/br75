@@ -294,12 +294,6 @@ const Allusers = () => {
                 </p>
               </div>
               <div className="flex gap-3 mt-4 md:mt-0">
-                <Link
-                  to="/admin/users/new"
-                  className="bg-[#1F2937] hover:bg-amber-600/20 border border-gray-700 hover:border-amber-500/40 px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-amber-400"
-                >
-                  <FaPlus /> ADD USER
-                </Link>
                 <button
                   onClick={fetchUsers}
                   className="bg-[#1F2937] hover:bg-amber-600/30 border border-gray-700 hover:border-amber-500/40 px-6 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 text-amber-400"
