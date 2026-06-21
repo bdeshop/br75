@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FaEdit, FaTrash, FaSearch, FaFilter, FaEye, FaPlus, FaSort, FaSortUp, FaSortDown, FaSpinner, FaImage, FaTags, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaSearch, FaFilter, FaEye, FaPlus, FaSort, FaSortUp, FaSortDown, FaSpinner, FaImage, FaTags, FaChevronLeft, FaChevronRight, FaGamepad, FaCode, FaTrashAlt } from 'react-icons/fa';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import { NavLink } from 'react-router-dom';
@@ -32,6 +32,7 @@ const Allgames = () => {
   const [portraitPreview, setPortraitPreview] = useState(null);
   const [landscapePreview, setLandscapePreview] = useState(null);
   const [useDefaultImages, setUseDefaultImages] = useState(false);
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
   
   const itemsPerPage = 10;
   
@@ -156,6 +157,110 @@ const Allgames = () => {
     return <FaSortDown className="text-indigo-500" />;
   };
 
+  // Delete all games function
+// Delete All Games with options
+const handleDeleteAll = () => {
+  if (totalGames === 0) {
+    toast.info('No games to delete');
+    return;
+  }
+
+  Swal.fire({
+    title: '⚠️ DELETE ALL GAMES ⚠️',
+    html: `
+      <div class="text-left">
+        <p class="text-red-400 font-bold mb-3">You are about to delete ALL ${totalGames} game(s)!</p>
+        <p class="text-yellow-400 mb-2">Options:</p>
+        <div class="mb-3">
+          <label class="flex items-center gap-2 mb-2">
+            <input type="checkbox" id="dryRunCheckbox" class="w-4 h-4">
+            <span class="text-sm">Dry Run (Preview only - don't delete)</span>
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="keepFeaturedCheckbox" class="w-4 h-4">
+            <span class="text-sm">Keep Featured Games (delete only non-featured)</span>
+          </label>
+        </div>
+        <p class="text-orange-400 font-semibold mt-2">Type <span class="bg-red-600 px-2 py-1 rounded font-mono">DELETE ALL</span> to confirm:</p>
+        <input type="text" id="confirmDeleteInput" class="swal2-input mt-2 w-full p-2 bg-gray-700 text-white border border-gray-600 rounded" placeholder="Type DELETE ALL">
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Delete Games',
+    cancelButtonText: 'Cancel',
+    background: '#1F2937',
+    preConfirm: () => {
+      const confirmInput = Swal.getPopup().querySelector('#confirmDeleteInput');
+      const confirmValue = confirmInput?.value;
+      if (confirmValue !== 'DELETE ALL') {
+        Swal.showValidationMessage('Please type DELETE ALL to confirm');
+        return false;
+      }
+      const dryRun = Swal.getPopup().querySelector('#dryRunCheckbox')?.checked;
+      const keepFeatured = Swal.getPopup().querySelector('#keepFeaturedCheckbox')?.checked;
+      return { dryRun, keepFeatured };
+    }
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      const { dryRun, keepFeatured } = result.value;
+      setDeleteAllLoading(true);
+      try {
+        let url = `${base_url}/api/admin/games/all?confirm=true`;
+        if (dryRun) url += '&dryRun=true';
+        if (keepFeatured) url += '&keepFeatured=true';
+        
+        const response = await axios.delete(url);
+        
+        if (response.data.dryRun) {
+          Swal.fire({
+            title: 'DRY RUN Preview',
+            html: `
+              <div class="text-left">
+                <p>${response.data.message}</p>
+                <div class="mt-3 p-3 bg-gray-800 rounded">
+                  <p><strong>Total to delete:</strong> ${response.data.summary.totalGames}</p>
+                  <p><strong>Featured games:</strong> ${response.data.summary.featuredGames}</p>
+                  <p><strong>Active games:</strong> ${response.data.summary.activeGames}</p>
+                  <p><strong>Games with local images:</strong> ${response.data.summary.gamesWithLocalImages}</p>
+                </div>
+              </div>
+            `,
+            icon: 'info',
+            confirmButtonColor: '#6366f1'
+          });
+        } else {
+          Swal.fire({
+            title: 'Deleted!',
+            html: `
+              <p>${response.data.message}</p>
+              <div class="text-left mt-3 p-3 bg-gray-800 rounded">
+                <p><strong>Games Deleted:</strong> ${response.data.details.gamesDeleted}</p>
+                <p><strong>Images Deleted:</strong> ${response.data.details.images.successfullyDeleted}</p>
+                <p><strong>User Favorites Cleaned:</strong> ${response.data.details.userFavoritesCleaned}</p>
+                ${response.data.details.images.failedDeletions > 0 ? `<p class="text-yellow-400"><strong>Image Errors:</strong> ${response.data.details.images.failedDeletions}</p>` : ''}
+              </div>
+            `,
+            icon: 'success',
+            confirmButtonColor: '#6366f1'
+          });
+          fetchGames();
+        }
+      } catch (error) {
+        Swal.fire({
+          title: 'Error!',
+          text: error.response?.data?.error || error.response?.data?.message || 'Failed to delete games',
+          icon: 'error',
+          confirmButtonColor: '#6366f1'
+        });
+      } finally {
+        setDeleteAllLoading(false);
+      }
+    }
+  });
+};
   const handleDelete = (game) => {
     Swal.fire({
       title: 'Delete Game?',
@@ -257,7 +362,8 @@ const Allgames = () => {
     
     setEditForm({
       name: game.name || '',
-      gameId: game.gameId || '',
+      gameId: game.gameId || game.gameApiID || '',
+      game_uid: game.game_uid || '',
       provider: game.provider || '',
       categories: categoriesArray,
       featured: game.featured || false,
@@ -334,6 +440,7 @@ const Allgames = () => {
     const formData = new FormData();
     formData.append('name', editForm.name);
     formData.append('gameApiID', editForm.gameId);
+    formData.append('game_uid', editForm.game_uid);
     formData.append('provider', editForm.provider);
     formData.append('category', editForm.categories.join(','));
     formData.append('featured', editForm.featured ? 'true' : 'false');
@@ -412,10 +519,34 @@ const Allgames = () => {
                 <h1 className="text-2xl font-semibold text-white tracking-tighter uppercase">Game Management</h1>
                 <p className="text-xs font-bold text-gray-500 mt-1">Manage all casino games in one place</p>
               </div>
-              <NavLink to="/games-management/new-game" className="w-full md:w-auto mt-4 md:mt-0 bg-[#1F2937] hover:bg-indigo-600 border border-gray-700 px-6 py-2 rounded font-bold text-xs transition-all flex items-center justify-center gap-2">
-                <FaPlus />
-                Add New Game
-              </NavLink>
+              <div className="flex gap-3 mt-4 md:mt-0">
+                {/* Delete All Games Button */}
+                <button
+                  onClick={handleDeleteAll}
+                  disabled={deleteAllLoading || totalGames === 0}
+                  className={`flex items-center gap-2 px-4 py-2 rounded font-bold text-xs transition-all ${
+                    deleteAllLoading || totalGames === 0
+                      ? 'bg-gray-700 cursor-not-allowed text-gray-400'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                >
+                  {deleteAllLoading ? (
+                    <FaSpinner className="animate-spin" />
+                  ) : (
+                    <FaTrashAlt />
+                  )}
+                  Delete All Games ({totalGames})
+                </button>
+                
+                {/* Add New Game Button */}
+                <NavLink 
+                  to="/games-management/new-game" 
+                  className="flex items-center gap-2 bg-[#1F2937] hover:bg-indigo-600 border border-gray-700 px-6 py-2 rounded font-bold text-xs transition-all"
+                >
+                  <FaPlus />
+                  Add New Game
+                </NavLink>
+              </div>
             </div>
             
             {/* Stats Cards */}
@@ -568,7 +699,7 @@ const Allgames = () => {
                         <th scope="col" className="px-6 py-4 text-left text-xs md:text-sm font-semibold text-indigo-400 uppercase tracking-wider cursor-pointer transition-colors hover:bg-gray-700" onClick={() => requestSort('name')}>
                           <div className="flex items-center">Game {getSortIcon('name')}</div>
                         </th>
-                        <th scope="col" className="px-6 py-4 text-left text-xs md:text-sm font-semibold text-indigo-400 uppercase tracking-wider">ID</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs md:text-sm font-semibold text-indigo-400 uppercase tracking-wider">Game ID / Game UID</th>
                         <th scope="col" className="px-6 py-4 text-left text-xs md:text-sm font-semibold text-indigo-400 uppercase tracking-wider cursor-pointer transition-colors hover:bg-gray-700" onClick={() => requestSort('provider')}>
                           <div className="flex items-center">Provider {getSortIcon('provider')}</div>
                         </th>
@@ -612,7 +743,19 @@ const Allgames = () => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-400 font-mono bg-[#0F111A] px-2 py-1 rounded border border-gray-700">{game.gameId || game.gameApiID}</div>
+                                <div className="space-y-1">
+                                  {game.game_uid && (
+                                    <>
+                                      <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                        <FaCode className="text-[10px]" />
+                                        <span>Game UID:</span>
+                                      </div>
+                                      <div className="text-xs font-mono text-indigo-400 bg-[#0F111A] px-2 py-1 rounded border border-gray-700">
+                                        {game.game_uid}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-gray-300">{game.provider}</div>
@@ -740,10 +883,17 @@ const Allgames = () => {
                 </svg>
               </button>
             </div>
-            <div className="grid grid-cols-1  gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Name:</strong> {selectedGame.name}</p>
-                <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Game ID:</strong> {selectedGame.gameId || selectedGame.gameApiID}</p>
+                <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Game ID:</strong> {selectedGame.gameId || selectedGame.gameApiID || 'N/A'}</p>
+                {selectedGame.game_uid && (
+                  <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Game UID:</strong> 
+                    <span className="ml-2 px-2 py-1 inline-block text-xs font-mono bg-[#0F111A] rounded border border-gray-700 text-indigo-400">
+                      {selectedGame.game_uid}
+                    </span>
+                  </p>
+                )}
                 <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Provider:</strong> {selectedGame.provider}</p>
                 <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Categories:</strong></p>
                 <div className="flex flex-wrap gap-1 mb-2">
@@ -773,14 +923,13 @@ const Allgames = () => {
                 <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Last Updated:</strong> {new Date(selectedGame.updatedAt).toLocaleString()}</p>
               </div>
               <div className='flex gap-5'>
-          <div>
+                <div>
                   <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Portrait Image:</strong></p>
-                <img src={getImageUrl(selectedGame.portraitImage)} alt="Portrait" className="max-w-[200px] h-auto rounded mb-4 border border-gray-700" onError={(e) => e.target.src = 'https://via.placeholder.com/300x200?text=No+Image'} />
-          
-          </div>
-          <div>
+                  <img src={getImageUrl(selectedGame.portraitImage)} alt="Portrait" className="max-w-[200px] h-auto rounded mb-4 border border-gray-700" onError={(e) => e.target.src = 'https://via.placeholder.com/300x200?text=No+Image'} />
+                </div>
+                <div>
                   <p className="mb-2 text-gray-300"><strong className="text-indigo-400">Landscape Image:</strong></p>
-                <img src={getImageUrl(selectedGame.landscapeImage)} alt="Landscape" className="max-w-[200px] h-auto rounded border border-gray-700" onError={(e) => e.target.src = 'https://via.placeholder.com/300x200?text=No+Image'} />
+                  <img src={getImageUrl(selectedGame.landscapeImage)} alt="Landscape" className="max-w-[200px] h-auto rounded border border-gray-700" onError={(e) => e.target.src = 'https://via.placeholder.com/300x200?text=No+Image'} />
                 </div>
               </div>
             </div>
@@ -828,6 +977,11 @@ const Allgames = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Game ID</label>
                   <input type="text" value={editForm.gameId} onChange={(e) => setEditForm({...editForm, gameId: e.target.value})} className="mt-1 w-full px-4 py-2 bg-[#0F111A] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-200" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Game UID</label>
+                  <input type="text" value={editForm.game_uid} onChange={(e) => setEditForm({...editForm, game_uid: e.target.value})} className="mt-1 w-full px-4 py-2 bg-[#0F111A] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-200 font-mono" placeholder="Unique identifier from provider" />
+                  <p className="text-xs text-gray-500 mt-1">Unique identifier used to link game with provider</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Provider</label>

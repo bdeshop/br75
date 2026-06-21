@@ -282,6 +282,11 @@ const uploadPromotional = multer({
   },
   fileFilter: fileFilter,
 });
+
+
+
+
+
 // ==================== COMPREHENSIVE DASHBOARD ROUTE ====================
 // PUT update admin password
 Adminrouter.put("/update-password", adminAuth, async (req, res) => {
@@ -3134,6 +3139,7 @@ const uploadGameImages = multer({
   fileFilter: fileFilter,
 });
 // ==================== GAME ROUTES ====================
+// ==================== GAME ROUTES ====================
 // GET all games with filtering and pagination
 Adminrouter.get("/games", async (req, res) => {
   try {
@@ -3241,6 +3247,7 @@ Adminrouter.get("/games/gameId/:gameId", async (req, res) => {
 });
 
 // POST create new game
+// POST create new game
 Adminrouter.post(
   "/games",
   uploadGameImages.fields([
@@ -3255,6 +3262,7 @@ Adminrouter.post(
         featured, 
         status, 
         gameApiID, 
+        game_uid,
         category, 
         fullScreen,
         defaultImage
@@ -3286,7 +3294,7 @@ Adminrouter.post(
       }
 
       // Enhanced validation
-      const requiredFields = { name, provider, gameApiID };
+      const requiredFields = { name, provider, gameApiID, game_uid };
       const missingFields = Object.keys(requiredFields).filter(field => !requiredFields[field]);
       
       if (missingFields.length > 0) {
@@ -3295,11 +3303,18 @@ Adminrouter.post(
         });
       }
 
-      // Check if game exists with same gameApiID and provider combination
-      const existingGame = await Game.findOne({ 
-        gameApiID: gameApiID,
-        provider: provider
+      // Check if game exists with same game_uid (primary check)
+      let existingGame = await Game.findOne({ 
+        game_uid: game_uid
       });
+      
+      // If not found by game_uid, check by gameApiID + provider combination
+      if (!existingGame) {
+        existingGame = await Game.findOne({ 
+          gameApiID: gameApiID,
+          provider: provider
+        });
+      }
       
       let portraitImageValue;
       let landscapeImageValue;
@@ -3340,12 +3355,15 @@ Adminrouter.post(
           featured: featured !== undefined ? (featured === "true" || featured === true) : existingGame.featured,
           status: status !== undefined ? (status !== "false" && status !== false) : existingGame.status,
           fullScreen: fullScreen !== undefined ? (fullScreen === "true" || fullScreen === true) : existingGame.fullScreen,
-          uniqueId: req.body.uniqueId || existingGame.uniqueId
+          uniqueId: req.body.uniqueId || existingGame.uniqueId,
+          game_uid: game_uid || existingGame.game_uid,
+          gameApiID: gameApiID || existingGame.gameApiID,
+          provider: provider || existingGame.provider
         };
         
         // Update the existing game
         const updatedGame = await Game.findOneAndUpdate(
-          { gameApiID: gameApiID, provider: provider },
+          { _id: existingGame._id },
           updateData,
           { new: true, runValidators: true }
         );
@@ -3366,6 +3384,7 @@ Adminrouter.post(
         const gameData = {
           name,
           gameId: gameApiID,
+          game_uid: game_uid, // Required field
           provider,
           category: categoriesArray,
           portraitImage: portraitImageValue,
@@ -3375,7 +3394,7 @@ Adminrouter.post(
           status: status !== "false" && status !== false,
           fullScreen: fullScreen === "true" || fullScreen === true,
           gameApiID,
-          uniqueId: req.body.uniqueId
+          uniqueId: req.body.uniqueId || game_uid // Use game_uid as fallback for uniqueId
         };
         
         const newGame = new Game(gameData);
@@ -3389,8 +3408,14 @@ Adminrouter.post(
     } catch (error) {
       console.error("Error creating/updating game:", error);
       
-      // Handle duplicate key error (gameApiID + provider combination)
+      // Handle duplicate key error
       if (error.code === 11000) {
+        // Check which field caused the duplicate key error
+        if (error.keyPattern?.game_uid) {
+          return res.status(400).json({ 
+            error: "A game with this game_uid already exists." 
+          });
+        }
         return res.status(400).json({ 
           error: "A game with this API ID and provider combination already exists." 
         });
@@ -3400,6 +3425,7 @@ Adminrouter.post(
     }
   }
 );
+
 // PUT update game
 Adminrouter.put(
   "/games/:id",
@@ -3416,8 +3442,23 @@ Adminrouter.put(
       
       console.log("Update request body:", req.body);
 
-      // Update fields
+      // Update basic fields
       if (req.body.name) game.name = req.body.name;
+      
+      // Handle game_uid update (check for uniqueness)
+      if (req.body.game_uid && req.body.game_uid !== game.game_uid) {
+        const existingGame = await Game.findOne({
+          game_uid: req.body.game_uid,
+          _id: { $ne: req.params.id }
+        });
+        
+        if (existingGame) {
+          return res.status(400).json({ 
+            error: `Game with game_uid "${req.body.game_uid}" already exists` 
+          });
+        }
+        game.game_uid = req.body.game_uid;
+      }
       
       // Handle gameApiID update with provider combination check
       if (req.body.gameApiID || req.body.provider) {
@@ -3470,6 +3511,7 @@ Adminrouter.put(
       if (req.body.featured !== undefined) game.featured = req.body.featured === "true" || req.body.featured === true;
       if (req.body.status !== undefined) game.status = req.body.status === "true" || req.body.status === true;
       if (req.body.fullScreen !== undefined) game.fullScreen = req.body.fullScreen === "true" || req.body.fullScreen === true;
+      if (req.body.uniqueId) game.uniqueId = req.body.uniqueId;
 
       // Handle default image URL update
       if (req.body.defaultImage) {
@@ -3526,16 +3568,20 @@ Adminrouter.put(
       console.error("Error updating game:", error);
       
       if (error.code === 11000) {
+        if (error.keyPattern?.game_uid) {
+          return res.status(400).json({ 
+            error: "Game with this game_uid already exists" 
+          });
+        }
         return res.status(400).json({ 
           error: "Game with this API ID and provider combination already exists" 
         });
       }
       
-      res.status(500).json({ error: "Failed to update game" });
+      res.status(500).json({ error: "Failed to update game: " + error.message });
     }
   }
 );
-
 
 // PUT update game status
 Adminrouter.put("/games/:id/status", async (req, res) => {
@@ -3627,8 +3673,92 @@ Adminrouter.put("/games/:id/categories", async (req, res) => {
     res.status(500).json({ error: "Failed to update game categories" });
   }
 });
+// ==================== GAME ROUTES ====================
 
-// DELETE game
+// DELETE all games - MUST COME FIRST before the :id route
+Adminrouter.delete("/games/all", async (req, res) => {
+  try {
+    const { confirm } = req.query;
+    
+    if (confirm !== "true") {
+      return res.status(400).json({ 
+        error: "Please confirm deletion by adding ?confirm=true to the URL. This action cannot be undone!" 
+      });
+    }
+
+    const games = await Game.find({});
+    
+    if (games.length === 0) {
+      return res.status(404).json({ message: "No games found to delete" });
+    }
+
+    const imageDeletionResults = {
+      deleted: [],
+      failed: []
+    };
+
+    for (const game of games) {
+      // Delete portrait image
+      if (game.portraitImage && !game.portraitImage.startsWith('http')) {
+        try {
+          const portraitPath = path.join(__dirname, "..", "public", game.portraitImage);
+          if (fs.existsSync(portraitPath)) {
+            fs.unlinkSync(portraitPath);
+            imageDeletionResults.deleted.push(game.portraitImage);
+          }
+        } catch (imageError) {
+          console.error(`Error deleting portrait image for game ${game._id}:`, imageError);
+          imageDeletionResults.failed.push({
+            gameId: game._id,
+            image: game.portraitImage,
+            error: imageError.message
+          });
+        }
+      }
+
+      // Delete landscape image
+      if (game.landscapeImage && !game.landscapeImage.startsWith('http')) {
+        try {
+          const landscapePath = path.join(__dirname, "..", "public", game.landscapeImage);
+          if (fs.existsSync(landscapePath)) {
+            fs.unlinkSync(landscapePath);
+            imageDeletionResults.deleted.push(game.landscapeImage);
+          }
+        } catch (imageError) {
+          console.error(`Error deleting landscape image for game ${game._id}:`, imageError);
+          imageDeletionResults.failed.push({
+            gameId: game._id,
+            image: game.landscapeImage,
+            error: imageError.message
+          });
+        }
+      }
+    }
+
+    const result = await Game.deleteMany({});
+
+    res.json({
+      message: `Successfully deleted ${result.deletedCount} game(s)`,
+      details: {
+        gamesDeleted: result.deletedCount,
+        images: {
+          successfullyDeleted: imageDeletionResults.deleted.length,
+          failedDeletions: imageDeletionResults.failed.length
+        }
+      },
+      imageDeletionErrors: imageDeletionResults.failed.length > 0 ? imageDeletionResults.failed : undefined
+    });
+
+  } catch (error) {
+    console.error("Error deleting all games:", error);
+    res.status(500).json({ 
+      error: "Failed to delete all games",
+      details: error.message 
+    });
+  }
+});
+
+// DELETE game by ID - MUST COME AFTER the /all route
 Adminrouter.delete("/games/:id", async (req, res) => {
   try {
     const game = await Game.findById(req.params.id);
@@ -3659,91 +3789,35 @@ Adminrouter.delete("/games/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete game" });
   }
 });
-
-// DELETE all games - Use with caution!
-Adminrouter.delete("/games/all", async (req, res) => {
+// DELETE game
+Adminrouter.delete("/games/:id", async (req, res) => {
   try {
-    // Optional: Add a confirmation parameter for safety
-    const { confirm } = req.query;
-    
-    if (confirm !== "true") {
-      return res.status(400).json({ 
-        error: "Please confirm deletion by adding ?confirm=true to the URL. This action cannot be undone!" 
-      });
+    const game = await Game.findById(req.params.id);
+    if (!game) {
+      return res.status(404).json({ error: "Game not found" });
     }
 
-    // Get all games to delete their images
-    const games = await Game.find({});
-    
-    if (games.length === 0) {
-      return res.status(404).json({ message: "No games found to delete" });
-    }
-
-    // Delete associated image files for each game
-    const imageDeletionResults = {
-      deleted: [],
-      failed: []
-    };
-
-    for (const game of games) {
-      // Delete portrait image if it's a local file (not a URL)
-      if (game.portraitImage && !game.portraitImage.startsWith('http')) {
-        try {
-          const portraitPath = path.join(__dirname, "..", "public", game.portraitImage);
-          if (fs.existsSync(portraitPath)) {
-            fs.unlinkSync(portraitPath);
-            imageDeletionResults.deleted.push(game.portraitImage);
-          }
-        } catch (imageError) {
-          console.error(`Error deleting portrait image for game ${game._id}:`, imageError);
-          imageDeletionResults.failed.push({
-            gameId: game._id,
-            image: game.portraitImage,
-            error: imageError.message
-          });
-        }
-      }
-
-      // Delete landscape image if it's a local file (not a URL)
-      if (game.landscapeImage && !game.landscapeImage.startsWith('http')) {
-        try {
-          const landscapePath = path.join(__dirname, "..", "public", game.landscapeImage);
-          if (fs.existsSync(landscapePath)) {
-            fs.unlinkSync(landscapePath);
-            imageDeletionResults.deleted.push(game.landscapeImage);
-          }
-        } catch (imageError) {
-          console.error(`Error deleting landscape image for game ${game._id}:`, imageError);
-          imageDeletionResults.failed.push({
-            gameId: game._id,
-            image: game.landscapeImage,
-            error: imageError.message
-          });
-        }
+    // Delete image files
+    if (game.portraitImage && !game.portraitImage.startsWith('http')) {
+      const portraitPath = path.join(__dirname, "..", "public", game.portraitImage);
+      if (fs.existsSync(portraitPath)) {
+        fs.unlinkSync(portraitPath);
       }
     }
 
-    // Delete all games from database
-    const result = await Game.deleteMany({});
+    if (game.landscapeImage && !game.landscapeImage.startsWith('http')) {
+      const landscapePath = path.join(__dirname, "..", "public", game.landscapeImage);
+      if (fs.existsSync(landscapePath)) {
+        fs.unlinkSync(landscapePath);
+      }
+    }
 
-    res.json({
-      message: `Successfully deleted ${result.deletedCount} game(s)`,
-      details: {
-        gamesDeleted: result.deletedCount,
-        images: {
-          successfullyDeleted: imageDeletionResults.deleted.length,
-          failedDeletions: imageDeletionResults.failed.length
-        }
-      },
-      imageDeletionErrors: imageDeletionResults.failed.length > 0 ? imageDeletionResults.failed : undefined
-    });
+    await Game.findByIdAndDelete(req.params.id);
 
+    res.json({ message: "Game deleted successfully" });
   } catch (error) {
-    console.error("Error deleting all games:", error);
-    res.status(500).json({ 
-      error: "Failed to delete all games",
-      details: error.message 
-    });
+    console.error("Error deleting game:", error);
+    res.status(500).json({ error: "Failed to delete game" });
   }
 });
 
@@ -10706,12 +10780,13 @@ const uploadMenuGame = multer({
 });
 // ==================== MENU GAME ROUTES ====================
 // ==================== MENU GAME ROUTES ====================
-// GET all menu games
+
+// GET all menu games sorted by serial
 Adminrouter.get("/menu-games", async (req, res) => {
     try {
         const games = await MenuGame.find()
             .populate("category", "name")
-            .sort({ createdAt: -1 });
+            .sort({ serial: 1, createdAt: -1 }); // Sort by serial ascending
         res.json(games);
     } catch (error) {
         console.error("Error fetching menu games:", error);
@@ -10719,25 +10794,11 @@ Adminrouter.get("/menu-games", async (req, res) => {
     }
 });
 
-// GET single menu game
-Adminrouter.get("/menu-games/:id", async (req, res) => {
-    try {
-        const game = await MenuGame.findById(req.params.id).populate("category", "name");
-        if (!game) {
-            return res.status(404).json({ error: "Menu game not found" });
-        }
-        res.json(game);
-    } catch (error) {
-        console.error("Error fetching menu game:", error);
-        res.status(500).json({ error: "Failed to fetch menu game" });
-    }
-});
-
-// POST create new menu game with image upload
+// POST create new menu game with auto-serial
 Adminrouter.post("/menu-games", uploadMenuGame.single("image"), async (req, res) => {
     try {
-        const { category, categoryname, name, gameId, provider, status = true } = req.body;
-             console.log(req.body)
+        const { uuid, category, categoryname, name, gameId, provider, status = true } = req.body;
+
         // Validation
         if (!req.file) {
             return res.status(400).json({ error: "Image is required" });
@@ -10749,20 +10810,25 @@ Adminrouter.post("/menu-games", uploadMenuGame.single("image"), async (req, res)
             });
         }
 
+        // Get the highest serial number and add 1
+        const lastGame = await MenuGame.findOne().sort({ serial: -1 });
+        const nextSerial = lastGame ? lastGame.serial + 1 : 1;
+
         const gameData = {
+            uuid: uuid || `GAME-${Date.now()}`,
             image: `/uploads/menu-games/${req.file.filename}`,
             category,
             categoryname,
             name,
             gameId,
             provider,
+            serial: nextSerial, // Auto-assign serial
             status
         };
 
         const newGame = new MenuGame(gameData);
         const savedGame = await newGame.save();
 
-        // Populate category for response
         await savedGame.populate("category", "name");
 
         res.status(201).json({
@@ -10782,10 +10848,99 @@ Adminrouter.post("/menu-games", uploadMenuGame.single("image"), async (req, res)
     }
 });
 
-// PUT update menu game with optional image upload
+// PUT update menu game serial (for reordering)
+Adminrouter.put("/menu-games/reorder", async (req, res) => {
+    try {
+        const { games } = req.body;
+
+        if (!games || !Array.isArray(games) || games.length === 0) {
+            return res.status(400).json({ error: "Games array is required" });
+        }
+
+        // Update serial numbers in bulk
+        const bulkOps = games.map((game, index) => ({
+            updateOne: {
+                filter: { _id: game._id },
+                update: { $set: { serial: index + 1 } }
+            }
+        }));
+
+        await MenuGame.bulkWrite(bulkOps);
+
+        const updatedGames = await MenuGame.find().sort({ serial: 1 });
+
+        res.json({
+            message: "Game order updated successfully",
+            games: updatedGames
+        });
+    } catch (error) {
+        console.error("Error reordering games:", error);
+        res.status(500).json({ error: "Failed to reorder games" });
+    }
+});
+
+// PUT update menu game serial individually
+Adminrouter.put("/menu-games/:id/serial", async (req, res) => {
+    try {
+        const { serial } = req.body;
+
+        if (serial === undefined || serial < 0) {
+            return res.status(400).json({ error: "Valid serial number is required" });
+        }
+
+        const game = await MenuGame.findById(req.params.id);
+        if (!game) {
+            return res.status(404).json({ error: "Menu game not found" });
+        }
+
+        // Get the current highest serial
+        const maxSerial = await MenuGame.findOne().sort({ serial: -1 });
+        const maxValue = maxSerial ? maxSerial.serial : 0;
+
+        if (serial > maxValue + 1) {
+            return res.status(400).json({ 
+                error: `Serial number cannot exceed ${maxValue + 1}` 
+            });
+        }
+
+        const oldSerial = game.serial;
+
+        // If moving to a lower number, shift other games up
+        if (serial < oldSerial) {
+            await MenuGame.updateMany(
+                { serial: { $gte: serial, $lt: oldSerial }, _id: { $ne: game._id } },
+                { $inc: { serial: 1 } }
+            );
+        } 
+        // If moving to a higher number, shift other games down
+        else if (serial > oldSerial) {
+            await MenuGame.updateMany(
+                { serial: { $gt: oldSerial, $lte: serial }, _id: { $ne: game._id } },
+                { $inc: { serial: -1 } }
+            );
+        }
+
+        // Update the game's serial
+        game.serial = serial;
+        await game.save();
+
+        const updatedGames = await MenuGame.find().sort({ serial: 1 });
+
+        res.json({
+            message: "Serial number updated successfully",
+            game,
+            allGames: updatedGames
+        });
+    } catch (error) {
+        console.error("Error updating serial:", error);
+        res.status(500).json({ error: "Failed to update serial number" });
+    }
+});
+
+// PUT update menu game (updated to handle serial)
 Adminrouter.put("/menu-games/:id", uploadMenuGame.single("image"), async (req, res) => {
     try {
-        const { category, categoryname, name, gameId, provider, status } = req.body;
+        const { uuid, category, categoryname, name, gameId, provider, status, serial } = req.body;
 
         const game = await MenuGame.findById(req.params.id);
         if (!game) {
@@ -10799,11 +10954,42 @@ Adminrouter.put("/menu-games/:id", uploadMenuGame.single("image"), async (req, r
         }
 
         // Update fields
+        if (uuid) game.uuid = uuid;
         if (category) game.category = category;
         if (categoryname) game.categoryname = categoryname;
         if (name) game.name = name;
         if (provider) game.provider = provider;
         if (status !== undefined) game.status = status;
+
+        // Handle serial update if provided
+        if (serial !== undefined && serial >= 0) {
+            const oldSerial = game.serial;
+            
+            // Get the current highest serial
+            const maxSerial = await MenuGame.findOne().sort({ serial: -1 });
+            const maxValue = maxSerial ? maxSerial.serial : 0;
+
+            if (serial > maxValue + 1 && serial !== oldSerial) {
+                return res.status(400).json({ 
+                    error: `Serial number cannot exceed ${maxValue + 1}` 
+                });
+            }
+
+            // Shift other games if serial is changing
+            if (serial < oldSerial) {
+                await MenuGame.updateMany(
+                    { serial: { $gte: serial, $lt: oldSerial }, _id: { $ne: game._id } },
+                    { $inc: { serial: 1 } }
+                );
+            } else if (serial > oldSerial) {
+                await MenuGame.updateMany(
+                    { serial: { $gt: oldSerial, $lte: serial }, _id: { $ne: game._id } },
+                    { $inc: { serial: -1 } }
+                );
+            }
+            
+            game.serial = serial;
+        }
 
         // Handle image update
         if (req.file) {
@@ -10817,7 +11003,6 @@ Adminrouter.put("/menu-games/:id", uploadMenuGame.single("image"), async (req, r
             fs.unlinkSync(oldImagePath);
         }
 
-        // Populate category for response
         await game.populate("category", "name");
 
         res.json({
@@ -10826,7 +11011,6 @@ Adminrouter.put("/menu-games/:id", uploadMenuGame.single("image"), async (req, r
         });
     } catch (error) {
         console.error("Error updating menu game:", error);
-        // Clean up new uploaded file if error occurs
         if (req.file) {
             const filePath = path.join(__dirname, "..", "public", "uploads", "menu-games", req.file.filename);
             if (fs.existsSync(filePath)) {
@@ -10837,39 +11021,15 @@ Adminrouter.put("/menu-games/:id", uploadMenuGame.single("image"), async (req, r
     }
 });
 
-// PUT update menu game status (no image involved)
-Adminrouter.put("/menu-games/:id/status", async (req, res) => {
-    try {
-        const { status } = req.body;
-
-        if (typeof status !== 'boolean') {
-            return res.status(400).json({ error: "Valid status is required" });
-        }
-
-        const game = await MenuGame.findById(req.params.id);
-        if (!game) {
-            return res.status(404).json({ error: "Menu game not found" });
-        }
-
-        game.status = status;
-        await game.save();
-
-        res.json({
-            message: `Menu game ${status ? 'activated' : 'deactivated'} successfully`,
-            game: game
-        });
-    } catch (error) {
-        console.error("Error updating menu game status:", error);
-        res.status(500).json({ error: "Failed to update menu game status" });
-    }
-});
-// DELETE menu game
+// DELETE menu game (auto-adjust serials)
 Adminrouter.delete("/menu-games/:id", async (req, res) => {
     try {
         const game = await MenuGame.findById(req.params.id);
         if (!game) {
             return res.status(404).json({ error: "Menu game not found" });
         }
+
+        const deletedSerial = game.serial;
 
         // Delete image file
         if (game.image) {
@@ -10881,7 +11041,16 @@ Adminrouter.delete("/menu-games/:id", async (req, res) => {
 
         await MenuGame.findByIdAndDelete(req.params.id);
 
-        res.json({ message: "Menu game deleted successfully" });
+        // Re-adjust serial numbers of remaining games
+        await MenuGame.updateMany(
+            { serial: { $gt: deletedSerial } },
+            { $inc: { serial: -1 } }
+        );
+
+        res.json({ 
+            message: "Menu game deleted successfully",
+            deletedSerial: deletedSerial
+        });
     } catch (error) {
         console.error("Error deleting menu game:", error);
         res.status(500).json({ error: "Failed to delete menu game" });
