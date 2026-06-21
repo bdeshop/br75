@@ -1356,4 +1356,4 @@ function generatePlayerId() {
 const User = mongoose.model('User', UserSchema);
 const ClickTrack = mongoose.model('ClickTrack', clickTrackSchema);
 
-module.exports = { User, ClickTrack };
+module.exports = { User, ClickTrack,generateGamingId   };
