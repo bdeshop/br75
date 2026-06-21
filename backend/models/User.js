@@ -178,7 +178,11 @@ const UserSchema = new Schema({
         type: String,
     },
     // Add these fields to your UserSchema in the model file
-
+ gamingid: {
+        type: String,
+        unique: true,
+        match: [/^[a-z]{10}$/, 'Gaming ID must be exactly 10 lowercase letters']
+    },
     // In the BASIC INFORMATION section, add:
     email: {
         type: String,
@@ -219,11 +223,6 @@ const UserSchema = new Schema({
         required: true,
         unique: true
     },
- gamingid: {
-        type: String,
-        unique: true,
-        match: [/^[a-z]{10}$/, 'Gaming ID must be exactly 10 lowercase letters']
-    },
     isOneClickUser: {
         type: Boolean,
         default: false
@@ -235,6 +234,7 @@ const UserSchema = new Schema({
     },
     status: {
         type: String,
+        enum: ['active', 'banned', 'deactivated', 'pending'],
         default: 'active',
     },
     language: {
@@ -268,17 +268,13 @@ const UserSchema = new Schema({
     // ========== COIN SYSTEM ==========
     coinBalance: {
         type: Number,
-        default: 100
+        default: 0
     },
     coinHistory: [{
         amount: Number,
         reason: String,
         date: { type: Date, default: Date.now }
     }],
-    claimedLevels: {
-  type: [Number],
-  default: []  // Stores level IDs that have been claimed
-},
     // ========== FINANCIAL INFORMATION ==========
     currency: {
         type: String,
@@ -286,8 +282,12 @@ const UserSchema = new Schema({
     },
     balance: {
         type: Number,
-        default: 0,
+        default: 200,
     },
+    first_deposit: {
+    type: Boolean,
+    default: false
+},
     bonusBalance: {
         type: Number,
         default: 0,
@@ -326,6 +326,15 @@ const UserSchema = new Schema({
         default: 0,
         min: 0
     },
+    // Add these to your UserSchema
+dailyLossAmount: {
+    type: Number,
+    default: 0
+},
+weeklyLossAmount: {
+    type: Number,
+    default: 0
+},
     net_profit: {
         type: Number,
         default: 0
@@ -361,7 +370,7 @@ const UserSchema = new Schema({
     lastWithdrawalDate: {
         type: Date
     },
-
+dailybet: { type: Number, default: 0 },
     // ========== BONUS INFORMATION ==========
     bonusInfo: {
         firstDepositBonusClaimed: {
@@ -425,7 +434,18 @@ const UserSchema = new Schema({
             cancelledAt: Date
         }]
     },
-
+levelInfo: {
+    currentLevel: { type: Number, default: 1 },
+    levelBonuses: [{
+        level: { type: Number, required: true },
+        bonusAmount: { type: Number, required: true },
+        status: { type: String, enum: ['pending', 'claimed', 'expired'], default: 'pending' },
+        createdAt: { type: Date, default: Date.now },
+        claimedAt: Date
+    }],
+    totalBonusClaimed: { type: Number, default: 0 },
+    totalBonusAmount: { type: Number, default: 0 }
+},
     // ========== SECURITY ==========
     transactionPassword: {
         type: String,
@@ -445,6 +465,19 @@ const UserSchema = new Schema({
         purpose: String,
         verified: { type: Boolean, default: false }
     },
+    mobileOTP: {
+    code: String,
+    expiresAt: Date,
+    purpose: {
+        type: String,
+        enum: ['mobile_verification', 'mobile_update', 'login'],
+        default: 'mobile_verification'
+    },
+    verified: { type: Boolean, default: false },
+    attempts: { type: Number, default: 0 },
+    createdAt: Date,
+    pendingPhone: String
+},
     resetPasswordToken: String,
     resetPasswordExpires: Date,
     twoFactorEnabled: {
@@ -589,7 +622,6 @@ const UserSchema = new Schema({
     // Adding the betHistory field to store betting records
     betHistory: [
         {
-            game_name:{ type: String},
             betAmount: { type: Number, required: true },
             betResult: { type: String, required: true },
             transaction_id: { type: String, required: true },
@@ -804,6 +836,18 @@ UserSchema.virtual('isAffiliateReferred').get(function () {
     return !!this.affiliateReferral;
 });
 
+// ========== PRE-SAVE HOOKS ==========
+// Helper function to generate random 10-letter gaming ID
+function generateGamingId() {
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    let result = '';
+    for (let i = 0; i < 10; i++) {
+        result += letters.charAt(Math.floor(Math.random() * letters.length));
+    }
+    return result;
+}
+// ========== PRE-SAVE HOOKS ==========
+// ========== PRE-SAVE HOOKS ==========
 // Helper function to generate random 10-letter gaming ID
 function generateGamingId() {
     const letters = 'abcdefghijklmnopqrstuvwxyz';
@@ -886,7 +930,6 @@ UserSchema.pre('save', async function (next) {
 
     next();
 });
-
 // ========== AFFILIATE TRACKING METHODS ==========
 UserSchema.methods.trackAffiliateConversion = async function (affiliateId, affiliateCode, clickId = null) {
     const Affiliate = mongoose.model('Affiliate');
@@ -1025,6 +1068,7 @@ UserSchema.methods.awardAffiliateCommission = async function (amount, transactio
 
 // ========== WITHDRAWAL METHODS ==========
 UserSchema.methods.canWithdraw = function (amount) {
+
     if (amount > this.balance) {
         return {
             canWithdraw: false,
@@ -1185,7 +1229,10 @@ UserSchema.methods.completeDeposit = async function (orderId, transactionId) {
     await this.save();
     return deposit;
 };
-
+UserSchema.methods.addDailyBet = function(amount) {
+    this.dailybet += amount;
+    return this.save();
+};
 // ========== BONUS WAGERING METHODS ==========
 UserSchema.methods.applyBetToWagering = async function (amount) {
     this.totalWagered += amount;
@@ -1304,9 +1351,8 @@ function generateClickId() {
 
 // Generate player ID helper function
 function generatePlayerId() {
-    return 'PL' + Math.random().toString(36).substr(2, 8).toUpperCase();
+    return 'BIR75' + Math.random().toString(36).substr(2, 8).toUpperCase();
 }
-
 const User = mongoose.model('User', UserSchema);
 const ClickTrack = mongoose.model('ClickTrack', clickTrackSchema);
 
