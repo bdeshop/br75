@@ -10986,7 +10986,19 @@ Adminrouter.put("/menu-games/:id/serial", async (req, res) => {
         res.status(500).json({ error: "Failed to update serial number" });
     }
 });
-
+// GET single menu game by ID
+Adminrouter.get("/menu-games/:id", async (req, res) => {
+  try {
+    const game = await MenuGame.findById(req.params.id);
+    if (!game) {
+      return res.status(404).json({ error: "Menu game not found" });
+    }
+    res.json(game);
+  } catch (error) {
+    console.error("Error fetching menu game:", error);
+    res.status(500).json({ error: "Failed to fetch menu game" });
+  }
+});
 // PUT update menu game (updated to handle serial)
 Adminrouter.put("/menu-games/:id", uploadMenuGame.single("image"), async (req, res) => {
     try {
