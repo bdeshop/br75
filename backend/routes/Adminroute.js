@@ -14947,9 +14947,273 @@ Adminrouter.post("/bonus/monthly/claim/:userId", adminAuth, async (req, res) => 
 });
 
 // ==================== WEEKLY & MONTHLY BETTING BONUS ROUTES ====================
+// ==================== DAILY LOSS BONUS ROUTE ====================
 
-// Import the BettingBonus model at the top of your file
-const BettingBonus = require("../models/BettingBonus");
+// GET route to fetch eligible users for daily bonus
+Adminrouter.get("/bonus/daily/eligible-users", adminAuth, async (req, res) => {
+  try {
+    const { bonusPercentage, minLossAmount, maxBonusAmount } = req.query;
+    
+    // Find users with dailyLossAmount > 0
+    const users = await User.find({
+      dailyLossAmount: { $gt: 0 }
+    }).select(`_id username email player_id balance dailyLossAmount dailybet`);
+    
+    const eligibleUsers = [];
+    
+    for (const user of users) {
+      // Apply min loss filter if provided
+      if (minLossAmount && user.dailyLossAmount < parseFloat(minLossAmount)) {
+        continue;
+      }
+      
+      // Calculate potential bonus
+      let potentialBonus = 0;
+      if (bonusPercentage) {
+        potentialBonus = (parseFloat(bonusPercentage) / 100) * user.dailyLossAmount;
+        
+        // Apply max bonus limit if provided
+        if (maxBonusAmount && potentialBonus > parseFloat(maxBonusAmount)) {
+          potentialBonus = parseFloat(maxBonusAmount);
+        }
+        
+        potentialBonus = parseFloat(potentialBonus.toFixed(2));
+      }
+      
+      eligibleUsers.push({
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        player_id: user.player_id,
+        currentBalance: user.balance,
+        dailyLossAmount: user.dailyLossAmount,
+        dailyBet: user.dailybet || 0,
+        potentialBonus: potentialBonus,
+        newBalance: parseFloat((user.balance + potentialBonus).toFixed(2))
+      });
+    }
+    
+    // Calculate totals
+    const totals = {
+      totalUsers: eligibleUsers.length,
+      totalLossAmount: eligibleUsers.reduce((sum, user) => sum + user.dailyLossAmount, 0),
+      totalPotentialBonus: eligibleUsers.reduce((sum, user) => sum + user.potentialBonus, 0),
+      bonusPercentage: bonusPercentage ? `${bonusPercentage}%` : 'Not specified'
+    };
+    
+    res.status(200).json({
+      success: true,
+      bonusType: 'daily',
+      data: {
+        totals: totals,
+        users: eligibleUsers
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error fetching eligible users for daily bonus:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch eligible users",
+      error: error.message
+    });
+  }
+});
+
+// POST route for daily loss bonus
+Adminrouter.post("/bonus/daily", adminAuth, async (req, res) => {
+  try {
+    const {
+      bonusPercentage,
+      minLossAmount,
+      maxBonusAmount,
+      processedBy,
+      notes
+    } = req.body;
+
+    // Validate required fields
+    if (!bonusPercentage || bonusPercentage <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Bonus percentage is required and must be greater than 0"
+      });
+    }
+
+    // Find all users with dailyLossAmount > 0
+    const users = await User.find({
+      dailyLossAmount: { $gt: 0 }
+    });
+
+    if (users.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No users found with daily loss amount greater than 0"
+      });
+    }
+
+    const results = {
+      totalUsers: users.length,
+      successful: [],
+      failed: [],
+      totalBonusAmount: 0
+    };
+
+    // Process each user
+    for (const user of users) {
+      try {
+        // Apply min loss filter if provided
+        if (minLossAmount && user.dailyLossAmount < minLossAmount) {
+          results.failed.push({
+            userId: user._id,
+            username: user.username,
+            lossAmount: user.dailyLossAmount,
+            reason: `Loss amount (${user.dailyLossAmount}) is less than minimum required (${minLossAmount})`
+          });
+          continue;
+        }
+
+        // Calculate bonus amount (percentage of loss amount)
+        let bonusAmount = (bonusPercentage / 100) * user.dailyLossAmount;
+        
+        // Apply max bonus limit if provided
+        if (maxBonusAmount && bonusAmount > maxBonusAmount) {
+          bonusAmount = maxBonusAmount;
+        }
+
+        // Round to 2 decimal places
+        bonusAmount = parseFloat(bonusAmount.toFixed(2));
+        
+        if (bonusAmount <= 0) {
+          results.failed.push({
+            userId: user._id,
+            username: user.username,
+            lossAmount: user.dailyLossAmount,
+            reason: "Calculated bonus amount is zero or negative"
+          });
+          continue;
+        }
+
+        const balanceBefore = user.balance;
+        
+        // Add bonus to user balance
+        user.balance += bonusAmount;
+        
+        // Add to bonus history
+        if (!user.bonusHistory) {
+          user.bonusHistory = [];
+        }
+        
+        user.bonusHistory.push({
+          type: 'daily',
+          subType: 'loss_based',
+          amount: bonusAmount,
+          totalLoss: user.dailyLossAmount,
+          bonusRate: `${bonusPercentage}%`,
+          bonusPercentage: `${bonusPercentage}%`,
+          status: 'claimed',
+          createdAt: new Date(),
+          claimedAt: new Date(),
+          processedBy: processedBy || req.user?.username || 'admin',
+          metadata: {
+            minLossAmount: minLossAmount || null,
+            maxBonusAmount: maxBonusAmount || null
+          }
+        });
+        
+        // Add transaction history
+        user.transactionHistory.push({
+          type: 'bonus',
+          amount: bonusAmount,
+          balanceBefore: balanceBefore,
+          balanceAfter: user.balance,
+          description: `Daily loss bonus (${bonusPercentage}% of ${user.dailyLossAmount} loss amount)`,
+          referenceId: `DAILY-LOSS-BONUS-${Date.now()}-${user._id}`,
+          createdAt: new Date()
+        });
+        
+        // Create tracking record if BettingBonus model exists
+        try {
+          const BettingBonus = require("../models/BettingBonus");
+          const bettingBonus = new BettingBonus({
+            userId: user._id,
+            username: user.username,
+            bonusType: 'daily',
+            subType: 'loss_based',
+            amount: bonusAmount,
+            lossAmount: user.dailyLossAmount,
+            status: 'claimed',
+            processedBy: processedBy || req.user?.username || 'admin',
+            distributionDate: new Date(),
+            claimedAt: new Date(),
+            claimedBy: processedBy || req.user?.username || 'admin',
+            notes: notes || 'Daily loss bonus distribution',
+            metadata: {
+              bonusPercentage: bonusPercentage,
+              minLossAmount: minLossAmount,
+              maxBonusAmount: maxBonusAmount
+            }
+          });
+          await bettingBonus.save();
+        } catch (modelError) {
+          // BettingBonus model might not exist, continue without it
+          console.log("BettingBonus model not found, skipping tracking record");
+        }
+        
+        // RESET dailyLossAmount to 0 after bonus is given
+        user.dailyLossAmount = 0;
+        
+        await user.save();
+        
+        results.successful.push({
+          userId: user._id,
+          username: user.username,
+          bonusAmount: bonusAmount,
+          lossAmount: user.dailyLossAmount,
+          oldBalance: balanceBefore,
+          newBalance: user.balance
+        });
+        
+        results.totalBonusAmount += bonusAmount;
+        
+      } catch (error) {
+        console.error(`Error processing daily loss bonus for user ${user._id}:`, error);
+        results.failed.push({
+          userId: user._id,
+          username: user.username,
+          reason: error.message
+        });
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: `Daily loss bonus successfully added to ${results.successful.length} users`,
+      data: {
+        bonusType: 'daily',
+        bonusSubType: 'loss_based',
+        bonusPercentage: `${bonusPercentage}%`,
+        minLossAmount: minLossAmount || null,
+        maxBonusAmount: maxBonusAmount || null,
+        totalUsers: results.totalUsers,
+        successfulCount: results.successful.length,
+        failedCount: results.failed.length,
+        totalBonusAmount: results.totalBonusAmount,
+        successful: results.successful,
+        failed: results.failed
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error calculating daily loss bonus:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to calculate daily loss bonus",
+      error: error.message
+    });
+  }
+});
+
+// ==================== WEEKLY & MONTHLY BONUS ROUTES ====================
 
 // Helper function to get week number
 function getWeekNumber(date) {
@@ -14968,9 +15232,83 @@ function getMonthName(month) {
   ];
   return monthNames[month - 1];
 }
-// Add this to your admin router (adminRoutes.js)
 
-// ==================== WEEKLY & MONTHLY BONUS WITH CUSTOM PERCENTAGE ====================
+// GET route to fetch eligible users for weekly/monthly bonus
+Adminrouter.get("/bonus/eligible-users", adminAuth, async (req, res) => {
+  try {
+    const { 
+      bonusType = 'weekly',
+      minLossAmount,
+      maxBonusAmount,
+      bonusPercentage 
+    } = req.query;
+    
+    // Determine which field to check based on bonus type
+    const lossField = bonusType === 'weekly' ? 'weeklyLossAmount' : 'monthlyLossAmount';
+    
+    // Build query - users with loss amount > 0
+    let query = { [lossField]: { $gt: 0 } };
+    
+    // Add min loss filter if provided
+    if (minLossAmount && parseFloat(minLossAmount) > 0) {
+      query[lossField] = { $gt: parseFloat(minLossAmount) };
+    }
+    
+    // Find users with loss amount > 0
+    const users = await User.find(query).select(`_id username email player_id balance ${lossField}`);
+    
+    // Parse bonus percentage (default 10% for weekly, 10% for monthly)
+    const bonusPercent = bonusPercentage ? parseFloat(bonusPercentage) : 10;
+    const bonusRateDecimal = bonusPercent / 100;
+    
+    // Calculate potential bonus for each user
+    const eligibleUsers = users.map(user => {
+      let potentialBonus = bonusRateDecimal * user[lossField];
+      
+      // Apply max bonus limit if provided
+      if (maxBonusAmount && parseFloat(maxBonusAmount) > 0 && potentialBonus > parseFloat(maxBonusAmount)) {
+        potentialBonus = parseFloat(maxBonusAmount);
+      }
+      
+      potentialBonus = parseFloat(potentialBonus.toFixed(2));
+      
+      return {
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        player_id: user.player_id,
+        currentBalance: user.balance,
+        lossAmount: user[lossField],
+        potentialBonus: potentialBonus,
+        newBalance: parseFloat((user.balance + potentialBonus).toFixed(2))
+      };
+    });
+    
+    // Calculate totals
+    const totals = {
+      totalUsers: eligibleUsers.length,
+      totalLossAmount: eligibleUsers.reduce((sum, user) => sum + user.lossAmount, 0),
+      totalPotentialBonus: eligibleUsers.reduce((sum, user) => sum + user.potentialBonus, 0),
+      bonusPercentage: `${bonusPercent}%`
+    };
+    
+    res.status(200).json({
+      success: true,
+      bonusType: bonusType,
+      bonusPercentage: bonusPercent,
+      totals: totals,
+      users: eligibleUsers
+    });
+    
+  } catch (error) {
+    console.error("Error fetching eligible users:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch eligible users",
+      error: error.message
+    });
+  }
+});
 
 // POST route for weekly bonus with custom percentage
 Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
@@ -14978,9 +15316,9 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
     const { 
       processedBy, 
       notes, 
-      bonusPercentage,  // Custom percentage from frontend
-      minLossAmount,    // Changed: Minimum loss amount filter
-      maxBonusAmount    // Maximum bonus limit
+      bonusPercentage,
+      minLossAmount,
+      maxBonusAmount
     } = req.body;
 
     // Validate bonus percentage
@@ -14993,7 +15331,7 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
 
     const bonusRateDecimal = bonusPercentage / 100;
 
-    // Build query for eligible users
+    // Build query for eligible users using weeklyLossAmount
     let query = { weeklyLossAmount: { $gt: 0 } };
     
     // Add min loss filter if provided
@@ -15087,30 +15425,35 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           createdAt: new Date()
         });
         
-        // Create tracking record
-        const bettingBonus = new BettingBonus({
-          userId: user._id,
-          username: user.username,
-          bonusType: 'weekly',
-          subType: 'loss_based',
-          amount: bonusAmount,
-          lossAmount: user.weeklyLossAmount,
-          status: 'claimed',
-          processedBy: processedBy || req.user?.username || 'admin',
-          weekNumber: weekNumber,
-          year: year,
-          distributionDate: new Date(),
-          claimedAt: new Date(),
-          claimedBy: processedBy || req.user?.username || 'admin',
-          notes: notes || 'Weekly loss bonus distribution',
-          metadata: {
-            bonusPercentage: bonusPercentage,
-            minLossAmount: minLossAmount,
-            maxBonusAmount: maxBonusAmount
-          }
-        });
-        
-        await bettingBonus.save();
+        // Create tracking record if BettingBonus model exists
+        try {
+          const BettingBonus = require("../models/BettingBonus");
+          const bettingBonus = new BettingBonus({
+            userId: user._id,
+            username: user.username,
+            bonusType: 'weekly',
+            subType: 'loss_based',
+            amount: bonusAmount,
+            lossAmount: user.weeklyLossAmount,
+            status: 'claimed',
+            processedBy: processedBy || req.user?.username || 'admin',
+            weekNumber: weekNumber,
+            year: year,
+            distributionDate: new Date(),
+            claimedAt: new Date(),
+            claimedBy: processedBy || req.user?.username || 'admin',
+            notes: notes || 'Weekly loss bonus distribution',
+            metadata: {
+              bonusPercentage: bonusPercentage,
+              minLossAmount: minLossAmount,
+              maxBonusAmount: maxBonusAmount
+            }
+          });
+          await bettingBonus.save();
+        } catch (modelError) {
+          // BettingBonus model might not exist, continue without it
+          console.log("BettingBonus model not found, skipping tracking record");
+        }
         
         // RESET weeklyLossAmount to 0 after bonus is given
         user.weeklyLossAmount = 0;
@@ -15121,7 +15464,7 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
           userId: user._id,
           username: user.username,
           bonusAmount: bonusAmount,
-          lossAmount: user.weeklyLossAmount, // This will be 0 since we reset it
+          lossAmount: user.weeklyLossAmount,
           oldBalance: balanceBefore,
           newBalance: user.balance
         });
@@ -15168,26 +15511,15 @@ Adminrouter.post("/bonus/weekly", adminAuth, async (req, res) => {
   }
 });
 
-// Helper function to get week number
-function getWeekNumber(date) {
-  const d = new Date(date);
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
 // POST route for monthly bonus with custom percentage
 Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
   try {
     const { 
       processedBy, 
       notes, 
-      bonusPercentage,  // New: Custom percentage from frontend
-      minBetAmount,     // New: Minimum bet amount filter
-      maxBonusAmount,   // New: Maximum bonus limit
-      month, 
-      year 
+      bonusPercentage,
+      minLossAmount,
+      maxBonusAmount
     } = req.body;
 
     // Validate bonus percentage
@@ -15200,12 +15532,12 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
 
     const bonusRateDecimal = bonusPercentage / 100;
 
-    // Build query for eligible users
-    let query = { monthlybetamount: { $gt: 0 } };
+    // Build query for eligible users using monthlyLossAmount
+    let query = { monthlyLossAmount: { $gt: 0 } };
     
-    // Add min bet filter if provided
-    if (minBetAmount && minBetAmount > 0) {
-      query.monthlybetamount = { $gt: minBetAmount };
+    // Add min loss filter if provided
+    if (minLossAmount && minLossAmount > 0) {
+      query.monthlyLossAmount = { $gt: minLossAmount };
     }
 
     // Find eligible users
@@ -15214,14 +15546,14 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
     if (users.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "No users found with monthly bet amount greater than 0"
+        message: "No users found with monthly loss amount greater than 0"
       });
     }
     
-    // Get current month and year (or use provided values)
+    // Get current month and year
     const now = new Date();
-    const targetMonth = month || (now.getMonth() + 1);
-    const targetYear = year || now.getFullYear();
+    const targetMonth = now.getMonth() + 1;
+    const targetYear = now.getFullYear();
     
     const results = {
       totalUsers: users.length,
@@ -15234,7 +15566,7 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
     for (const user of users) {
       try {
         // Calculate bonus amount with custom percentage
-        let bonusAmount = bonusRateDecimal * user.monthlybetamount;
+        let bonusAmount = bonusRateDecimal * user.monthlyLossAmount;
         
         // Apply max bonus limit if provided
         if (maxBonusAmount && bonusAmount > maxBonusAmount) {
@@ -15248,7 +15580,7 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
           results.failed.push({
             userId: user._id,
             username: user.username,
-            betAmount: user.monthlybetamount,
+            lossAmount: user.monthlyLossAmount,
             reason: "Calculated bonus amount is zero or negative"
           });
           continue;
@@ -15266,16 +15598,19 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
         
         user.bonusHistory.push({
           type: 'monthly',
+          subType: 'loss_based',
           amount: bonusAmount,
-          totalBet: user.monthlybetamount,
+          totalLoss: user.monthlyLossAmount,
           bonusRate: `${bonusPercentage}%`,
           bonusPercentage: `${bonusPercentage}%`,
           status: 'claimed',
           createdAt: new Date(),
           claimedAt: new Date(),
           processedBy: processedBy || req.user?.username || 'admin',
+          month: targetMonth,
+          year: targetYear,
           metadata: {
-            minBetAmount: minBetAmount || null,
+            minLossAmount: minLossAmount || null,
             maxBonusAmount: maxBonusAmount || null
           }
         });
@@ -15286,37 +15621,43 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
           amount: bonusAmount,
           balanceBefore: balanceBefore,
           balanceAfter: user.balance,
-          description: `Monthly bonus (${bonusPercentage}% of ${user.monthlybetamount} bet amount)`,
-          referenceId: `MONTHLY-BONUS-${Date.now()}-${user._id}`,
+          description: `Monthly loss bonus (${bonusPercentage}% of ${user.monthlyLossAmount} loss amount)`,
+          referenceId: `MONTHLY-LOSS-BONUS-${Date.now()}-${user._id}`,
           createdAt: new Date()
         });
         
-        // Create tracking record
-        const bettingBonus = new BettingBonus({
-          userId: user._id,
-          username: user.username,
-          bonusType: 'monthly',
-          amount: bonusAmount,
-          betAmount: user.monthlybetamount,
-          status: 'claimed',
-          processedBy: processedBy || req.user?.username || 'admin',
-          month: targetMonth,
-          year: targetYear,
-          distributionDate: new Date(),
-          claimedAt: new Date(),
-          claimedBy: processedBy || req.user?.username || 'admin',
-          notes: notes || 'Monthly bonus distribution',
-          metadata: {
-            bonusPercentage: bonusPercentage,
-            minBetAmount: minBetAmount,
-            maxBonusAmount: maxBonusAmount
-          }
-        });
+        // Create tracking record if BettingBonus model exists
+        try {
+          const BettingBonus = require("../models/BettingBonus");
+          const bettingBonus = new BettingBonus({
+            userId: user._id,
+            username: user.username,
+            bonusType: 'monthly',
+            subType: 'loss_based',
+            amount: bonusAmount,
+            lossAmount: user.monthlyLossAmount,
+            status: 'claimed',
+            processedBy: processedBy || req.user?.username || 'admin',
+            month: targetMonth,
+            year: targetYear,
+            distributionDate: new Date(),
+            claimedAt: new Date(),
+            claimedBy: processedBy || req.user?.username || 'admin',
+            notes: notes || 'Monthly loss bonus distribution',
+            metadata: {
+              bonusPercentage: bonusPercentage,
+              minLossAmount: minLossAmount,
+              maxBonusAmount: maxBonusAmount
+            }
+          });
+          await bettingBonus.save();
+        } catch (modelError) {
+          // BettingBonus model might not exist, continue without it
+          console.log("BettingBonus model not found, skipping tracking record");
+        }
         
-        await bettingBonus.save();
-        
-        // RESET monthlybetamount to 0 after bonus is given
-        user.monthlybetamount = 0;
+        // RESET monthlyLossAmount to 0 after bonus is given
+        user.monthlyLossAmount = 0;
         
         await user.save();
         
@@ -15324,7 +15665,7 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
           userId: user._id,
           username: user.username,
           bonusAmount: bonusAmount,
-          betAmount: user.monthlybetamount,
+          lossAmount: user.monthlyLossAmount,
           oldBalance: balanceBefore,
           newBalance: user.balance
         });
@@ -15332,7 +15673,7 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
         results.totalBonusAmount += bonusAmount;
         
       } catch (error) {
-        console.error(`Error processing monthly bonus for user ${user._id}:`, error);
+        console.error(`Error processing monthly loss bonus for user ${user._id}:`, error);
         results.failed.push({
           userId: user._id,
           username: user.username,
@@ -15343,11 +15684,12 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: `Monthly bonus (${bonusPercentage}%) successfully added to ${results.successful.length} users`,
+      message: `Monthly loss bonus (${bonusPercentage}%) successfully added to ${results.successful.length} users`,
       data: {
         bonusType: 'monthly',
+        bonusSubType: 'loss_based',
         bonusPercentage: `${bonusPercentage}%`,
-        minBetAmount: minBetAmount || null,
+        minLossAmount: minLossAmount || null,
         maxBonusAmount: maxBonusAmount || null,
         month: targetMonth,
         monthName: getMonthName(targetMonth),
@@ -15362,92 +15704,16 @@ Adminrouter.post("/bonus/monthly", adminAuth, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("Error calculating monthly bonus:", error);
+    console.error("Error calculating monthly loss bonus:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to calculate monthly bonus",
+      message: "Failed to calculate monthly loss bonus",
       error: error.message
     });
   }
 });
 
-// GET route to fetch eligible users with custom parameters
-Adminrouter.get("/bonus/eligible-users", adminAuth, async (req, res) => {
-  try {
-    const { 
-      bonusType = 'weekly',
-      minLossAmount,     // Changed from minBetAmount
-      maxBonusAmount,
-      bonusPercentage 
-    } = req.query;
-    
-    // Determine which field to check based on bonus type
-    const lossField = bonusType === 'weekly' ? 'weeklyLossAmount' : 'monthlyLossAmount';
-    
-    // Build query
-    let query = { [lossField]: { $gt: 0 } };
-    
-    // Add min loss filter if provided
-    if (minLossAmount && parseFloat(minLossAmount) > 0) {
-      query[lossField] = { $gt: parseFloat(minLossAmount) };
-    }
-    
-    // Find users with loss amount > 0
-    const users = await User.find(query).select(`_id username email player_id balance ${lossField}`);
-    
-    // Parse bonus percentage (default 10% for weekly, 8% for monthly)
-    const bonusPercent = bonusPercentage ? parseFloat(bonusPercentage) : (bonusType === 'weekly' ? 10 : 8);
-    const bonusRateDecimal = bonusPercent / 100;
-    
-    // Calculate potential bonus for each user
-    const eligibleUsers = users.map(user => {
-      let potentialBonus = bonusRateDecimal * user[lossField];
-      
-      // Apply max bonus limit if provided
-      if (maxBonusAmount && parseFloat(maxBonusAmount) > 0 && potentialBonus > parseFloat(maxBonusAmount)) {
-        potentialBonus = parseFloat(maxBonusAmount);
-      }
-      
-      potentialBonus = parseFloat(potentialBonus.toFixed(2));
-      
-      return {
-        userId: user._id,
-        username: user.username,
-        email: user.email,
-        player_id: user.player_id,
-        currentBalance: user.balance,
-        lossAmount: user[lossField],  // Changed from betAmount
-        potentialBonus: potentialBonus,
-        newBalance: parseFloat((user.balance + potentialBonus).toFixed(2))
-      };
-    });
-    
-    // Calculate totals
-    const totals = {
-      totalUsers: eligibleUsers.length,
-      totalLossAmount: eligibleUsers.reduce((sum, user) => sum + user.lossAmount, 0),  // Changed from totalBetAmount
-      totalPotentialBonus: eligibleUsers.reduce((sum, user) => sum + user.potentialBonus, 0),
-      bonusPercentage: `${bonusPercent}%`
-    };
-    
-    res.status(200).json({
-      success: true,
-      bonusType: bonusType,
-      bonusPercentage: bonusPercent,
-      totals: totals,
-      users: eligibleUsers
-    });
-    
-  } catch (error) {
-    console.error("Error fetching eligible users:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch eligible users",
-      error: error.message
-    });
-  }
-});
-// GET route to fetch bonus history (for admin view)
+// GET bonus history
 Adminrouter.get("/bonus/history", adminAuth, async (req, res) => {
   try {
     const {
@@ -15458,7 +15724,7 @@ Adminrouter.get("/bonus/history", adminAuth, async (req, res) => {
       search,
       startDate,
       endDate,
-      sortBy = "distributionDate",
+      sortBy = "createdAt",
       sortOrder = "desc"
     } = req.query;
     
@@ -15480,12 +15746,12 @@ Adminrouter.get("/bonus/history", adminAuth, async (req, res) => {
     
     // Date range filter
     if (startDate || endDate) {
-      filter.distributionDate = {};
+      filter.createdAt = {};
       if (startDate) {
-        filter.distributionDate.$gte = new Date(startDate);
+        filter.createdAt.$gte = new Date(startDate);
       }
       if (endDate) {
-        filter.distributionDate.$lte = new Date(endDate);
+        filter.createdAt.$lte = new Date(endDate);
       }
     }
     
@@ -15494,31 +15760,74 @@ Adminrouter.get("/bonus/history", adminAuth, async (req, res) => {
     const sort = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
     
-    // Get bonuses
-    const bonuses = await BettingBonus.find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit));
+    // Try to get from BettingBonus model first, fallback to user bonusHistory
+    let bonuses = [];
+    let total = 0;
     
-    const total = await BettingBonus.countDocuments(filter);
-    
-    // Get summary statistics
-    const summary = await BettingBonus.aggregate([
-      { $match: filter },
-      {
-        $group: {
-          _id: "$bonusType",
-          totalBonusAmount: { $sum: "$amount" },
-          totalBetAmount: { $sum: "$betAmount" },
-          count: { $sum: 1 }
-        }
+    try {
+      const BettingBonus = require("../models/BettingBonus");
+      bonuses = await BettingBonus.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit));
+      total = await BettingBonus.countDocuments(filter);
+    } catch (modelError) {
+      // BettingBonus model doesn't exist, fetch from users
+      console.log("BettingBonus model not found, fetching from user bonusHistory");
+      
+      // Get users with bonus history
+      const userFilter = {};
+      if (bonusType && bonusType !== 'all') {
+        userFilter['bonusHistory.type'] = bonusType;
       }
-    ]);
+      if (search) {
+        userFilter['username'] = { $regex: search, $options: 'i' };
+      }
+      
+      const users = await User.find(userFilter)
+        .select('username bonusHistory')
+        .limit(parseInt(limit) * 2);
+      
+      // Extract bonus history entries
+      const allBonuses = [];
+      users.forEach(user => {
+        if (user.bonusHistory && user.bonusHistory.length > 0) {
+          user.bonusHistory.forEach(bonus => {
+            allBonuses.push({
+              ...bonus.toObject(),
+              username: user.username,
+              userId: user._id,
+              _id: bonus._id || `bonus-${Date.now()}-${Math.random()}`
+            });
+          });
+        }
+      });
+      
+      // Filter by date if provided
+      let filteredBonuses = allBonuses;
+      if (startDate) {
+        const start = new Date(startDate);
+        filteredBonuses = filteredBonuses.filter(b => new Date(b.createdAt) >= start);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        filteredBonuses = filteredBonuses.filter(b => new Date(b.createdAt) <= end);
+      }
+      
+      // Sort and paginate
+      filteredBonuses.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.distributionDate || 0);
+        const dateB = new Date(b.createdAt || b.distributionDate || 0);
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      });
+      
+      total = filteredBonuses.length;
+      bonuses = filteredBonuses.slice(skip, skip + parseInt(limit));
+    }
     
     res.status(200).json({
       success: true,
       data: bonuses,
-      summary: summary,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -15544,47 +15853,102 @@ Adminrouter.get("/bonus/stats", adminAuth, async (req, res) => {
     
     let dateFilter = {};
     if (startDate || endDate) {
-      dateFilter.distributionDate = {};
-      if (startDate) dateFilter.distributionDate.$gte = new Date(startDate);
-      if (endDate) dateFilter.distributionDate.$lte = new Date(endDate);
+      dateFilter.createdAt = {};
+      if (startDate) dateFilter.createdAt.$gte = new Date(startDate);
+      if (endDate) dateFilter.createdAt.$lte = new Date(endDate);
     }
     
-    // Overall statistics
-    const overallStats = await BettingBonus.aggregate([
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: null,
-          totalBonusAmount: { $sum: "$amount" },
-          totalBetAmount: { $sum: "$betAmount" },
-          totalTransactions: { $sum: 1 }
-        }
-      }
-    ]);
+    // Try to get stats from BettingBonus model
+    let stats = {
+      overall: {
+        totalBonusAmount: 0,
+        totalLossAmount: 0,
+        totalTransactions: 0
+      },
+      byType: []
+    };
     
-    // Statistics by bonus type
-    const statsByType = await BettingBonus.aggregate([
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: "$bonusType",
-          totalBonusAmount: { $sum: "$amount" },
-          totalBetAmount: { $sum: "$betAmount" },
-          count: { $sum: 1 }
+    try {
+      const BettingBonus = require("../models/BettingBonus");
+      const overallStats = await BettingBonus.aggregate([
+        { $match: dateFilter },
+        {
+          $group: {
+            _id: null,
+            totalBonusAmount: { $sum: "$amount" },
+            totalLossAmount: { $sum: "$lossAmount" },
+            totalTransactions: { $sum: 1 }
+          }
         }
-      }
-    ]);
+      ]);
+      
+      const statsByType = await BettingBonus.aggregate([
+        { $match: dateFilter },
+        {
+          $group: {
+            _id: "$bonusType",
+            totalBonusAmount: { $sum: "$amount" },
+            totalLossAmount: { $sum: "$lossAmount" },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      stats.overall = overallStats[0] || {
+        totalBonusAmount: 0,
+        totalLossAmount: 0,
+        totalTransactions: 0
+      };
+      stats.byType = statsByType;
+      
+    } catch (modelError) {
+      // BettingBonus model doesn't exist, get stats from users
+      console.log("BettingBonus model not found, fetching stats from user bonusHistory");
+      
+      const users = await User.find({ 'bonusHistory.0': { $exists: true } })
+        .select('bonusHistory');
+      
+      let totalBonusAmount = 0;
+      let totalTransactions = 0;
+      const typeMap = {};
+      
+      users.forEach(user => {
+        if (user.bonusHistory) {
+          user.bonusHistory.forEach(bonus => {
+            // Apply date filter if provided
+            if (startDate && new Date(bonus.createdAt) < new Date(startDate)) return;
+            if (endDate && new Date(bonus.createdAt) > new Date(endDate)) return;
+            
+            totalBonusAmount += bonus.amount || 0;
+            totalTransactions++;
+            
+            const type = bonus.type || 'unknown';
+            if (!typeMap[type]) {
+              typeMap[type] = { totalBonusAmount: 0, count: 0 };
+            }
+            typeMap[type].totalBonusAmount += bonus.amount || 0;
+            typeMap[type].count++;
+          });
+        }
+      });
+      
+      stats.overall = {
+        totalBonusAmount,
+        totalLossAmount: 0,
+        totalTransactions
+      };
+      
+      stats.byType = Object.keys(typeMap).map(type => ({
+        _id: type,
+        totalBonusAmount: typeMap[type].totalBonusAmount,
+        totalLossAmount: 0,
+        count: typeMap[type].count
+      }));
+    }
     
     res.status(200).json({
       success: true,
-      stats: {
-        overall: overallStats[0] || {
-          totalBonusAmount: 0,
-          totalBetAmount: 0,
-          totalTransactions: 0
-        },
-        byType: statsByType
-      }
+      stats: stats
     });
     
   } catch (error) {
@@ -15596,9 +15960,6 @@ Adminrouter.get("/bonus/stats", adminAuth, async (req, res) => {
     });
   }
 });
-
-
-
 // ==================== DAILY BET BONUS ROUTE ====================
 
 // POST route for daily bonus - Simple route that accepts frontend data
